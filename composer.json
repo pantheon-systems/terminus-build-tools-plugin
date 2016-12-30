@@ -1,0 +1,14 @@
+{
+    "name": "pantheon-systems/terminus-build-tools-plugin",
+    "description": "Build Tools - A Terminus plugin that contain commands to manage build assets on Pantheon.",
+    "license": "MIT",
+    "type": "terminus-plugin",
+    "autoload": {
+        "psr-4": { "Pantheon\\TerminusBuildTools\\": "src" }
+    },
+    "extra": {
+        "terminus": {
+            "compatible-version": "^1"
+        }
+    }
+}
