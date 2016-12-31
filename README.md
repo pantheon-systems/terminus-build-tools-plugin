@@ -12,9 +12,19 @@ In order to use this plugin, you will need to set up a GitHub repository and a C
 
 ## Examples
 
+### Delete Old Multidevs
+
+`terminus build-env:delete my-pantheon-site '^ci-' --keep=2 --delete-branch`
+
+### List Old Multidevs
+
+`terminus build-env:list`
+
+## Future
+
 - Create Pantheon Multidev
 - Merge Pantheon Multidev
-- Delete Old Multidevs
+- Post comment to GitHub or GitLab
 
 ## Installation
 For help installing, see [Terminus's Wiki](https://github.com/pantheon-systems/terminus/wiki/Plugins)
@@ -24,4 +34,4 @@ composer create-project -d ~/terminus/plugins pantheon-systems/terminus-build-to
 ```
 
 ## Help
-Run `terminus list build-tools` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
+Run `terminus list build-env` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
