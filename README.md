@@ -29,8 +29,8 @@ In order to use this plugin, you will need to set up a GitHub repository and a C
 ## Installation
 For help installing, see [Terminus's Wiki](https://github.com/pantheon-systems/terminus/wiki/Plugins)
 ```
-mkdir -p ~/terminus/plugins
-composer create-project -d ~/terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
+mkdir -p ~/.terminus/plugins
+composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
 ```
 
 ## Help
