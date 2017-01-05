@@ -100,7 +100,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     public function mergeBuildEnv($site_env_id, $options = ['label' => ''])
     {
         // c.f. merge-pantheon-multidev script
-        list(, $env) = $this->getSiteEnv($site_env_id);
+        list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
         $env_label = $env;
         if (!empty($options['label'])) {
@@ -116,7 +116,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // When using build-env:merge, we expect that the dev environment
         // should stay in git mode. We will switch it to git mode now to be sure.
-        $this->connectionSet($env, 'git');
+        $dev_env = $site->getEnvironments()->get('dev');
+        $this->connectionSet($dev_env, 'git');
 
         // Replace the entire contents of the master branch with the branch we just tested.
         $this->passthru('git checkout master');
