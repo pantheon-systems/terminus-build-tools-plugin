@@ -10,6 +10,7 @@ namespace Pantheon\TerminusBuildTools\Commands;
 use Consolidation\OutputFormatters\StructuredData\PropertyList;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Pantheon\Terminus\Commands\TerminusCommand;
+use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\Terminus\Site\SiteAwareInterface;
 use Pantheon\Terminus\Site\SiteAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
@@ -32,19 +33,96 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
+     * Create the specified multidev environment on the given Pantheon
+     * site from the build assets at the current working directory.
+     *
      * @command build-env:create
+     * @param string $site_env_id The site and env of the SOURCE
+     * @param string $multidev The name of the env to CREATE
+     * @option label What to name the environment in commit comments
      */
-    public function createBuildEnv()
+    public function createBuildEnv($site_env_id, $multidev, $options = ['label' => ''])
     {
         // c.f. create-pantheon-multidev script
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+        $env_id = $env->getName();
+        $env_label = $multidev;
+        if (!empty($options['label'])) {
+            $env_label = $options['label'];
+        }
+
+        // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
+        // Skip this step if the remote is already there (e.g. due to CI service caching).
+        if (!$this->hasPantheonRemote()) {
+            $connectionInfo = $env->connectionInfo();
+            $gitUrl = $connectionInfo['git_url'];
+            $this->passthru("echo git remote add pantheon $gitUrl");
+        }
+        $this->passthru('git fetch pantheon');
+
+        // If we are testing against the dev environment, then simply force-push
+        // our build assets to the master branch via rsync and exit. Note that
+        // the modified files remain uncommitted unless build-env:merge is called.
+        if ($multidev == $env_id) {
+          $this->connectionSet($env, 'sftp');
+
+          $siteInfo = $site->serialize();
+          $site_id = $siteInfo['id'];
+          $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $env_id.$site_id@appserver.$env_id.$site_id.drush.in:code/");
+          return;
+        }
+
+        // Create a new branch and commit the results from anything that may have changed
+        $this->passthru("git checkout -B $multidev");
+        $this->passthru('git add -A .');
+        $this->passthru("git commit -q -m 'Build assets for $env_label.'");
+
+        // Push the branch to Pantheon, and create a new environment for it
+        $this->passthru("git push -q pantheon $multidev");
+
+        // Create a new environment for this test.
+        $this->create($site_env_id, $multidev);
+
+        // Set the target environment to sftp mode (TODO: necessary?)
+        $target_env = $site->getEnvironments()->get($multidev);
+        $this->connectionSet($target_env, 'sftp');
     }
 
     /**
      * @command build-env:merge
+     * @param string $site_env_id The site and env to merge and delete
+     * @option label What to name the environment in commit comments
      */
     public function mergeBuildEnv($site_env_id, $options = ['label' => ''])
     {
         // c.f. merge-pantheon-multidev script
+        list(, $env) = $this->getSiteEnv($site_env_id);
+        $env_id = $env->getName();
+        $env_label = $env;
+        if (!empty($options['label'])) {
+            $env_label = $options['label'];
+        }
+
+        // If we are building against the 'dev' environment, then simply
+        // commit the changes once the PR is merged.
+        if ($env_id == 'dev') {
+            $env->commitChanges("Build assets for $env_label.");
+            return;
+        }
+
+        // When using build-env:merge, we expect that the dev environment
+        // should stay in git mode. We will switch it to git mode now to be sure.
+        $this->connectionSet($env, 'git');
+
+        // Replace the entire contents of the master branch with the branch we just tested.
+        $this->passthru('git checkout master');
+        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' -X theirs $env_id");
+
+        // Push our changes back to the dev environment, replacing whatever was there before.
+        $this->passthru('git push --force -q pantheon master');
+
+        // Once the build environment is merged, we do not need it any more
+        $this->deleteEnv($env, true);
     }
 
     /**
@@ -106,13 +184,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $site_env_id = "{$site_id}.{$env_id}";
 
             list (, $env) = $this->getSiteEnv($site_env_id);
-            $workflow = $env->delete(['delete_branch' => $options['delete-branch'],]);
-            $workflow->wait();
-            if ($workflow->isSuccessful()) {
-                $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
-            } else {
-                throw new TerminusException($workflow->getMessage());
-            }
+            $this->deleteEnv($env, $options['delete-branch']);
+        }
+    }
+
+    protected function deleteEnv($env, $deleteBranch = false)
+    {
+        $workflow = $env->delete(['delete_branch' => $deleteBranch,]);
+        $workflow->wait();
+        if ($workflow->isSuccessful()) {
+            $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
+        } else {
+            throw new TerminusException($workflow->getMessage());
         }
     }
 
@@ -171,5 +254,45 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         );
 
         return $env_list;
+    }
+
+    // TODO: Use Multidev\CreateCommand in Terminus?
+    public function create($site_env, $multidev)
+    {
+        list($site, $env) = $this->getSiteEnv($site_env, 'dev');
+        $workflow = $site->getEnvironments()->create($multidev, $env);
+        while (!$workflow->checkProgress()) {
+            // TODO: Add workflow progress output
+        }
+        $this->log()->notice($workflow->getMessage());
+    }
+
+    public function connectionSet($env, $mode)
+    {
+        $workflow = $env->changeConnectionMode($mode);
+        if (is_string($workflow)) {
+            $this->log()->notice($workflow);
+        } else {
+            while (!$workflow->checkProgress()) {
+                // TODO: Add workflow progress output
+            }
+            $this->log()->notice($workflow->getMessage());
+        }
+    }
+
+    protected function hasPantheonRemote()
+    {
+        exec('git remote show', $output);
+        return array_search('pantheon', $output) !== false;
+    }
+
+    protected function passthru($command)
+    {
+        $result = 0;
+        passthru($command, $result);
+
+        if ($result != 0) {
+            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
+        }
     }
 }
