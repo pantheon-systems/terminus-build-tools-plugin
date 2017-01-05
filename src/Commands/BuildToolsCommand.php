@@ -83,7 +83,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Create a new environment for this test.
         $this->create($site_env_id, $multidev);
 
-        // Set the target environment to sftp mode (TODO: necessary?)
+        // Clear the environments, so that they will be re-fetched.
+        // Otherwise, the new environment will not be found.
+        $site->$environments = null;
+
+        // Set the target environment to sftp mode
         $target_env = $site->getEnvironments()->get($multidev);
         $this->connectionSet($target_env, 'sftp');
     }
@@ -260,6 +264,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     public function create($site_env, $multidev)
     {
         list($site, $env) = $this->getSiteEnv($site_env, 'dev');
+        $this->log()->notice("Create multidev '{env}' for site {site}", ['site' => $site->getName(), 'env' => $env->getName()]);
         $workflow = $site->getEnvironments()->create($multidev, $env);
         while (!$workflow->checkProgress()) {
             // TODO: Add workflow progress output
