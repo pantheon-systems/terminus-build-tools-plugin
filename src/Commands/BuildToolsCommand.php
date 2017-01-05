@@ -56,7 +56,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         if (!$this->hasPantheonRemote()) {
             $connectionInfo = $env->connectionInfo();
             $gitUrl = $connectionInfo['git_url'];
-            $this->passthru("echo git remote add pantheon $gitUrl");
+            $this->passthru("git remote add pantheon $gitUrl");
         }
         $this->passthru('git fetch pantheon');
 
@@ -85,7 +85,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Clear the environments, so that they will be re-fetched.
         // Otherwise, the new environment will not be found.
-        $site->$environments = null;
+        $site->environments = null;
 
         // Set the target environment to sftp mode
         $target_env = $site->getEnvironments()->get($multidev);
@@ -264,7 +264,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     public function create($site_env, $multidev)
     {
         list($site, $env) = $this->getSiteEnv($site_env, 'dev');
-        $this->log()->notice("Create multidev '{env}' for site {site}", ['site' => $site->getName(), 'env' => $env->getName()]);
+        $this->log()->notice("Creating multidev {env} for site {site}", ['site' => $site->getName(), 'env' => $multidev]);
         $workflow = $site->getEnvironments()->create($multidev, $env);
         while (!$workflow->checkProgress()) {
             // TODO: Add workflow progress output
