@@ -1,0 +1,51 @@
+# Generic circle.yml for using the Terminus Build Tools Plugin to
+# test a Pantheon site. See the README for customization instructions.
+
+# https://circleci.com/docs/configuration#machine
+machine:
+  timezone:
+    America/Chicago
+  php:
+    # https://circleci.com/docs/build-image-trusty/#php
+    version: 7.0.11
+  environment:
+    TERMINUS_SITE: my-test-site
+    TERMINUS_ENV: ci-$CIRCLE_BUILD_NUM
+    TERMINUS_ENV_LABEL: CI-$CIRCLE_BUILD_NUM
+    MULTIDEV_DELETE_PATTERN: ^ci-
+    PATH: $PATH:~/.composer/vendor/bin:~/.config/composer/vendor/bin
+
+dependencies:
+  cache_directories:
+    - ~/.composer/cache
+  pre:
+    # Avoid ssh prompting when connecting to new ssh hosts
+    - echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+    - |
+      if [ -n "$GITHUB_TOKEN" ] ; then
+        composer config --global github-oauth.github.com $GITHUB_TOKEN
+      fi
+    - git config --global user.email "$GIT_EMAIL"
+    - git config --global user.name "Circle CI"
+  override:
+    - composer global require "hirak/prestissimo:^0.3"
+    - composer global require "consolidation/cgr"
+    - cgr "pantheon-systems/terminus:~1" --stability beta
+    - terminus --version
+    - mkdir -p ~/.terminus/plugins
+    - composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
+  post:
+    - terminus auth:login --machine-token="$TERMINUS_TOKEN"
+    - terminus build-env:delete "$TERMINUS_SITE" "$MULTIDEV_DELETE_PATTERN" --keep=2 --delete-branch --yes
+    - composer build-assets
+    - terminus build-env:create "$TERMINUS_SITE.dev" "$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL"
+
+test:
+  override:
+    - behat
+
+deployment:
+  build-assets:
+    branch: master
+    commands:
+      - terminus build-env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL"
