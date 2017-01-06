@@ -109,7 +109,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->passthru("git commit -q -m 'Build assets for $env_label.'");
 
         // Push the branch to Pantheon, and create a new environment for it
-        $this->passthru("git push -q pantheon $multidev");
+        $this->passthru("git push --force -q pantheon $multidev");
 
         // Create a new environment for this test.
         $this->create($site_env_id, $multidev);

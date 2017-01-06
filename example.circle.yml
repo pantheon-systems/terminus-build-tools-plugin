@@ -41,6 +41,7 @@ dependencies:
     - composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
   post:
     - terminus auth:login --machine-token="$TERMINUS_TOKEN"
+    - terminus env:delete "$TERMINUS_SITE.$TERMINUS_ENV" --yes || echo "$TERMINUS_SITE.$TERMINUS_ENV does not exist yet."
     - terminus build-env:delete "$TERMINUS_SITE" "$MULTIDEV_DELETE_PATTERN" --keep=2 --delete-branch --yes
     - composer build-assets
     - terminus env:wake "$TERMINUS_SITE.dev"
