@@ -402,16 +402,19 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
-    protected function recordBuildMetadata()
+    public function recordBuildMetadata()
     {
-        $buildMetadataFile = '.build-metadata.json';
+        $buildMetadataFile = 'build-metadata.json';
         $branch = exec('git rev-parse --abbrev-ref HEAD');
         $head = exec('git rev-parse HEAD');
 
         $metadata['ref'] = $branch;
         $metadata['sha'] = $head;
 
-        file_put_contents($buildMetadataFile, json_encode($metadata));
+        $metadataContents = json_encode($metadata);
+        $this->log()->notice('Wrote {metadata} to {file}. cwd is {cwd}', ['metadata' => $metadataContents, 'file' => $buildMetadataFile, 'cwd' => getcwd()]);
+
+        file_put_contents($buildMetadataFile, $metadataContents);
     }
 
     protected function hasPantheonRemote()

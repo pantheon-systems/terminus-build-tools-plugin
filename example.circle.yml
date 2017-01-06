@@ -45,7 +45,7 @@ dependencies:
     - terminus build-env:delete "$TERMINUS_SITE" "$MULTIDEV_DELETE_PATTERN" --keep=2 --delete-branch --yes
     - composer build-assets
     - terminus env:wake "$TERMINUS_SITE.dev"
-    - terminus build-env:create "$TERMINUS_SITE.dev" "$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL"
+    - terminus build-env:create "$TERMINUS_SITE.dev" "$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL" --yes
 
 test:
   override:
@@ -55,5 +55,5 @@ deployment:
   build-assets:
     branch: master
     commands:
-      - terminus build-env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL"
+      - terminus build-env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL" --yes
       - terminus build-env:delete "$TERMINUS_SITE" "$PR_DELETE_PATTERN" --preserve-prs --delete-branch --yes
