@@ -15,11 +15,15 @@ An [example circle.yml file](example.circle.yml) has been provided to show how t
 
 When a PR is merged to the master branch, then the test PR is merged into the dev environment if the test passes.
 
+Testing multidev environments are divided into two groups: environments used for testing pull requests, and environments used for testing other kinds of builds (e.g. tagged releases, commits or merges to master, and so on). PR test environments persist until the PR branch on GitHub is deleted. The other test environments are deleted just before a new testing environment is created. The most recent three of these environments remain, and the rest are deleted.
+
 See below for the list of supported commands. This plugin is only available for Terminus 1.x.
 
 ## Configuration
 
 In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials will also need to be set up (to be documented).
+
+### Build Customizations
 
 To customize this for a specific project:
 
@@ -33,9 +37,23 @@ To customize this for a specific project:
 - [Add a `build-assets` script](https://pantheon.io/blog/writing-composer-scripts) to your composer.json file.
 - Add any needed cleanup steps (e.g. `drush updatedb`) after `build-env:merge`.
 
+### Specific Examples
+
 For a more specific example, see:
 
 - https://github.com/pantheon-systems/example-drops-8-composer
+
+### PR Environments vs Other Test Environments
+
+Note that using a single environment for each PR means that it is not possible to run multiple tests against the same PR at the same time. Currently, no effort is made to cancel running tests when a new one is kicked off; if the concurrent build is not cancelled before a new commit is pushed to the PR branch, then the two tests could potentially conflict with each other. If support for parallel tests on the same PR is desired, then it is possible to eliminate PR environments, and make all tests run in their own independent CI environment. To do this, make the following change in the environments section of the circle.yml file:
+
+    TERMINUS_ENV: $CI_LABEL
+
+### Running Tests without Multidevs
+
+To use this tool on a Pantheon site that does not have multidev environments support, it is possible to run all tests against the dev environment. If this is done, then clearly it is not possible to run multiple tests at the same time. To use the dev environment, make the following change in the environments section of the circle.yml file:
+
+    TERMINUS_ENV: dev
 
 ## Examples
 
