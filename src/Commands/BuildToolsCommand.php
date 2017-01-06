@@ -60,10 +60,33 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
         $this->passthru('git fetch pantheon');
 
+        // Check to see if '$multidev' already exists on Pantheon.
+        $environmentExists = $site->getEnvironments()->has($multidev);
+
         // If we are testing against the dev environment, then simply force-push
         // our build assets to the master branch via rsync and exit. Note that
         // the modified files remain uncommitted unless build-env:merge is called.
-        if ($multidev == $env_id) {
+        //
+        // We also use this same code path for any test run after the first to
+        // any given multidev site. This will only ever happen for `pr-` builds,
+        // as the `ci-` builds are created for every test run, and therefore will
+        // never receive more commits after the first. In the case of PR builds,
+        // subsequent builds will overwrite any test still in progress, with
+        // unpredictable results. The changed files will be rsync'ed over the
+        // previous commits; the new commits will NOT be pushed to the Pantheon
+        // branch, as that would require switching from SFTP mode to Git mode,
+        // doing the push, and then switching back to SFTP mode. This is slow,
+        // and there are race conditions on both transitions. We therefore use
+        // rsync to get the code to Pantheon, and let the changed files "pile up"
+        // uncommitted. Eventually, the PR will be merged on GitHub, at which
+        // point all of the right commits will be merged into the master branch.
+        // That will result in one more test, this time with a 'ci-' build that
+        // always starts with a fresh multidev and a force-push of the lean
+        // repository commits, followed by a single commit with the build assets
+        // for this test. The end result is that the dev environment will always
+        // be an exact match of the lean repository, plus just one last commit
+        // with only the most recent build artifacts.
+        if ($environmentExists) {
           $this->connectionSet($env, 'sftp');
 
           $siteInfo = $site->serialize();
