@@ -41,7 +41,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param string $multidev The name of the env to CREATE
      * @option label What to name the environment in commit comments
      */
-    public function createBuildEnv($site_env_id, $multidev, $options = ['label' => ''])
+    public function createBuildEnv(
+        $site_env_id,
+        $multidev,
+        $options = [
+            'label' => '',
+            'pr' => ''
+        ])
     {
         // c.f. create-pantheon-multidev script
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -93,6 +99,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
           $site_id = $siteInfo['id'];
           $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $env_id.$site_id@appserver.$env_id.$site_id.drush.in:code/");
           return;
+        }
+
+        // If this is a PR, then record the metadata for this build
+        if (!empty($options['pr'])) {
+            $this->recordBuildMetadata($options);
         }
 
         // Create a new branch and commit the results from anything that may have changed
@@ -392,6 +403,19 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             }
             $this->log()->notice($workflow->getMessage());
         }
+    }
+
+    protected function recordBuildMetadata($options)
+    {
+        $buildMetadataFile = './private/.build-metadata.json';
+        $branch = exec('git rev-parse --abbrev-ref HEAD');
+        $head = exec('git rev-parse HEAD');
+
+        $metadata['pr'] = $options['pr'];
+        $metadata['ref'] = $branch;
+        $metadata['sha'] = $head;
+
+        file_put_contents($buildMetadataFile, json_encode($metadata));
     }
 
     protected function hasPantheonRemote()

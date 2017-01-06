@@ -43,7 +43,7 @@ dependencies:
     - terminus build-env:delete "$TERMINUS_SITE" "$MULTIDEV_DELETE_PATTERN" --keep=2 --delete-branch --yes
     - composer build-assets
     - terminus env:wake "$TERMINUS_SITE.dev"
-    - terminus build-env:create "$TERMINUS_SITE.dev" "$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL"
+    - terminus build-env:create "$TERMINUS_SITE.dev" "$TERMINUS_ENV" --label="$TERMINUS_ENV_LABEL" --pr="$CIRCLE_PR_NUMBER"
 
 test:
   override:
