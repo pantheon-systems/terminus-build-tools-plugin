@@ -46,7 +46,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $multidev,
         $options = [
             'label' => '',
-            'pr' => ''
         ])
     {
         // c.f. create-pantheon-multidev script
@@ -101,10 +100,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
           return;
         }
 
-        // If this is a PR, then record the metadata for this build
-        if (!empty($options['pr'])) {
-            $this->recordBuildMetadata($options);
-        }
+        // Record the metadata for this build
+        $this->recordBuildMetadata();
 
         // Create a new branch and commit the results from anything that may have changed
         $this->passthru("git checkout -B $multidev");
@@ -405,13 +402,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
-    protected function recordBuildMetadata($options)
+    protected function recordBuildMetadata()
     {
-        $buildMetadataFile = './private/.build-metadata.json';
+        $buildMetadataFile = '.build-metadata.json';
         $branch = exec('git rev-parse --abbrev-ref HEAD');
         $head = exec('git rev-parse HEAD');
 
-        $metadata['pr'] = $options['pr'];
         $metadata['ref'] = $branch;
         $metadata['sha'] = $head;
 

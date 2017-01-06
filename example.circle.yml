@@ -10,7 +10,8 @@ machine:
     version: 7.0.11
   environment:
     TERMINUS_SITE: my-test-site
-    PR_LABEL: ${CI_PULL_REQUEST:+pr-$CIRCLE_BRANCH}
+    BRANCH: $(echo $CIRCLE_BRANCH | grep -v '^\(master\|[0-9]\+.x\)$')
+    PR_LABEL: ${BRANCH:+pr-$BRANCH}
     CI_LABEL: ci-$CIRCLE_BUILD_NUM
     TERMINUS_ENV: $(echo ${PR_LABEL:-$CI_LABEL} | cut -c -11)
     TERMINUS_ENV_LABEL: CI-$CIRCLE_BUILD_NUM
