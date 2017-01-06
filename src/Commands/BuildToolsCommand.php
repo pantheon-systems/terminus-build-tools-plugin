@@ -132,18 +132,35 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
     /**
      * Delete all of the build environments matching the provided pattern,
-     * optionally keeping a few of the most recently-created.
+     * optionally keeping a few of the most recently-created. Also, optionally
+     * any environment that still has a remote branch on GitHub may be preserved.
+     *
+     * TODO: It would be good if we could use the GitHub API to test to see if
+     * the remote branch has been merged, and treat those branches as if they
+     * were deleted branches. In order to do this, though, we would need to be
+     * able to recover the pull request number, something we currently are
+     * unable to do.
      *
      * @command build-env:delete
      *
      * @param string $site_id Site name
      * @param string $multidev_delete_pattern Pattern used for build environments
      * @option keep Number of environments to keep
+     * @option preserve-prs Keep any environment that still has a remote branch that has not been deleted.
      * @option delete-branch Delete the git branch in addition to the multidev environment.
+     * @option dry-run Only print what would be deleted; do not delete anything.
      */
-    public function deleteBuildEnv($site_id, $multidev_delete_pattern = self::DEFAULT_DELETE_PATTERN, $options  = ['keep' => 0, 'delete-branch' => false])
+    public function deleteBuildEnv(
+        $site_id,
+        $multidev_delete_pattern = self::DEFAULT_DELETE_PATTERN,
+        $options = [
+            'keep' => 0,
+            'preserve-prs' => false,
+            'delete-branch' => false,
+            'dry-run' => false,
+        ])
     {
-        // Look up the oldest environments
+        // Look up the oldest environments matching the delete pattern
         $oldestEnvironments = $this->oldestEnvironments($site_id, $multidev_delete_pattern);
 
         // Stop if nothing matched
@@ -152,7 +169,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             return;
         }
 
-        // Reduce result list down to just the env id
+        // Reduce result list down to just the env id ('ci-123' et. al.)
         $oldestEnvironments = array_map(
             function ($item) {
                 return $item['id'];
@@ -160,10 +177,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $oldestEnvironments
         );
 
-        // Separate list into 'keep' and 'oldest' lists.
+        // Reduce result list down to just those that do NOT have remote
+        // branches in GitHub
         $environmentsToKeep = [];
+        if (!empty($options['preserve-prs'])) {
+            $environmentsWithoutBranches = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
+            $environmentsToKeep = array_diff($oldestEnvironments, $environmentsWithoutBranches);
+            $oldestEnvironments = $environmentsWithoutBranches;
+        }
+
+        // Separate list into 'keep' and 'oldest' lists.
         if ($options['keep']) {
-            $environmentsToKeep = array_slice($oldestEnvironments, count($oldestEnvironments) - $options['keep']);
+            $environmentsToKeep = array_merge(
+                $environmentsToKeep,
+                array_slice($oldestEnvironments, count($oldestEnvironments) - $options['keep'])
+            );
             $oldestEnvironments = array_slice($oldestEnvironments, 0, count($oldestEnvironments) - $options['keep']);
         }
 
@@ -180,7 +208,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             return;
         }
 
-        if (!$this->confirm('Are you sure you want to delete {deleteList}, keeping {keepList}?', ['deleteList' => $deleteList, 'keepList' => $keepList])) {
+        if ($options['dry-run']) {
+            $this->log()->notice('Dry run: would delete {deleteList} and keep {keepList}', ['deleteList' => $deleteList, 'keepList' => $keepList]);
+            return;
+        }
+
+        if (!$this->confirm('Are you sure you want to delete {deleteList} and keep {keepList}?', ['deleteList' => $deleteList, 'keepList' => $keepList])) {
             return;
         }
 
@@ -191,6 +224,58 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             list (, $env) = $this->getSiteEnv($site_env_id);
             $this->deleteEnv($env, $options['delete-branch']);
         }
+    }
+
+    protected function preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern)
+    {
+        $remoteBranch = 'origin';
+
+        // Update the local repository -- prune / add remote branches.
+        // We could use `git remote prune origin` to only prune remote branches.
+        $this->passthru('git remote update --prune origin');
+
+        // List all of the remote branches
+        $outputLines = $this->exec('git branch -ar');
+
+        // Remove branch lines that do not begin with 'origin/'
+        $outputLines = array_filter(
+            $outputLines,
+            function ($item) use ($remoteBranch) {
+                return preg_match("%^ *$remoteBranch/%", $item);
+            }
+        );
+
+        // Strip the 'origin/' from the beginning of each branch line
+        $outputLines = array_map(
+            function ($item) use ($remoteBranch) {
+                return preg_replace("%^ *$remoteBranch/%", '', $item);
+            },
+            $outputLines
+        );
+
+        // Filter environments that have matching remote branches in origin
+        return array_filter(
+            $oldestEnvironments,
+            function ($item) use ($outputLines, $multidev_delete_pattern) {
+                $match = $item;
+                // If the name is less than the maximum length, then require
+                // an exact match; otherwise, do a 'starts with' test.
+                if (strlen($item) < 11) {
+                    $match .= '$';
+                }
+                // Strip the multidev delete pattern from the beginning of
+                // the match. The multidev env name was composed by prepending
+                // the delete pattern to the branch name, so this recovers
+                // the branch name.
+                $match = preg_replace("%$multidev_delete_pattern%", '', $match);
+                // Constrain match to only match from the beginning
+                $match = "^$match";
+
+                // Find items in $outputLines that match $match.
+                $matches  = preg_grep ("%$match%i", $outputLines);
+                return empty($matches);
+            }
+        );
     }
 
     protected function deleteEnv($env, $deleteBranch = false)
@@ -300,5 +385,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         if ($result != 0) {
             throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
         }
+    }
+
+    protected function exec($command)
+    {
+        $result = 0;
+        exec($command, $outputLines, $result);
+
+        if ($result != 0) {
+            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
+        }
+        return $outputLines;
     }
 }
