@@ -1,6 +1,8 @@
 <?php
 /**
- * This command will manage secrets on a Pantheon site.
+ * Terminus Plugin that contain a collection of commands useful during
+ * the build step on a [Pantheon](https://www.pantheon.io) site that uses
+ * a GitHub PR workflow.
  *
  * See README.md for usage information.
  */
@@ -16,7 +18,7 @@ use Pantheon\Terminus\Site\SiteAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
- * Manage secrets on a Pantheon instance
+ * Build Tool Commands
  */
 class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 {
@@ -168,9 +170,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * TODO: It would be good if we could use the GitHub API to test to see if
      * the remote branch has been merged, and treat those branches as if they
-     * were deleted branches. In order to do this, though, we would need to be
-     * able to recover the pull request number, something we currently are
-     * unable to do.
+     * were deleted branches.  This should be possible per
+     * https://developer.github.com/v3/pulls/#list-pull-requests.
+     * See https://github.com/pantheon-systems/terminus-build-tools-plugin/issues/1
      *
      * @command build-env:delete
      *
@@ -405,9 +407,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     public function recordBuildMetadata()
     {
         $buildMetadataFile = 'build-metadata.json';
+        $repoUrl = exec('git config --get remote.origin.url');
         $branch = exec('git rev-parse --abbrev-ref HEAD');
         $head = exec('git rev-parse HEAD');
 
+        $metadata['url'] = $repoUrl;
         $metadata['ref'] = $branch;
         $metadata['sha'] = $head;
 
