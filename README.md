@@ -61,6 +61,8 @@ To use this tool on a Pantheon site that does not have multidev environments sup
 
 `terminus build-env:create my-pantheon-site.dev ci-1234`
 
+This command will commit the generated artifacts to a new branch and then create the requested multidev environment for use in testing. Note that it is very important that the .gitignore file allow the build artifacts to be added to the  repository. If the build artifacts are normally included in the .gitignore file (e.g. to keep them from being added to the GitHub repository), then the .gitignore file should be modified during the build step to remove any entry that excludes artifacts. Modifications to the .gitignore file will *not* be included in the commit, so the resulting multidev environment will ignore any changes made to the build artifacts when making commits on the Pantheon site during on-server development.
+
 ### Merge Testing Multidev into Dev Environment
 
 `terminus build-env:merge my-pantheon-site.ci-1234`
