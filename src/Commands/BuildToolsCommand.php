@@ -418,13 +418,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     public function recordBuildMetadata()
     {
         $buildMetadataFile = 'build-metadata.json';
-        $repoUrl = exec('git config --get remote.origin.url');
-        $branch = exec('git rev-parse --abbrev-ref HEAD');
-        $head = exec('git rev-parse HEAD');
-
-        $metadata['url'] = $repoUrl;
-        $metadata['ref'] = $branch;
-        $metadata['sha'] = $head;
+        $metadata = [
+          'url'         => exec('git config --get remote.origin.url'),
+          'ref'         => exec('git rev-parse --abbrev-ref HEAD'),
+          'sha'         => exec('git rev-parse HEAD'),
+          'commit-date' => exec('git show -s --format=%ci HEAD'),
+          'build-date'  => date('Y-m-d H:i:s O'),
+        ];
 
         $metadataContents = json_encode($metadata);
         $this->log()->notice('Wrote {metadata} to {file}. cwd is {cwd}', ['metadata' => $metadataContents, 'file' => $buildMetadataFile, 'cwd' => getcwd()]);
