@@ -105,18 +105,27 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Record the metadata for this build
         $this->recordBuildMetadata();
 
-        // Create a new branch and commit the results from anything that may have changed
+        // Create a new branch and commit the results from anything that may
+        // have changed. We presume that the source repository is clean of
+        // any unwanted files prior to the build step (e.g. after a clean
+        // checkout in a CI environment.)
         $this->passthru("git checkout -B $multidev");
-        $this->passthru('git add -A .');
+        $this->passthru('git add --force -A .');
 
-        // It is a requirement that the .gitignore file allow the build artifacts
-        // to be added to the repository prior to calling build-env:create. However,
-        // if the .gitignore file was modified to remove artifact directories so
-        // that they can be included in the `git add` above, then we will back
-        // out that modification now, so that changes made to the build artifacts
-        // on the target system will by default not be included in any commits made.
-        $this->passthru('git reset HEAD .gitignore');
-        $this->passthru('git checkout -- .gitignore');
+        // Exclude any .git files added above from the set of files being
+        // committed. Ideally, there will be none.
+        $finder = new Finder();
+        foreach (
+          $finder
+            ->directories()
+            ->in(getcwd())
+            ->ignoreDotFiles(false)
+            ->ignoreVCS(false)
+            ->depth('> 0')
+            ->name('.git')
+          as $dir) {
+          $this->passthru('git reset HEAD ' . $dir->getRelativePathname());
+        }
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru("git commit -q -m 'Build assets for $env_label.'");
