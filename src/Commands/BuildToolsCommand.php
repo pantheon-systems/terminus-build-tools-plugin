@@ -17,6 +17,7 @@ use Pantheon\Terminus\Site\SiteAwareInterface;
 use Pantheon\Terminus\Site\SiteAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Process\ProcessUtils;
 
 /**
  * Build Tool Commands
@@ -43,12 +44,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param string $site_env_id The site and env of the SOURCE
      * @param string $multidev The name of the env to CREATE
      * @option label What to name the environment in commit comments
+     * @option notify Command to exec to notify when a build environment is created
      */
     public function createBuildEnv(
         $site_env_id,
         $multidev,
         $options = [
             'label' => '',
+            'notify' => '',
         ])
     {
         // c.f. create-pantheon-multidev script
@@ -58,6 +61,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         if (!empty($options['label'])) {
             $env_label = $options['label'];
         }
+
+        // Fetch the site id also
+        $siteInfo = $site->serialize();
+        $site_id = $siteInfo['id'];
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
@@ -95,16 +102,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // be an exact match of the lean repository, plus just one last commit
         // with only the most recent build artifacts.
         if ($environmentExists) {
-          $this->connectionSet($env, 'sftp');
-
-          $siteInfo = $site->serialize();
-          $site_id = $siteInfo['id'];
-          $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $env_id.$site_id@appserver.$env_id.$site_id.drush.in:code/");
-          return;
+            $this->connectionSet($env, 'sftp');
+            $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $env_id.$site_id@appserver.$env_id.$site_id.drush.in:code/");
+            return;
         }
 
         // Record the metadata for this build
-        $this->recordBuildMetadata();
+        $metadata = $this->getBuildMetadata();
+        $this->recordBuildMetadata($metadata);
 
         // Create a new branch and commit the results from anything that may
         // have changed. We presume that the source repository is clean of
@@ -144,6 +149,22 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Set the target environment to sftp mode
         $target_env = $site->getEnvironments()->get($multidev);
         $this->connectionSet($target_env, 'sftp');
+
+        // If '--notify' was passed, then exec the notify command
+        if (!empty($options['notify'])) {
+            $metadata += [
+                'site-id' => $site_id,
+                'env-id' => $env_id,
+                'label' => $env_label,
+                'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$env_id}",
+                'site-url' => "https://{$env_id}-{$site_id}.pantheonsite.io/",
+            ];
+
+            $command = $this->interpolate($options['notify'], $metadata);
+
+            // Run notification command. Ignore errors.
+            passthru($command);
+        }
     }
 
     /**
@@ -425,17 +446,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
-    public function recordBuildMetadata()
+    public function getBuildMetadata()
     {
-        $buildMetadataFile = 'build-metadata.json';
-        $metadata = [
+        return [
           'url'         => exec('git config --get remote.origin.url'),
           'ref'         => exec('git rev-parse --abbrev-ref HEAD'),
           'sha'         => exec('git rev-parse HEAD'),
+          'comment'     => exec('git log --pretty=format:%s -1'),
           'commit-date' => exec('git show -s --format=%ci HEAD'),
           'build-date'  => date('Y-m-d H:i:s O'),
         ];
+    }
 
+    public function recordBuildMetadata($metadata)
+    {
+        $buildMetadataFile = 'build-metadata.json';
         $metadataContents = json_encode($metadata);
         $this->log()->notice('Wrote {metadata} to {file}. cwd is {cwd}', ['metadata' => $metadataContents, 'file' => $buildMetadataFile, 'cwd' => getcwd()]);
 
@@ -446,6 +471,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         exec('git remote show', $output);
         return array_search('pantheon', $output) !== false;
+    }
+
+    private function interpolate($message, array $context)
+    {
+        // build a replacement array with braces around the context keys
+        $replace = array();
+        foreach ($context as $key => $val) {
+            if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
+                $replace[sprintf('{%s}', $key)] = $val;
+                $replace[sprintf('[[%s]]', $key)] = ProcessUtils::escapeArgument($val);
+            }
+        }
+
+        // interpolate replacement values into the message and return
+        return strtr($message, $replace);
     }
 
     protected function passthru($command)
