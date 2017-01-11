@@ -152,15 +152,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // If '--notify' was passed, then exec the notify command
         if (!empty($options['notify'])) {
+            $site_name = $site->getName();
             $project = preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $metadata['url']));
             $metadata += [
                 'project' => $project,
                 'site-id' => $site_id,
-                'site' => $site->getName(),
+                'site' => $site_name,
                 'env' => $env_id,
                 'label' => $env_label,
                 'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$env_id}",
-                'site-url' => "https://{$env_id}-{$site_id}.pantheonsite.io/",
+                'site-url' => "https://{$env_id}-{$site_name}.pantheonsite.io/",
             ];
 
             $command = $this->interpolate($options['notify'], $metadata);
