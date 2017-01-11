@@ -156,7 +156,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $metadata += [
                 'project' => $project,
                 'site-id' => $site_id,
-                'env-id' => $env_id,
+                'site' => $site->getName(),
+                'env' => $env_id,
                 'label' => $env_label,
                 'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$env_id}",
                 'site-url' => "https://{$env_id}-{$site_id}.pantheonsite.io/",
