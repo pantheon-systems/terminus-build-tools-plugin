@@ -103,7 +103,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // with only the most recent build artifacts.
         if ($environmentExists) {
             $this->connectionSet($env, 'sftp');
-            $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $env_id.$site_id@appserver.$env_id.$site_id.drush.in:code/");
+            $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $multidev.$site_id@appserver.$multidev.$site_id.drush.in:code/");
             return;
         }
 
@@ -158,10 +158,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 'project' => $project,
                 'site-id' => $site_id,
                 'site' => $site_name,
-                'env' => $env_id,
+                'env' => $multidev,
                 'label' => $env_label,
-                'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$env_id}",
-                'site-url' => "https://{$env_id}-{$site_name}.pantheonsite.io/",
+                'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$multidev}",
+                'site-url' => "https://{$multidev}-{$site_name}.pantheonsite.io/",
             ];
 
             $command = $this->interpolate($options['notify'], $metadata);
