@@ -152,7 +152,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // If '--notify' was passed, then exec the notify command
         if (!empty($options['notify'])) {
+            $project = preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $metadata['url']));
             $metadata += [
+                'project' => $project,
                 'site-id' => $site_id,
                 'env-id' => $env_id,
                 'label' => $env_label,
