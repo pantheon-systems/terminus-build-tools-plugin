@@ -26,7 +26,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 {
     use SiteAwareTrait;
 
-    const DEFAULT_DELETE_PATTERN = '^ci-';
+    const TRANSIENT_CI_DELETE_PATTERN = '^ci-';
+    const PR_BRANCH_DELETE_PATTERN = '^pr-';
+    const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
 
     /**
      * Object constructor
@@ -228,6 +230,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @option preserve-prs Keep any environment that still has a remote branch that has not been deleted.
      * @option delete-branch Delete the git branch in addition to the multidev environment.
      * @option dry-run Only print what would be deleted; do not delete anything.
+     *
+     * @deprecated This function can be too destructive if called from ci
+     * using --yes with an overly-inclusive delete pattern, e.g. if an
+     * environment variable for a recurring build is incorrectly altered.
+     * Use build-env:delete:ci and build-env:delete:pr as safer alternatives.
+     * This function will be removed in future versions.
      */
     public function deleteBuildEnv(
         $site_id,
@@ -303,6 +311,60 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             list (, $env) = $this->getSiteEnv($site_env_id);
             $this->deleteEnv($env, $options['delete-branch']);
         }
+    }
+
+    /**
+     * Delete all of the build environments matching the pattern for transient
+     * CI builds, i.e., all multidevs whose name begins with "ci-".
+     *
+     * @command build-env:delete:ci
+     *
+     * @param string $site_id Site name
+     * @option keep Number of environments to keep
+     * @option dry-run Only print what would be deleted; do not delete anything.
+     */
+    public function deleteBuildEnvCi(
+        $site_id,
+        $options = [
+            'keep' => 0,
+            'dry-run' => false,
+        ])
+    {
+        // There should never be a PR that begins with the CI delete pattern,
+        // but if there is, we will check for it and exclude that multidev
+        // from consideration.
+        $options['preserve-prs'] = true;
+
+        // We always want to clean up the remote branch.
+        $options['delete-branch'] = true;
+
+        return $this->deleteBuildEnv($site_id, self::TRANSIENT_CI_DELETE_PATTERN, $options);
+    }
+
+    /**
+     * Delete all of the build environments matching the pattern for pull
+     * request branches, i.e., all multidevs whose name begins with "pr-".
+     *
+     * @command build-env:delete:pr
+     *
+     * @param string $site_id Site name
+     * @option keep Number of environments to keep
+     * @option dry-run Only print what would be deleted; do not delete anything.
+     */
+    public function deleteBuildEnvPR(
+        $site_id,
+        $options = [
+            'keep' => 0,
+            'dry-run' => false,
+        ])
+    {
+        // Preserve any pull request that still has a corresponding branch in GitHub.
+        $options['preserve-prs'] = true;
+
+        // We always want to clean up the remote branch.
+        $options['delete-branch'] = true;
+
+        return $this->deleteBuildEnv($site_id, self::PR_BRANCH_DELETE_PATTERN, $options);
     }
 
     protected function preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern)
@@ -471,6 +533,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         file_put_contents($buildMetadataFile, $metadataContents);
     }
 
+    /**
+     * Check to see if there is a remote named 'pantheon'
+     */
     protected function hasPantheonRemote()
     {
         exec('git remote show', $output);
