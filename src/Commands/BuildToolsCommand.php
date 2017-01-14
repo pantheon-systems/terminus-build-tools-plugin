@@ -68,6 +68,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $siteInfo = $site->serialize();
         $site_id = $siteInfo['id'];
 
+        // Check to see if '$multidev' already exists on Pantheon.
+        $environmentExists = $site->getEnvironments()->has($multidev);
+
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
         if (!$this->hasPantheonRemote()) {
@@ -76,38 +79,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $this->passthru("git remote add pantheon $gitUrl");
         }
         $this->passthru('git fetch pantheon');
-
-        // Check to see if '$multidev' already exists on Pantheon.
-        $environmentExists = $site->getEnvironments()->has($multidev);
-
-        // If we are testing against the dev environment, then simply force-push
-        // our build assets to the master branch via rsync and exit. Note that
-        // the modified files remain uncommitted unless build-env:merge is called.
-        //
-        // We also use this same code path for any test run after the first to
-        // any given multidev site. This will only ever happen for `pr-` builds,
-        // as the `ci-` builds are created for every test run, and therefore will
-        // never receive more commits after the first. In the case of PR builds,
-        // subsequent builds will overwrite any test still in progress, with
-        // unpredictable results. The changed files will be rsync'ed over the
-        // previous commits; the new commits will NOT be pushed to the Pantheon
-        // branch, as that would require switching from SFTP mode to Git mode,
-        // doing the push, and then switching back to SFTP mode. This is slow,
-        // and there are race conditions on both transitions. We therefore use
-        // rsync to get the code to Pantheon, and let the changed files "pile up"
-        // uncommitted. Eventually, the PR will be merged on GitHub, at which
-        // point all of the right commits will be merged into the master branch.
-        // That will result in one more test, this time with a 'ci-' build that
-        // always starts with a fresh multidev and a force-push of the lean
-        // repository commits, followed by a single commit with the build assets
-        // for this test. The end result is that the dev environment will always
-        // be an exact match of the lean repository, plus just one last commit
-        // with only the most recent build artifacts.
-        if ($environmentExists) {
-            $this->connectionSet($env, 'sftp');
-            $this->passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' ./ $multidev.$site_id@appserver.$multidev.$site_id.drush.in:code/");
-            return;
-        }
 
         // Record the metadata for this build
         $metadata = $this->getBuildMetadata();
@@ -138,18 +109,43 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Now that everything is ready, commit the build artifacts.
         $this->passthru("git commit -q -m 'Build assets for $env_label.'");
 
+        // If the environment does exist, then we need to be in git mode
+        // to push the branch up to the existing multidev site.
+        if ($environmentExists) {
+            $this->connectionSet($env, 'git');
+        }
+
         // Push the branch to Pantheon, and create a new environment for it
+        $preCommitTime = time();
         $this->passthru("git push --force -q pantheon $multidev");
 
         // Create a new environment for this test.
-        $this->create($site_env_id, $multidev);
+        if (!$environmentExists) {
+            // If the environment is created after the branch is pushed,
+            // then there is never a race condition -- the new env is
+            // created with the correct files from the specified branch.
+            $this->create($site_env_id, $multidev);
 
-        // Clear the environments, so that they will be re-fetched.
-        // Otherwise, the new environment will not be found.
-        $site->environments = null;
+            // Clear the environments, so that they will be re-fetched.
+            // Otherwise, the new environment will not be found immediately
+            // after it is first created.
+            $site->environments = null;
+        }
+
+        // Get a reference to our target multidev site.
+        $target_env = $site->getEnvironments()->get($multidev);
+
+        // If the environment already existed, then we risk encountering
+        // a race condition, because the 'git push' above will fire off
+        // an asynchronous update of the existing update. If we switch to
+        // sftp mode (next step, below) before this sync is completed,
+        // then the converge that sftp mode kicks off will corrupt the
+        // environment.
+        if ($environmentExists) {
+            $this->waitForCodeSync($preCommitTime, $site, $target_env);
+        }
 
         // Set the target environment to sftp mode
-        $target_env = $site->getEnvironments()->get($multidev);
         $this->connectionSet($target_env, 'sftp');
 
         // If '--notify' was passed, then exec the notify command
@@ -348,13 +344,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @command build-env:delete:pr
      *
      * @param string $site_id Site name
-     * @option keep Number of environments to keep
      * @option dry-run Only print what would be deleted; do not delete anything.
      */
     public function deleteBuildEnvPR(
         $site_id,
         $options = [
-            'keep' => 0,
             'dry-run' => false,
         ])
     {
@@ -510,6 +504,46 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             }
             $this->log()->notice($workflow->getMessage());
         }
+    }
+
+    /**
+     * Wait for a workflow to complete.
+     *
+     * @param int $startTime Ignore any workflows that started before the start time.
+     * @param string $workflow The workflow message to wait for.
+     */
+    protected function waitForCodeSync($startTime, $site, $env)
+    {
+        $env_id = $env->getName();
+        $expectedWorkflowDescription = "Sync code on \"$env_id\"";
+
+        // Wait for at most one minute.
+        $startWaiting = time();
+        while(time() - $startWaiting < 60) {
+            $workflow = $this->getLatestWorkflow($site);
+            $workflowCreationTime = $workflow->get('created_at');
+            $workflowDescription = $workflow->get('description');
+
+            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
+                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, $workflow->getStatus(), ]);
+                if ($workflow->isSuccessful()) {
+                    return;
+                }
+            }
+            else {
+                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+            }
+            // Wait a bit, then spin some more
+            sleep(5);
+        }
+    }
+
+    protected function getLatestWorkflow($site)
+    {
+        $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
+        $workflow = array_shift($workflows);
+        $workflow->fetchWithLogs();
+        return $workflow;
     }
 
     public function getBuildMetadata()
