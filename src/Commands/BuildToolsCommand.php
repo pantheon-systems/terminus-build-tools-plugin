@@ -112,7 +112,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
         if ($environmentExists) {
-            $this->connectionSet($env, 'git');
+            // Get a reference to our target multidev site.
+            $target_env = $site->getEnvironments()->get($multidev);
+            $this->connectionSet($target_env, 'git');
         }
 
         // Push the branch to Pantheon, and create a new environment for it
