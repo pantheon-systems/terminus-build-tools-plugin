@@ -127,14 +127,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // then there is never a race condition -- the new env is
             // created with the correct files from the specified branch.
             $this->create($site_env_id, $multidev);
-
-            // Clear the environments, so that they will be re-fetched.
-            // Otherwise, the new environment will not be found immediately
-            // after it is first created.
-            $site->environments = null;
         }
 
-        // Get a reference to our target multidev site.
+        // Clear the environments, so that they will be re-fetched.
+        // Otherwise, the new environment will not be found immediately
+        // after it is first created. If we set the connection mode to
+        // git mode, then Terminus will think it is still in sftp mode
+        // if we do not re-fetch.
+        $site->environments = null;
+
+        // Get (or re-fetch) a reference to our target multidev site.
         $target_env = $site->getEnvironments()->get($multidev);
 
         // If the environment already existed, then we risk encountering
@@ -527,7 +529,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $workflowDescription = $workflow->get('description');
 
             if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, $workflow->getStatus(), ]);
+                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
                 if ($workflow->isSuccessful()) {
                     return;
                 }
