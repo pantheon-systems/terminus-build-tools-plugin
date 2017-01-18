@@ -188,7 +188,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // c.f. merge-pantheon-multidev script
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
-        $env_label = $env;
+        $env_label = $env_id;
         if (!empty($options['label'])) {
             $env_label = $options['label'];
         }
