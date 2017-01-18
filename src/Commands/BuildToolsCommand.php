@@ -265,13 +265,24 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $oldestEnvironments
         );
 
+        // Find the URL to the remote origin
+        $remoteUrlFromGit = exec('git config --get remote.origin.url');
+
+        // Find the URL of the remote origin stored in the build metadata
+        $remoteUrl = $this->retrieveRemoteUrlFromBuildMetadata($site_id, $oldestEnvironments);
+
+        // Bail if there is a URL mismatch
+        if (!empty($remoteUrlFromGit) && ($remoteUrlFromGit != $remoteUrl)) {
+            throw new TerminusException('Remote repository mismatch: local repository, {gitrepo} is different than the repository {metadatarepo} associated with the site {site}.', ['gitrepo' => $remoteUrlFromGit, 'metadatarepo' => $remoteUrl, 'site' => $site_id]);
+        }
+
         // Reduce result list down to just those that do NOT have open PRs.
         // We will use either the GitHub API or available git branches to check.
         $environmentsWithoutPRs = [];
         if (!empty($options['preserve-prs'])) {
             // Call GitHub PR to get all open PRs.  Filter out matching branches
             // from this list that appear in $oldestEnvironments
-            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($oldestEnvironments, $multidev_delete_pattern);
+            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern);
         }
         elseif (!empty($options['preserve-if-branch'])) {
             $environmentsWithoutPRs = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
@@ -319,9 +330,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
-    protected function preserveEnvsWithOpenPRs($oldestEnvironments, $multidev_delete_pattern)
+    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
-        $remoteUrl = exec('git config --get remote.origin.url');
         $project = $this->projectFromRemoteUrl($remoteUrl);
         $branchList = $this->branchesForOpenPullRequests($project);
         return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
@@ -537,6 +547,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     /**
      * Return a list of multidev environments matching the provided
      * pattern, sorted with oldest first.
+     *
+     * @param string $site_id Site to check.
+     * @param string $multidev_delete_pattern Regex of environments to select.
      */
     protected function oldestEnvironments($site_id, $multidev_delete_pattern)
     {
@@ -565,7 +578,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return $env_list;
     }
 
-    // TODO: Use Multidev\CreateCommand in Terminus?
+    /**
+     * Create a new multidev environment
+     *
+     * @param string $site_env Source site and environment.
+     * @param string $multidev Name of environment to create.
+     */
     public function create($site_env, $multidev)
     {
         list($site, $env) = $this->getSiteEnv($site_env, 'dev');
@@ -577,6 +595,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->log()->notice($workflow->getMessage());
     }
 
+    /**
+     * Set the connection mode to 'sftp' or 'git' mode, and wait for
+     * it to complete.
+     *
+     * @param Pantheon\Terminus\Models\Environment $env
+     * @param string $mode
+     */
     public function connectionSet($env, $mode)
     {
         $workflow = $env->changeConnectionMode($mode);
@@ -622,6 +647,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
+    /**
+     * Fetch the info about the currently-executing (or most recently completed)
+     * workflow operation.
+     */
     protected function getLatestWorkflow($site)
     {
         $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
@@ -630,6 +659,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return $workflow;
     }
 
+    /**
+     * Return the metadata for this build.
+     *
+     * @return string[]
+     */
     public function getBuildMetadata()
     {
         return [
@@ -642,6 +676,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         ];
     }
 
+    /**
+     * Write the build metadata into the build results prior to committing them.
+     *
+     * @param string[] $metadata
+     */
     public function recordBuildMetadata($metadata)
     {
         $buildMetadataFile = 'build-metadata.json';
@@ -649,6 +688,53 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->log()->notice('Wrote {metadata} to {file}. cwd is {cwd}', ['metadata' => $metadataContents, 'file' => $buildMetadataFile, 'cwd' => getcwd()]);
 
         file_put_contents($buildMetadataFile, $metadataContents);
+    }
+
+    /**
+     * Iterate through the different environments, and keep fetching their
+     * metadata until we find one that has a 'url' component.
+     *
+     * @param string $site_id The site to operate on
+     * @param stirng[] $oldestEnvironments List of environments
+     * @return string
+     */
+    protected function retrieveRemoteUrlFromBuildMetadata($site_id, $oldestEnvironments)
+    {
+        foreach ($oldestEnvironments as $env) {
+            try {
+                $metadata = $this->retrieveBuildMetadata("{$site_id}.{$env}");
+                if (isset($metadata['url'])) {
+                    return $metadata['url'];
+                }
+            }
+            catch(Exception $e) {
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Get the build metadata from a remote site.
+     *
+     * @param string $site_env_id
+     * @return string[]
+     */
+    public function retrieveBuildMetadata($site_env_id)
+    {
+        $src = ':code/build-metadata.json';
+        $dest = '/tmp/build-metadata.json';
+
+        $status = $this->rsync($site_env_id, $src, $dest);
+        if ($status != 0) {
+            return [];
+        }
+
+        $metadataContents = file_get_contents($dest);
+        $metadata = json_decode($metadataContents, true);
+
+        unlink($dest);
+
+        return $metadata;
     }
 
     /**
@@ -660,6 +746,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return array_search('pantheon', $output) !== false;
     }
 
+    /**
+     * Substitute replacements in a string. Replacements should be formatted
+     * as {key} for raw value, or [[key]] for shell-escaped values.
+     *
+     * @param string $message
+     * @param string[] $context
+     * @return string[]
+     */
     private function interpolate($message, array $context)
     {
         // build a replacement array with braces around the context keys
@@ -675,6 +769,36 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return strtr($message, $replace);
     }
 
+    /**
+     * Call rsync to or from the specified site.
+     *
+     * @param string $site_env_id Remote site
+     * @param string $src Source path to copy from. Start with ":" for remote.
+     * @param string $dest Destination path to copy to. Start with ":" for remote.
+     */
+    protected function rsync($site_env_id, $src, $dest)
+    {
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+        $env_id = $env->getName();
+
+        $siteInfo = $site->serialize();
+        $site_id = $siteInfo['id'];
+
+        $siteAddress = "$env_id.$site_id@appserver.$env_id.$site_id.drush.in:";
+
+        $src = preg_replace('/^:/', $siteAddress, $src);
+        $dest = preg_replace('/^:/', $siteAddress, $dest);
+
+        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1", $status);
+
+        return $status;
+    }
+
+    /**
+     * Call passthru; throw an exception on failure.
+     *
+     * @param string $command
+     */
     protected function passthru($command)
     {
         $result = 0;
@@ -685,6 +809,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
+    /**
+     * Call exec; throw an exception on failure.
+     *
+     * @param string $command
+     * @return string[]
+     */
     protected function exec($command)
     {
         $result = 0;
