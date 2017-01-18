@@ -155,7 +155,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // If '--notify' was passed, then exec the notify command
         if (!empty($options['notify'])) {
             $site_name = $site->getName();
-            $project = preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $metadata['url']));
+            $project = $this->projectFromRemoteUrl($metadata['url']);
             $metadata += [
                 'project' => $project,
                 'site-id' => $site_id,
@@ -171,6 +171,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // Run notification command. Ignore errors.
             passthru($command);
         }
+    }
+
+    protected function projectFromRemoteUrl($url)
+    {
+        return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
     /**
@@ -216,19 +221,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * optionally keeping a few of the most recently-created. Also, optionally
      * any environment that still has a remote branch on GitHub may be preserved.
      *
-     * TODO: It would be good if we could use the GitHub API to test to see if
-     * the remote branch has been merged, and treat those branches as if they
-     * were deleted branches.  This should be possible per
-     * https://developer.github.com/v3/pulls/#list-pull-requests.
-     * See https://github.com/pantheon-systems/terminus-build-tools-plugin/issues/1
-     *
      * @command build-env:delete
      *
      * @param string $site_id Site name
      * @param string $multidev_delete_pattern Pattern used for build environments
      * @option keep Number of environments to keep
-     * @option preserve-prs Keep any environment that still has a remote branch that has not been deleted.
-     * @option delete-branch Delete the git branch in addition to the multidev environment.
+     * @option preserve-prs Keep any environment that still has an open pull request associated with it.
+     * @option preserve-if-branch Keep any environment that still has a remote branch that has not been deleted.
+     * @option delete-branch Delete the git branch in the Pantheon repository in addition to the multidev environment.
      * @option dry-run Only print what would be deleted; do not delete anything.
      *
      * @deprecated This function can be too destructive if called from ci
@@ -243,6 +243,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $options = [
             'keep' => 0,
             'preserve-prs' => false,
+            'preserve-if-branch' => false,
             'delete-branch' => false,
             'dry-run' => false,
         ])
@@ -264,14 +265,19 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $oldestEnvironments
         );
 
-        // Reduce result list down to just those that do NOT have remote
-        // branches in GitHub
-        $environmentsToKeep = [];
+        // Reduce result list down to just those that do NOT have open PRs.
+        // We will use either the GitHub API or available git branches to check.
+        $environmentsWithoutPRs = [];
         if (!empty($options['preserve-prs'])) {
-            $environmentsWithoutBranches = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
-            $environmentsToKeep = array_diff($oldestEnvironments, $environmentsWithoutBranches);
-            $oldestEnvironments = $environmentsWithoutBranches;
+            // Call GitHub PR to get all open PRs.  Filter out matching branches
+            // from this list that appear in $oldestEnvironments
+            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($oldestEnvironments, $multidev_delete_pattern);
         }
+        elseif (!empty($options['preserve-if-branch'])) {
+            $environmentsWithoutPRs = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
+        }
+        $environmentsToKeep = array_diff($oldestEnvironments, $environmentsWithoutPRs);
+        $oldestEnvironments = $environmentsWithoutPRs;
 
         // Separate list into 'keep' and 'oldest' lists.
         if ($options['keep']) {
@@ -313,6 +319,48 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
+    protected function preserveEnvsWithOpenPRs($oldestEnvironments, $multidev_delete_pattern)
+    {
+        $remoteUrl = exec('git config --get remote.origin.url');
+        $project = $this->projectFromRemoteUrl($remoteUrl);
+        $branchList = $this->branchesForOpenPullRequests($project);
+        return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
+    }
+
+    function branchesForOpenPullRequests($project)
+    {
+        $data = $this->curlGitHub("repos/$project/pulls?state=open");
+
+        $branchList = array_map(
+            function ($item) {
+                return $item['head']['ref'];
+            },
+            $data
+        );
+
+        return $branchList;
+    }
+
+    function curlGitHub($uri)
+    {
+        $url = "https://api.github.com/$uri";
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'User-Agent: pantheon/terminus-build-tools-plugin']);
+        $result = curl_exec($ch);
+        if(curl_errno($ch))
+        {
+            throw new TerminusException(curl_error($ch));
+        }
+        $data = json_decode($result, true);
+        curl_close($ch);
+
+        return $data;
+    }
+
     /**
      * Delete all of the build environments matching the pattern for transient
      * CI builds, i.e., all multidevs whose name begins with "ci-".
@@ -338,6 +386,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // We always want to clean up the remote branch.
         $options['delete-branch'] = true;
 
+        $options += [
+            'keep' => 0,
+            'preserve-if-branch' => false,
+        ];
+
         return $this->deleteBuildEnv($site_id, self::TRANSIENT_CI_DELETE_PATTERN, $options);
     }
 
@@ -362,9 +415,31 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // We always want to clean up the remote branch.
         $options['delete-branch'] = true;
 
+        $options += [
+            'keep' => 0,
+            'preserve-if-branch' => false,
+        ];
+
         return $this->deleteBuildEnv($site_id, self::PR_BRANCH_DELETE_PATTERN, $options);
     }
 
+    // TODO: At the moment, this takes multidev environment names,
+    // e.g.:
+    //   pr-dc-worka
+    // And compares them against a list of branches, e.g.:
+    //   dc-workaround
+    //   lightning-fist-2
+    //   composer-merge-pantheon
+    // In its current form, the 'pr-' is stripped from the beginning of
+    // the environment name, and then a 'begins-with' test is done. This
+    // is not perfect, but if it goes wrong, the result will be that a
+    // multidev environment that should have been eligible for deletion will
+    // not be deleted.
+    //
+    // This could be made better if we could fetch the build-metadata.json
+    // file from the repository root of each multidev environment, which would
+    // give us the correct branch name for every environment. We could do
+    // this without too much trouble via rsync; this might be a little slow, though.
     protected function preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern)
     {
         $remoteBranch = 'origin';
@@ -392,10 +467,15 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $outputLines
         );
 
+        return $this->filterBranches($oldestEnvironments, $outputLines, $multidev_delete_pattern);
+    }
+
+    protected function filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
+    {
         // Filter environments that have matching remote branches in origin
         return array_filter(
             $oldestEnvironments,
-            function ($item) use ($outputLines, $multidev_delete_pattern) {
+            function ($item) use ($branchList, $multidev_delete_pattern) {
                 $match = $item;
                 // If the name is less than the maximum length, then require
                 // an exact match; otherwise, do a 'starts with' test.
@@ -410,8 +490,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 // Constrain match to only match from the beginning
                 $match = "^$match";
 
-                // Find items in $outputLines that match $match.
-                $matches  = preg_grep ("%$match%i", $outputLines);
+                // Find items in $branchList that match $match.
+                $matches = preg_grep ("%$match%i", $branchList);
                 return empty($matches);
             }
         );
