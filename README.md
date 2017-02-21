@@ -32,7 +32,7 @@ To customize this for a specific project:
   - TERMINUS_TOKEN: A Terminus OAuth token that has write access to the terminus site specified by TERMINUS_SITE.
   - GIT_EMAIL: Used to configure the git user’s email address for commits we make.
   - GITHUB_TOKEN: Optional, if needed.
-- Cusomize `dependencies:` as needed to install additional tools.
+- Customize `dependencies:` as needed to install additional tools.
 - Replace example `test:` section with commands to run your tests.
 - [Add a `build-assets` script](https://pantheon.io/blog/writing-composer-scripts) to your composer.json file.
 - Add any needed cleanup steps (e.g. `drush updatedb`) after `build-env:merge`.
