@@ -2,7 +2,7 @@
 
 [![Terminus v1.x Compatible](https://img.shields.io/badge/terminus-v1.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x)
 
-Terminus Plugin that contain a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that uses a GitHub PR workflow.
+Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that uses a GitHub PR workflow.
 
 An [example circle.yml file](example.circle.yml) has been provided to show how this tool should be used with CircleCI. When a test runs against a "light" repository on GitHub, the following things will happen:
 
