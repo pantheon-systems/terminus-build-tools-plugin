@@ -91,10 +91,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->passthru("git checkout -B $multidev");
         $this->passthru('git add --force -A .');
 
-        // Exclude any .git files added above from the set of files being
-        // committed. Ideally, there will be none.
+        // Remove any .git directories added by composer from the set of files
+        // being committed. Ideally, there will be none. We cannot allow any to
+        // remain, though, as git will interpret these as submodules, which
+        // will prevent the contents of directories containing .git directories
+        // from being added to the main repository.
         $finder = new Finder();
-        foreach (
+        $fs = new Filesystem();
+        $fs->remove(
           $finder
             ->directories()
             ->in(getcwd())
@@ -102,9 +106,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             ->ignoreVCS(false)
             ->depth('> 0')
             ->name('.git')
-          as $dir) {
-          $this->passthru('git reset HEAD ' . $dir->getRelativePathname());
-        }
+            ->getIterator()
+        );
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru("git commit -q -m 'Build assets for $env_label.'");
