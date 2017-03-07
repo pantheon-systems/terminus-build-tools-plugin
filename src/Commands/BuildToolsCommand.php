@@ -72,12 +72,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $environmentExists = $site->getEnvironments()->has($multidev);
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
-        // Skip this step if the remote is already there (e.g. due to CI service caching).
-        if (!$this->hasPantheonRemote()) {
-            $connectionInfo = $env->connectionInfo();
-            $gitUrl = $connectionInfo['git_url'];
-            $this->passthru("git remote add pantheon $gitUrl");
+        // Refresh the remote is already there (e.g. due to CI service caching), just in
+        // case. If something changes, this info is NOT removed by "rebuild without cache".
+        if ($this->hasPantheonRemote()) {
+            $this->passthru("git remote remove pantheon");
         }
+        $connectionInfo = $env->connectionInfo();
+        $gitUrl = $connectionInfo['git_url'];
+        $this->passthru("git remote add pantheon $gitUrl");
         $this->passthru('git fetch pantheon');
 
         // Record the metadata for this build
@@ -159,7 +161,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // then the converge that sftp mode kicks off will corrupt the
         // environment.
         if ($environmentExists) {
-            $this->waitForCodeSync($preCommitTime, $site, $target_env);
+            $this->waitForCodeSync($preCommitTime, $site, $target_env->getName());
         }
 
         // Set the target environment to sftp mode
@@ -206,6 +208,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $env_label = $options['label'];
         }
 
+        $preCommitTime = time();
+
         // If we are building against the 'dev' environment, then simply
         // commit the changes once the PR is merged.
         if ($env_id == 'dev') {
@@ -227,6 +231,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Once the build environment is merged, we do not need it any more
         $this->deleteEnv($env, true);
+
+        // Wait for the dev environment to finish syncing after the merge.
+        $this->waitForCodeSync($preCommitTime, $site, 'dev');
     }
 
     /**
@@ -634,10 +641,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param int $startTime Ignore any workflows that started before the start time.
      * @param string $workflow The workflow message to wait for.
      */
-    protected function waitForCodeSync($startTime, $site, $env)
+    protected function waitForCodeSync($startTime, $site, $env_name)
     {
-        $env_id = $env->getName();
-        $expectedWorkflowDescription = "Sync code on \"$env_id\"";
+        $expectedWorkflowDescription = "Sync code on \"$env_name\"";
 
         // Wait for at most one minute.
         $startWaiting = time();
