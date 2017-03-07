@@ -137,7 +137,17 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // after it is first created. If we set the connection mode to
         // git mode, then Terminus will think it is still in sftp mode
         // if we do not re-fetch.
-        $site->environments = null;
+        // TODO: Require Terminus ^1.1 in our composer.json and simplify old code below.
+        if (method_exists($site, 'unsetEnvironments')) {
+            $site->unsetEnvironments();
+        }
+        else {
+            // In Terminus 1.0.0, Site::unsetEnvironments() did not exist,
+            // and $site->environments was public. If the line below is crashing
+            // for you, perhaps you are using a dev version of Terminus from
+            // 20 Feb - 7 Mar 2017. Use something newer or older instead.
+            $site->environments = null;
+        }
 
         // Get (or re-fetch) a reference to our target multidev site.
         $target_env = $site->getEnvironments()->get($multidev);
