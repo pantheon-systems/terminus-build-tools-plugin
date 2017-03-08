@@ -920,8 +920,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // sftp mode before this sync is completed, then the converge that
         // sftp mode kicks off will corrupt the environment.
         if ($environmentExists) {
-            $target_env = $site->getEnvironments()->get($multidev);
-            $this->waitForCodeSync($preCommitTime, $site, $target_env);
+            $this->waitForCodeSync($preCommitTime, $site, $multidev);
         }
 
         return $metadata;
@@ -954,6 +953,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             return;
         }
 
+        $preCommitTime = time();
+
         // When using build-env:merge, we expect that the dev environment
         // should stay in git mode. We will switch it to git mode now to be sure.
         $dev_env = $site->getEnvironments()->get('dev');
@@ -968,6 +969,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Once the build environment is merged, we do not need it any more
         $this->deleteEnv($env, true);
+
+        // Wait for the dev environment to finish syncing after the merge.
+        $this->waitForCodeSync($preCommitTime, $site, 'dev');
     }
 
     /**
@@ -1486,10 +1490,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param int $startTime Ignore any workflows that started before the start time.
      * @param string $workflow The workflow message to wait for.
      */
-    protected function waitForCodeSync($startTime, $site, $env)
+    protected function waitForCodeSync($startTime, $site, $env_name)
     {
-        $env_id = $env->getName();
-        $expectedWorkflowDescription = "Sync code on \"$env_id\"";
+        $expectedWorkflowDescription = "Sync code on \"$env_name\"";
 
         // Wait for at most one minute.
         $startWaiting = time();
@@ -1603,15 +1606,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
-     * Add the 'pantheon' remote if it hasn't already been added
+     * Add or refresh the 'pantheon' remote
      */
     public function addPantheonRemote($env, $repositoryDir)
     {
-        if (!$this->hasPantheonRemote()) {
-            $connectionInfo = $env->connectionInfo();
-            $gitUrl = $connectionInfo['git_url'];
-            $this->passthru("git -C $repositoryDir remote add pantheon $gitUrl");
+        // Refresh the remote is already there (e.g. due to CI service caching), just in
+        // case. If something changes, this info is NOT removed by "rebuild without cache".
+        if ($this->hasPantheonRemote()) {
+            $this->passthru("git -C $repositoryDir remote remove pantheon");
         }
+        $connectionInfo = $env->connectionInfo();
+        $gitUrl = $connectionInfo['git_url'];
+        $this->passthru("git -C $repositoryDir remote add pantheon $gitUrl");
     }
 
     /**
