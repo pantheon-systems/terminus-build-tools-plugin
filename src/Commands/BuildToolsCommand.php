@@ -86,30 +86,32 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $metadata = $this->getBuildMetadata();
         $this->recordBuildMetadata($metadata);
 
-        // Create a new branch and commit the results from anything that may
-        // have changed. We presume that the source repository is clean of
-        // any unwanted files prior to the build step (e.g. after a clean
-        // checkout in a CI environment.)
-        $this->passthru("git checkout -B $multidev");
-        $this->passthru('git add --force -A .');
-
         // Remove any .git directories added by composer from the set of files
         // being committed. Ideally, there will be none. We cannot allow any to
         // remain, though, as git will interpret these as submodules, which
         // will prevent the contents of directories containing .git directories
         // from being added to the main repository.
         $finder = new Finder();
+        $dirs = [];
+        foreach ($finder
+                ->directories()
+                ->in(getcwd())
+                ->ignoreDotFiles(false)
+                ->ignoreVCS(false)
+                ->depth('> 0')
+                ->name('.git') as $dir) {
+            $this->log()->notice('Delete .git directory "{dir}".', ['dir' => $dir]);
+            $dirs[] = $dir;
+        }
         $fs = new Filesystem();
-        $fs->remove(
-          $finder
-            ->directories()
-            ->in(getcwd())
-            ->ignoreDotFiles(false)
-            ->ignoreVCS(false)
-            ->depth('> 0')
-            ->name('.git')
-            ->getIterator()
-        );
+        $fs->remove($dirs);
+
+        // Create a new branch and commit the results from anything that may
+        // have changed. We presume that the source repository is clean of
+        // any unwanted files prior to the build step (e.g. after a clean
+        // checkout in a CI environment.)
+        $this->passthru("git checkout -B $multidev");
+        $this->passthru('git add --force -A .');
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru("git commit -q -m 'Build assets for $env_label.'");
@@ -229,11 +231,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Push our changes back to the dev environment, replacing whatever was there before.
         $this->passthru('git push --force -q pantheon master');
 
-        // Once the build environment is merged, we do not need it any more
-        $this->deleteEnv($env, true);
-
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
+
+        // Once the build environment is merged, we do not need it any more
+        $this->deleteEnv($env, true);
     }
 
     /**
