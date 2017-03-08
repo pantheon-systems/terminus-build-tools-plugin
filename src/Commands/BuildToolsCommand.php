@@ -875,13 +875,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $metadata = $this->getBuildMetadata($repositoryDir);
         $this->recordBuildMetadata($metadata, $repositoryDir);
 
-        // Create a new branch and commit the results from anything that may
-        // have changed. We presume that the source repository is clean of
-        // any unwanted files prior to the build step (e.g. after a clean
-        // checkout in a CI environment.)
-        $this->passthru("git -C $repositoryDir checkout -B $branch");
-        $this->passthru("git -C $repositoryDir add --force -A .");
-
         // Remove any .git directories added by composer from the set of files
         // being committed. Ideally, there will be none. We cannot allow any to
         // remain, though, as git will interpret these as submodules, which
@@ -899,6 +892,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             ->name('.git')
             ->getIterator()
         );
+
+        // Create a new branch and commit the results from anything that may
+        // have changed. We presume that the source repository is clean of
+        // any unwanted files prior to the build step (e.g. after a clean
+        // checkout in a CI environment.)
+        $this->passthru("git -C $repositoryDir checkout -B $branch");
+        $this->passthru("git -C $repositoryDir add --force -A .");
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru("git -C $repositoryDir commit -q -m 'Build assets for $env_label.'");
@@ -967,11 +967,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Push our changes back to the dev environment, replacing whatever was there before.
         $this->passthru('git push --force -q pantheon master');
 
-        // Once the build environment is merged, we do not need it any more
-        $this->deleteEnv($env, true);
-
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
+
+        // Once the build environment is merged, we do not need it any more
+        $this->deleteEnv($env, true);
     }
 
     /**
