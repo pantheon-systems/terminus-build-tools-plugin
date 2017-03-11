@@ -1,0 +1,58 @@
+#
+# IMPORTANT NOTE:
+#
+# This is the test script for the Terminus Build Tools Plugin itself.
+# You probably DO NOT want to use this as a template to emulate for setting
+# up tests for other Terminus plugins or Pantheon sites.
+#
+# This test suite creates an entire Pantheon site (and corresponding
+# Github project and Circle CI configuration) for EVERY SINGLE TEST. For
+# most other projects, you will want to create your test environment once,
+# and re-use it for every test.
+#
+# See `example.circle.yml` for a more reasonable boilerplate.
+#
+machine:
+  timezone:
+    America/Chicago
+  php:
+    version: 7.0.11
+  environment:
+    TERMINUS_SITE: build-tools-$CIRCLE_BUILD_NUM
+    TERMINUS_ORG: CI for Drupal 8 + Composer
+    GITHUB_USERNAME: pantheon-ci-bot
+    SOURCE_COMPOSER_PROJECT: pantheon-systems/example-drops-8-composer
+    TARGET_REPO: $GITHUB_USERNAME/$TERMINUS_SITE
+    TARGET_REPO_WORKING_COPY: $HOME/$TERMINUS_SITE
+    PATH: $PATH:~/.composer/vendor/bin:~/.config/composer/vendor/bin
+
+dependencies:
+  cache_directories:
+    - ~/.composer/cache
+  pre:
+    - git config --global user.email "$GIT_EMAIL"
+    - git config --global user.name "Circle CI"
+  override:
+    - gem install circle-cli
+    - composer global require -n "hirak/prestissimo:^0.3"
+    - composer global require -n "consolidation/cgr"
+    - cgr "pantheon-systems/terminus:~1" --stability beta
+    - terminus --version
+    # Link the project directory as a Terminus plugin.
+    - mkdir -p $HOME/.terminus/plugins
+    - ln -s $(pwd) $HOME/.terminus/plugins
+    - terminus list -n build-env
+  post:
+    - terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+test:
+  override:
+    - terminus build-env:create-project -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL"
+    # Confirm that the Pantheon site was created
+    - terminus site:info "$TERMINUS_SITE"
+    # Confirm that the Github project was created
+    - git clone "https://github.com/${TARGET_REPO}.git" "$TARGET_REPO_WORKING_COPY"
+    # Confirm that Circle was configured for testing, and that the first test passed
+    - cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
+  post:
+    # Delete the Pantheon site, the Github project, and the Circle configuration
+    - terminus build-env:obliterate -n "$TERMINUS_SITE"
