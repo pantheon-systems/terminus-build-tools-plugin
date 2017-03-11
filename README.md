@@ -41,6 +41,8 @@ If you do not export these environment variables, you will be prompted to enter 
 
 ### Create a New Project Quickstart
 
+EXPERIMENTAL: The build-env:create-project is under development. Backwards compatibility not guarenteed until version 1.3.0.
+
 To create a new project consisting of a GitHub project, a Pantheon site, and Circle CI tests, first set up credentials as shown in the previous section, and then run the `build-env:create-project` command as shown below:
 ```
 terminus build-env:create-project --team="Agency Org Name" d8 example-site
