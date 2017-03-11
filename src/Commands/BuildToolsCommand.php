@@ -18,6 +18,9 @@ use Pantheon\Terminus\Site\SiteAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Process\ProcessUtils;
+use Consolidation\AnnotatedCommand\AnnotationData;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Build Tool Commands
@@ -30,12 +33,638 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     const PR_BRANCH_DELETE_PATTERN = '^pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
 
+    protected $tmpDirs = [];
+
     /**
      * Object constructor
      */
     public function __construct()
     {
         parent::__construct();
+    }
+
+    /**
+     * Register our shutdown function if any of our commands are executed.
+     *
+     * @hook init
+     */
+    public function initialize(InputInterface $input, AnnotationData $annotationData)
+    {
+        // Insure that $workdir will be deleted on exit.
+        register_shutdown_function([$this, 'cleanup']);
+    }
+
+    /**
+     * Recover the session's machine token.
+     */
+    protected function recoverSessionMachineToken()
+    {
+        if (!$this->session()->isActive()) {
+            $this->log()->notice('No active session.');
+            return;
+        }
+
+        $user_data = $this->session()->getUser()->fetch()->serialize();
+        if (!array_key_exists('email', $user_data)) {
+            $this->log()->notice('No email address in active session data.');
+            return;
+        }
+
+        // Look up the email address of the active user (as auth:whoami does).
+        $email_address = $user_data['email'];
+
+        // Try to look up the machine token using the Terminus API.
+        $tokens = $this->session()->getTokens();
+        $token = $tokens->get($email_address);
+        $machine_token = $token->get('token');
+
+        // If we can't get the machine token through regular Terminus API,
+        // then serialize all of the tokens and see if we can find it there.
+        // This is a workaround for a Terminus bug.
+        if (empty($machine_token)) {
+            $raw_data = $tokens->serialize();
+            if (isset($raw_data[$email_address]['token'])) {
+                $machine_token = $raw_data[$email_address]['token'];
+            }
+        }
+
+        return $machine_token;
+    }
+
+    /**
+     * Ensure that the user has provided credentials for GitHub and Circle CI,
+     * and prompt for them if they have not.
+     *
+     * n.b. This hook is not called in --no-interaction mode.
+     *
+     * @hook interact build-env:create-project
+     */
+    public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
+    {
+        $github_token = getenv('GITHUB_TOKEN');
+        if (empty($github_token)) {
+            $github_token = $this->io()->ask("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/.\nThen, enter it here:");
+            $github_token = trim($github_token);
+            putenv("GITHUB_TOKEN=$github_token");
+        }
+
+        $circle_token = getenv('CIRCLE_TOKEN');
+        if (empty($circle_token)) {
+            $circle_token = $this->io()->ask("Please generate a Circle CI personal API token token, as described in https://circleci.com/docs/api/#authentication.\nThen, enter it here:");
+            $circle_token = trim($circle_token);
+            putenv("CIRCLE_TOKEN=$circle_token");
+        }
+    }
+
+    /**
+     * Create a new project from the requested source GitHub project.
+     *  - Creates a GitHub repository forked from the source project.
+     *  - Creates a Pantheon site to run the tests on.
+     *  - Sets up Circle CI to test the repository.
+     * In order to use this command, it is also necessary to provide
+     * a set of secrets that are used to create the necessary projects,
+     * and that are subsequentially cached in Circle CI for use during
+     * the test run. Currently, these secrets must be provided via
+     * environment variables; this keeps them out of the command history
+     * and other places they may be inadvertantly observed.
+     *
+     * export TERMINUS_TOKEN machine_token_from_pantheon_dashboard
+     * export GITHUB_TOKEN github_personal_access_token
+     * export CIRCLE_TOKEN circle_personal_api_token
+     *
+     * @authorize
+     *
+     * @command build-env:create-project
+     * @param string $source Packagist org/name of source template project to fork.
+     * @param string $target Simple name of project to create.
+     * @option org GitHub organization (defaults to authenticated user)
+     * @option team Pantheon team
+     * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
+     * @option email email address to place in ssh-key
+     * @option stability Minimum allowed stability for template project.
+     */
+    public function createProject(
+        $source,
+        $target = '',
+        $options = [
+            'org' => '',
+            'team' => null,
+            'pantheon-site' => '',
+            'label' => '',
+            'email' => '',
+            'test-site-name' => '',
+            'admin-password' => '',
+            'admin-email' => '',
+            'stability' => '',
+        ])
+    {
+        // Copy options into ordinary variables
+        $github_org = $options['org'];
+        $team = $options['team'];
+        $site_name = $options['pantheon-site'];
+        $label = $options['label'];
+        $stability = $options['stability'];
+
+        // If only one parameter was provided, then it is the TARGET
+        if (empty($target)) {
+            $target = $source;
+            $source = 'd8';
+        }
+
+        // If the source site is a common alias, then replace it with its expanded value
+        $source = $this->expandSourceAliases($source);
+
+        // If an org was not provided for the source, then assume pantheon-systems
+        if (strpos($source, '/') === FALSE) {
+            $source = "pantheon-systems/$source";
+        }
+
+        // If an org was provided for the target, then extract it into
+        // the `$org` variable
+        if (strpos($target, '/') !== FALSE) {
+            list($github_org, $target) = explode('/', $target, 2);
+        }
+
+        // If the user did not explicitly provide a Pantheon site name,
+        // then use the target name for that purpose. This will probably
+        // be the most common usage -- with matching GitHub / Pantheon
+        // site names.
+        if (empty($site_name)) {
+            $site_name = $target;
+        }
+
+        // Provide default values for other optional variables.
+        if (empty($label)) {
+          $label = $site_name;
+        }
+
+        if (empty($team)) {
+            $team = getenv('TERMINUS_TEAM');
+        }
+
+        // Before we begin, check to see if the requested site name is
+        // available on Pantheon, and fail if it is not.
+        $site_name = strtr(strtolower($site_name), '_ ', '--');
+        if ($this->sites()->nameIsTaken($site_name)) {
+            throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
+        }
+
+        // Get our authenticated credentials from environment variables.
+        $github_token = $this->getRequiredGithubToken();
+        $circle_token = $this->getRequiredCircleToken();
+
+        // This target label is only used for the log messages below.
+        $target_label = $target;
+        if (!empty($github_org)) {
+            $target_label = "$github_org/$target";
+        }
+
+        // Create the github repository
+        $this->log()->notice('Create GitHub project {target} from {src}', ['src' => $source, 'target' => $target_label]);
+        list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability);
+
+        // Look up our upstream.
+        $upstream = $this->autodetectUpstream($siteDir);
+
+        // Push our site to Pantheon.
+        $this->log()->notice('Creating site {name} in org {org} with upstream {upstream}', ['name' => $site_name, 'org' => $team, 'upstream' => $upstream]);
+        $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
+
+        // Look up the site UUID for the Pantheon dashboard link
+        $site = $this->getSite($site_name);
+        $siteInfo = $site->serialize();
+        $site_uuid = $siteInfo['id'];
+
+        $this->log()->notice('Created a new Pantheon site with UUID {uuid}', ['uuid' => $site_uuid]);
+
+        // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
+        $badgeTargetLabel = strtr($target, '-', '_');
+        $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=svg)](https://circleci.com/gh/{$target_project})";
+        $pantheonBadge = "[![Pantheon {$target}](https://img.shields.io/badge/pantheon-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
+        $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
+        $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
+
+        if (!$this->siteHasMultidevCapability($site)) {
+            $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the CircleCI environment variable configuration page](https://circleci.com/gh/{$target_project}) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
+        }
+
+        file_put_contents("$siteDir/README.md", $readme);
+
+        // Make the initial commit to our GitHub repository
+        $this->log()->notice('Make initial commit to GitHub');
+        $this->initialCommit($github_token, $target_project, $siteDir);
+
+        $this->log()->notice('Push code to Pantheon');
+
+        // Push code to newly-created project.
+        $metadata = $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+
+        $this->log()->notice('Install the site on the dev environment');
+
+        $circle_env = $this->getCIEnvironment($site_name, $options);
+
+        // Install the site.
+        $site_install_options = [
+            'account-mail' => $circle_env['ADMIN_EMAIL'],
+            'account-name' => 'admin',
+            'account-pass' => $circle_env['ADMIN_PASSWORD'],
+            'site-mail' => $circle_env['ADMIN_EMAIL'],
+            'site-name' => $circle_env['TEST_SITE_NAME'],
+        ];
+        $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
+
+        $this->configureCircle($target_project, $circle_token, $circle_env);
+    }
+
+    /**
+     * Fetch the environment variable 'GITHUB_TOKEN', or throw an exception if it is not set.
+     * @return string
+     */
+    protected function getRequiredGithubToken()
+    {
+        $github_token = getenv('GITHUB_TOKEN');
+        if (empty($github_token)) {
+            throw new TerminusException("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/. Then run: \n\nexport GITHUB_TOKEN=my_personal_access_token_value");
+        }
+        return $github_token;
+    }
+
+    /**
+     * Fetch the environment variable 'CIRCLE_TOKEN', or throw an exception if it is not set.
+     * @return string
+     */
+    protected function getRequiredCircleToken()
+    {
+        $circle_token = getenv('CIRCLE_TOKEN');
+        if (empty($circle_token)) {
+            throw new TerminusException("Please generate a Circle CI personal API token token, as described in https://circleci.com/docs/api/#authentication. Then run: \n\nexport CIRCLE_TOKEN=my_personal_api_token_value");
+        }
+        return $circle_token;
+    }
+
+    /**
+     * Determine whether or not this site can create multidev environments.
+     */
+    protected function siteHasMultidevCapability($site)
+    {
+        // Can our new site create multidevs?
+        $settings = $site->get('settings');
+        if (!$settings) {
+            return false;
+        }
+        return $settings->max_num_cdes > 0;
+    }
+
+    /**
+     * Return the set of environment variables to save on the CI server.
+     *
+     * @param string $site_name
+     * @param array $options
+     * @return array
+     */
+    public function getCIEnvironment($site_name, $options)
+    {
+        $site = $this->getSite($site_name);
+
+        $test_site_name = $options['test-site-name'];
+        $git_email = $options['email'];
+        $admin_password = $options['admin-password'];
+        $admin_email = $options['admin-email'];
+
+        if (empty($test_site_name)) {
+            $test_site_name = $site_name;
+        }
+
+        if (empty($admin_password)) {
+            $admin_password = mt_rand();
+        }
+
+        if (empty($git_email)) {
+            $git_email = exec('git config user.email');
+        }
+
+        if (empty($admin_email)) {
+            $admin_email = $git_email;
+        }
+
+        // We should always be authenticated by the time we get here, but
+        // we will test just to be sure.
+        $terminus_token = $this->recoverSessionMachineToken();
+        if (empty($terminus_token)) {
+            throw new TerminusException("Please generate a Pantheon machine token, as described in https://pantheon.io/docs/machine-tokens/. Then log in via: \n\nterminus auth:login --machine-token=my_machine_token_value");
+        }
+
+        // Set up Circle CI and run our first test.
+        $circle_env = [
+            'TERMINUS_TOKEN' => $terminus_token,
+            'TERMINUS_SITE' => $site_name,
+            'TEST_SITE_NAME' => $test_site_name,
+            'ADMIN_PASSWORD' => $admin_password,
+            'ADMIN_EMAIL' => $admin_email,
+            'GIT_EMAIL' => $git_email,
+        ];
+        // If this site cannot create multidev environments, then configure
+        // it to always run tests on the dev environment.
+        if (!$this->siteHasMultidevCapability($site)) {
+            $circle_env['TERMINUS_ENV'] = 'dev';
+        }
+
+        // Add the github token if available
+        $github_token = getenv('GITHUB_TOKEN');
+        if ($github_token) {
+            $circle_env['GITHUB_TOKEN'] = $github_token;
+        }
+
+        return $circle_env;
+    }
+
+    /**
+     * Write the CI environment variables to the Circle "envrionment variables" configuration section.
+     *
+     * @param string $target_project
+     * @param string $circle_token
+     * @param array $circle_env
+     */
+    public function configureCircle($target_project, $circle_token, $circle_env)
+    {
+        $this->log()->notice('Configure Circle CI');
+
+        $site_name = $circle_env['TERMINUS_SITE'];
+        $git_email = $circle_env['GIT_EMAIL'];
+        $target_label = strtr($target_project, '/', '-');
+
+        $circle_url = "https://circleci.com/api/v1.1/project/github/$target_project";
+        $this->setCircleEnvironmentVars($circle_url, $circle_token, $circle_env);
+
+        // Create an ssh key pair dedicated to use in these tests.
+        // Change the email address to "user+ci-SITE@domain.com" so
+        // that these keys can be differentiated in the Pantheon dashboard.
+        $ssh_key_email = str_replace('@', "+ci-{$target_label}@", $git_email);
+        $this->log()->notice('Create ssh key pair for {email}', ['email' => $ssh_key_email]);
+        list($publicKey, $privateKey) = $this->createSshKeyPair($ssh_key_email, $site_name . '-key');
+        $this->addPublicKeyToPantheonUser($publicKey);
+        $this->addPrivateKeyToCircleProject($circle_url, $circle_token, $privateKey);
+
+        // Follow the project (start a build)
+        $this->circleFollow($circle_url, $circle_token);
+    }
+
+    /**
+     * Configure CI Tests for a Pantheon site created from the specified
+     * GitHub repository
+     *
+     * @authorize
+     *
+     * @command build-env:ci:configure
+     * @param $site_name The pantheon site to test.
+     * @param $target_project The GitHub org/project to build the Pantheon site from.
+     */
+    public function configureCI(
+        $site_name,
+        $target_project,
+        $options = [
+            'test-site-name' => '',
+            'email' => '',
+            'admin-password' => '',
+            'admin-email' => '',
+        ])
+    {
+        $site = $this->getSite($site_name);
+
+        // Get the build metadata from the Pantheon site. Fail if there is
+        // no build metadata on the master branch of the Pantheon site.
+        $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
+        $desired_url = "git@github.com:{$target_project}.git";
+        if (!empty($buildMetadata['url']) && ($desired_url != $buildMetadata['url'])) {
+            throw new TerminusException('The site {site} is already configured to test {url}; you cannot use this site to test {desired}.', ['site' => $site_name, 'url' => $buildMetadata['url'], 'desired' => $desired_url]);
+        }
+
+        // Get our authenticated credentials from environment variables.
+        $github_token = $this->getRequiredGithubToken();
+        $circle_token = $this->getRequiredCircleToken();
+
+        $circle_env = $this->getCIEnvironment($site_name, $options);
+        $this->configureCircle($target_project, $circle_token, $circle_env);
+    }
+
+    /**
+     * Provide some simple aliases to reduce typing when selecting common repositories
+     */
+    protected function expandSourceAliases($source)
+    {
+        //
+        // key:   org/project of template repository
+        // value: list of aliases
+        //
+        // If the org is missing from the template repository, then
+        // pantheon-systems is assumed.
+        //
+        $aliases = [
+            'example-drops-8-composer' => ['d8', 'drops-8'],
+            'example-drops-7-composer' => ['d7', 'drops-7'],
+
+            // The wordpress template has not been created yet
+            // 'example-wordpress-composer' => ['wp', 'wordpress'],
+        ];
+
+        $map = [strtolower($source) => $source];
+        foreach ($aliases as $full => $shortcuts) {
+            foreach ($shortcuts as $alias) {
+                $map[$alias] = $full;
+            }
+        }
+
+        return $map[strtolower($source)];
+    }
+
+    /**
+     * Detect the upstream to use based on the contents of the source repository.
+     * Upstream is irrelevant, save for the fact that this is the only way to
+     * set the framework on Pantheon at the moment.
+     */
+    protected function autodetectUpstream($siteDir)
+    {
+        // or 'Drupal 7' or 'WordPress'
+        return 'Drupal 8';
+    }
+
+    /**
+     * Create a unique ssh key pair to use in testing
+     *
+     * @param string $ssh_key_email
+     * @param string $prefix
+     * @return [string, string]
+     */
+    protected function createSshKeyPair($ssh_key_email, $prefix = 'id')
+    {
+        $tmpkeydir = $this->tempdir('ssh-keys');
+
+        $privateKey = "$tmpkeydir/$prefix";
+        $publicKey = "$privateKey.pub";
+
+        $this->passthru("ssh-keygen -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
+
+        return [$publicKey, $privateKey];
+    }
+
+    /**
+     * Use the GitHub API to create a new GitHub project.
+     */
+    protected function createGitHub($source, $target, $github_org, $github_token, $stability = '')
+    {
+        // We need a different URL here if $github_org is an org; if no
+        // org is provided, then we use a simpler URL to create a repository
+        // owned by the currently-authenitcated user.
+        $createRepoUrl = "orgs/$github_org/repos";
+        $target_org = $github_org;
+        if (empty($github_org)) {
+            $createRepoUrl = 'user/repos';
+            $userData = $this->curlGitHub('user', [], $github_token);
+            $target_org = $userData['login'];
+        }
+        $target_project = "$target_org/$target";
+
+        $source_project = $this->sourceProjectFromSource($source);
+        $tmpsitedir = $this->tempdir('local-site');
+
+        $local_site_path = "$tmpsitedir/$target";
+
+        $this->log()->notice('Creating project and resolving dependencies.');
+
+        // If the source is 'org/project:dev-branch', then automatically
+        // set the stability to 'dev'.
+        if (empty($stability) && preg_match('#:dev-#', $source)) {
+            $stability = 'dev';
+        }
+        // Pass in --stability to `composer create-project` if user requested it.
+        $stability_flag = empty($stability) ? '' : "--stability $stability";
+
+        // TODO: Do we need to remove $local_site_path/.git? (-n should obviate this need)
+        $this->passthru("composer create-project $source $local_site_path -n $stability_flag");
+
+        $this->log()->notice('Creating repository {repo} from {source}', ['repo' => $target_project, 'source' => $source]);
+        $postData = ['name' => $target];
+        $result = $this->curlGitHub($createRepoUrl, $postData, $github_token);
+
+        // Create a GitHub repository
+        $this->passthru("git -C $local_site_path init");
+
+        return [$target_project, $local_site_path];
+    }
+
+    /**
+     * Given a source, such as:
+     *    pantheon-systems/example-drops-8-composer:dev-lightning-fist-2
+     * Return the 'project' portion, including the org, e.g.:
+     *    pantheon-systems/example-drops-8-composer
+     */
+    protected function sourceProjectFromSource($source)
+    {
+        return preg_replace('/:.*/', '', $source);
+    }
+
+    /**
+     * Make the initial commit to our new GitHub project.
+     */
+    protected function initialCommit($github_token, $target_project, $local_site_path)
+    {
+        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
+
+        // Add the canonical repository files to the new GitHub project
+        // respecting .gitignore.
+        $this->passthru("git -C $local_site_path add .");
+        $this->passthru("git -C $local_site_path commit -m 'Initial commit'");
+        $this->passthruRedacted("git -C $local_site_path push --progress $remote_url master", $github_token);
+    }
+
+    // TODO: if we could look up the commandfile for
+    // Pantheon\Terminus\Commands\Site\CreateCommand,
+    // then we could just call its 'create' method
+    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null,])
+    {
+        if ($this->sites()->nameIsTaken($site_name)) {
+            throw new TerminusException('The site name {site_name} is already taken.', compact('site_name'));
+        }
+
+        $workflow_options = [
+            'label' => $label,
+            'site_name' => $site_name
+        ];
+        $user = $this->session()->getUser();
+
+        // Locate upstream
+        $upstream = $user->getUpstreams()->get($upstream_id);
+
+        // Locate organization
+        if (!empty($org_id = $options['org'])) {
+            $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
+            $workflow_options['organization_id'] = $org->id;
+        }
+
+        // Create the site
+        $this->log()->notice('Creating a new Pantheon site {name}', ['name' => $site_name]);
+        $workflow = $this->sites()->create($workflow_options);
+        while (!$workflow->checkProgress()) {
+            // @TODO: Add Symfony progress bar to indicate that something is happening.
+        }
+
+        // Deploy the upstream
+        if ($site = $this->getSite($workflow->get('waiting_for_task')->site_id)) {
+            $this->log()->notice('Deploying {upstream} to Pantheon site', ['upstream' => $upstream_id]);
+            $workflow = $site->deployProduct($upstream->id);
+            while (!$workflow->checkProgress()) {
+                // @TODO: Add Symfony progress bar to indicate that something is happening.
+            }
+            $this->log()->notice('Deployed CMS');
+        }
+    }
+
+    /**
+     * Destroy a Pantheon site that was created by the build-env:create-project command.
+     *
+     * @command build-env:obliterate
+     */
+    public function obliterate($site_name)
+    {
+        $site = $this->getSite($site_name);
+
+        // Get the build metadata from the Pantheon site. Fail if there is
+        // no build metadata on the master branch of the Pantheon site.
+        $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
+        if (empty($buildMetadata['url'])) {
+            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be deleted via build-env:obliterate.', ['site' => $site_name]);
+        }
+        $github_url = $buildMetadata['url'];
+
+        // Look up the GitHub authentication token
+        $github_token = $this->getRequiredGithubToken();
+
+        // Do nothing without confirmation
+        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {github_url} and CircleCI configuration?', ['site' => $site->getName(), 'github_url' => $github_url])) {
+            return;
+        }
+
+        $this->log()->notice('About to delete {site} and its corresponding GitHub repository {github_url} and CircleCI configuration.', ['site' => $site->getName(), 'github_url' => $github_url]);
+
+        // We don't need to do anything with CircleCI; the project is
+        // automatically removed when the GitHub project is deleted.
+
+        // Use the GitHub API to delete the GitHub project.
+        $project = $this->projectFromRemoteUrl($github_url);
+        $ch = $this->createGitHubDeleteChannel("repos/$project", $github_token);
+        $data = $this->execCurlRequest($ch, 'GitHub');
+
+        // GitHub oddity: if DELETE fails, the message is set,
+        // but 'errors' is not set. Force an error in this case.
+        if (isset($data['message'])) {
+            throw new TerminusException('GitHub error: {message}.', ['message' => $data['message']]);
+        }
+
+        $this->log()->notice('Deleted {project} from GitHub', ['project' => $project,]);
+
+        // Use the Terminus API to delete the Pantheon site.
+        $site->delete();
+        $this->log()->notice('Deleted {site} from Pantheon', ['site' => $site_name,]);
     }
 
     /**
@@ -56,7 +685,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'notify' => '',
         ])
     {
-        // c.f. create-pantheon-multidev script
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
         $env_label = $multidev;
@@ -71,62 +699,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Check to see if '$multidev' already exists on Pantheon.
         $environmentExists = $site->getEnvironments()->has($multidev);
 
-        // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
-        // Refresh the remote is already there (e.g. due to CI service caching), just in
-        // case. If something changes, this info is NOT removed by "rebuild without cache".
-        if ($this->hasPantheonRemote()) {
-            $this->passthru("git remote remove pantheon");
-        }
-        $connectionInfo = $env->connectionInfo();
-        $gitUrl = $connectionInfo['git_url'];
-        $this->passthru("git remote add pantheon $gitUrl");
-        $this->passthru('git fetch pantheon');
-
-        // Record the metadata for this build
-        $metadata = $this->getBuildMetadata();
-        $this->recordBuildMetadata($metadata);
-
-        // Remove any .git directories added by composer from the set of files
-        // being committed. Ideally, there will be none. We cannot allow any to
-        // remain, though, as git will interpret these as submodules, which
-        // will prevent the contents of directories containing .git directories
-        // from being added to the main repository.
-        $finder = new Finder();
-        $dirs = [];
-        foreach ($finder
-                ->directories()
-                ->in(getcwd())
-                ->ignoreDotFiles(false)
-                ->ignoreVCS(false)
-                ->depth('> 0')
-                ->name('.git') as $dir) {
-            $this->log()->notice('Delete .git directory "{dir}".', ['dir' => $dir]);
-            $dirs[] = $dir;
-        }
-        $fs = new Filesystem();
-        $fs->remove($dirs);
-
-        // Create a new branch and commit the results from anything that may
-        // have changed. We presume that the source repository is clean of
-        // any unwanted files prior to the build step (e.g. after a clean
-        // checkout in a CI environment.)
-        $this->passthru("git checkout -B $multidev");
-        $this->passthru('git add --force -A .');
-
-        // Now that everything is ready, commit the build artifacts.
-        $this->passthru("git commit -q -m 'Build assets for $env_label.'");
-
-        // If the environment does exist, then we need to be in git mode
-        // to push the branch up to the existing multidev site.
-        if ($environmentExists) {
-            // Get a reference to our target multidev site.
-            $target_env = $site->getEnvironments()->get($multidev);
-            $this->connectionSet($target_env, 'git');
+        // Check to see if pantheon.yml has been modified.
+        if (!$environmentExists && $this->commitChangesFile('HEAD', 'pantheon.yml')) {
+            // If it does, then we need to create the environment
+            // in advance, before we push our change. It is more
+            // efficient to push the branch first, and then create
+            // the multidev, as in this instance, we do not need
+            // to call waitForCodeSync(). However, changes to pantheon.yml
+            // will not be applied unless we push our change.
+            // To allow pantheon.yml to be processed, we will
+            // create the multidev environment, and then push the code.
+            $this->create($site_env_id, $multidev);
+            $environmentExists = true;
         }
 
-        // Push the branch to Pantheon, and create a new environment for it
-        $preCommitTime = time();
-        $this->passthru("git push --force -q pantheon $multidev");
+        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
 
         // Create a new environment for this test.
         if (!$environmentExists) {
@@ -156,16 +743,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Get (or re-fetch) a reference to our target multidev site.
         $target_env = $site->getEnvironments()->get($multidev);
 
-        // If the environment already existed, then we risk encountering
-        // a race condition, because the 'git push' above will fire off
-        // an asynchronous update of the existing update. If we switch to
-        // sftp mode (next step, below) before this sync is completed,
-        // then the converge that sftp mode kicks off will corrupt the
-        // environment.
-        if ($environmentExists) {
-            $this->waitForCodeSync($preCommitTime, $site, $target_env->getName());
-        }
-
         // Set the target environment to sftp mode
         $this->connectionSet($target_env, 'sftp');
 
@@ -188,6 +765,168 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // Run notification command. Ignore errors.
             passthru($command);
         }
+    }
+
+    /**
+     * Install the apporpriate CMS on the newly-created Pantheon site.
+     *
+     * @command build-env:install-site
+     */
+    public function installSite(
+        $site_env_id,
+        $siteDir = '',
+        $site_install_options = [
+            'account-mail' => '',
+            'account-name' => '',
+            'account-pass' => '',
+            'site-mail' => '',
+            'site-name' => ''
+        ])
+    {
+        // TODO: Detect WordPress sites and use wp-cli to install.
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+
+        $this->log()->notice('Install site on {site}', ['site' => $site_env_id]);
+
+        // Set the target environment to sftp mode prior to installation
+        $this->connectionSet($env, 'sftp');
+
+        $command_line = "drush site-install --yes";
+        foreach ($site_install_options as $option => $value) {
+            if (!empty($value)) {
+                $command_line .= " --$option=" . $this->escapeArgument($value);
+            }
+        }
+        $this->log()->notice("Install site via {cmd}", ['cmd' => str_replace($site_install_options['account-pass'], 'REDACTED', $command_line)]);
+        $result = $env->sendCommandViaSsh(
+            $command_line,
+            function ($type, $buffer) {
+            }
+        );
+        $output = $result['output'];
+    }
+
+    /**
+     * Escape one command-line arg
+     *
+     * @param string $arg The argument to escape
+     * @return RowsOfFields
+     */
+    protected function escapeArgument($arg)
+    {
+        // Omit escaping for simple args.
+        if (preg_match('/^[a-zA-Z0-9_-]*$/', $arg)) {
+            return $arg;
+        }
+        return ProcessUtils::escapeArgument($arg);
+    }
+
+    /**
+     * Push code to a specific Pantheon site and environment that already exists.
+     *
+     * @command build-env:push-code
+     *
+     * @param string $site_env_id Site and environment to push to. May be any dev or multidev environment.
+     * @param string $repositoryDir Code to push. Defaults to cwd.
+     */
+    public function pushCode(
+        $site_env_id,
+        $repositoryDir = '',
+        $options = [
+          'label' => '',
+        ])
+    {
+        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label']);
+    }
+
+    /**
+     * Push code to Pantheon -- common routine used by 'create-project', 'create' and 'push-code' commands.
+     */
+    public function pushCodeToPantheon(
+        $site_env_id,
+        $multidev = '',
+        $repositoryDir = '',
+        $label = '')
+    {
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+        $env_id = $env->getName();
+        $multidev = empty($multidev) ? $env_id : $multidev;
+        $branch = ($multidev == 'dev') ? 'master' : $multidev;
+        $env_label = $multidev;
+        if (!empty($label)) {
+            $env_label = $label;
+        }
+
+        $this->log()->notice('Pushing code to {multidev} using branch {branch}.', ['multidev' => $multidev, $branch]);
+
+        // Fetch the site id also
+        $siteInfo = $site->serialize();
+        $site_id = $siteInfo['id'];
+        if (empty($repositoryDir)) {
+            $repositoryDir = getcwd();
+        }
+
+        // Check to see if '$multidev' already exists on Pantheon.
+        $environmentExists = $site->getEnvironments()->has($multidev);
+
+        // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
+        // Skip this step if the remote is already there (e.g. due to CI service caching).
+        $this->addPantheonRemote($env, $repositoryDir);
+        // $this->passthru("git -C $repositoryDir fetch pantheon");
+
+        // Record the metadata for this build
+        $metadata = $this->getBuildMetadata($repositoryDir);
+        $this->recordBuildMetadata($metadata, $repositoryDir);
+
+        // Remove any .git directories added by composer from the set of files
+        // being committed. Ideally, there will be none. We cannot allow any to
+        // remain, though, as git will interpret these as submodules, which
+        // will prevent the contents of directories containing .git directories
+        // from being added to the main repository.
+        $finder = new Finder();
+        $fs = new Filesystem();
+        $fs->remove(
+          $finder
+            ->directories()
+            ->in(getcwd())
+            ->ignoreDotFiles(false)
+            ->ignoreVCS(false)
+            ->depth('> 0')
+            ->name('.git')
+            ->getIterator()
+        );
+
+        // Create a new branch and commit the results from anything that may
+        // have changed. We presume that the source repository is clean of
+        // any unwanted files prior to the build step (e.g. after a clean
+        // checkout in a CI environment.)
+        $this->passthru("git -C $repositoryDir checkout -B $branch");
+        $this->passthru("git -C $repositoryDir add --force -A .");
+
+        // Now that everything is ready, commit the build artifacts.
+        $this->passthru("git -C $repositoryDir commit -q -m 'Build assets for $env_label.'");
+
+        // If the environment does exist, then we need to be in git mode
+        // to push the branch up to the existing multidev site.
+        if ($environmentExists) {
+            $target_env = $site->getEnvironments()->get($multidev);
+            $this->connectionSet($target_env, 'git');
+        }
+
+        // Push the branch to Pantheon
+        $preCommitTime = time();
+        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+
+        // If the environment already existed, then we risk encountering
+        // a race condition, because the 'git push' above will fire off
+        // an asynchronous update of the existing update. If we switch to
+        // sftp mode before this sync is completed, then the converge that
+        // sftp mode kicks off will corrupt the environment.
+        if ($environmentExists) {
+            $this->waitForCodeSync($preCommitTime, $site, $multidev);
+        }
+
+        return $metadata;
     }
 
     protected function projectFromRemoteUrl($url)
@@ -218,6 +957,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $env->commitChanges("Build assets for $env_label.");
             return;
         }
+
+        $preCommitTime = time();
 
         // When using build-env:merge, we expect that the dev environment
         // should stay in git mode. We will switch it to git mode now to be sure.
@@ -373,24 +1114,135 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return $branchList;
     }
 
-    function curlGitHub($uri)
+    protected function createAuthorizationHeaderCurlChannel($url, $auth = '')
     {
-        $url = "https://api.github.com/$uri";
+        $headers = [
+            'Content-Type: application/json',
+            'User-Agent: pantheon/terminus-build-tools-plugin'
+        ];
+
+        if (!empty($auth)) {
+            $headers[] = "Authorization: token $auth";
+        }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'User-Agent: pantheon/terminus-build-tools-plugin']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        return $ch;
+    }
+
+    protected function createBasicAuthenticationCurlChannel($url, $username, $password = '')
+    {
+        $ch = $this->createAuthorizationHeaderCurlChannel($url);
+        curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
+        return $ch;
+    }
+
+    protected function setCurlChannelPostData($ch, $postData, $force = false)
+    {
+        if (!empty($postData) || $force) {
+            $payload = json_encode($postData);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        }
+    }
+
+    public function execCurlRequest($ch, $service = 'API request')
+    {
         $result = curl_exec($ch);
         if(curl_errno($ch))
         {
             throw new TerminusException(curl_error($ch));
         }
         $data = json_decode($result, true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
+        $errors = [];
+        if (isset($data['errors'])) {
+            foreach ($data['errors'] as $error) {
+                $errors[] = $error['message'];
+            }
+        }
+        if ($httpCode && ($httpCode >= 300)) {
+            $errors[] = "Http status code: $httpCode";
+        }
+
+        $message = isset($data['message']) ? "{$data['message']}." : '';
+
+        if (!empty($message) || !empty($errors)) {
+            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
+        }
+
         return $data;
+    }
+
+    protected function setCircleEnvironmentVars($circle_url, $token, $env)
+    {
+        foreach ($env as $key => $value) {
+            $data = ['name' => $key, 'value' => $value];
+            $this->curlCircleCI($data, "$circle_url/envvar", $token);
+        }
+    }
+
+    protected function circleFollow($circle_url, $token)
+    {
+        $this->curlCircleCI([], "$circle_url/follow", $token);
+    }
+
+    protected function addPublicKeyToPantheonUser($publicKey)
+    {
+        $this->session()->getUser()->getSSHKeys()->addKey($publicKey);
+    }
+
+    protected function addPrivateKeyToCircleProject($circle_url, $token, $privateKey)
+    {
+        $privateKeyContents = file_get_contents($privateKey);
+        $data = [
+            'hostname' => 'drush.in',
+            'private_key' => $privateKeyContents,
+        ];
+        $this->curlCircleCI($data, "$circle_url/ssh-key", $token);
+    }
+
+    protected function curlCircleCI($data, $url, $auth)
+    {
+        $this->log()->notice('Call CircleCI API: {uri}', ['uri' => $url]);
+        $ch = $this->createBasicAuthenticationCurlChannel($url, $auth);
+        $this->setCurlChannelPostData($ch, $data, true);
+        return $this->execCurlRequest($ch, 'CircleCI');
+    }
+
+    protected function createGitHubCurlChannel($uri, $auth = '')
+    {
+        $url = "https://api.github.com/$uri";
+        return $this->createAuthorizationHeaderCurlChannel($url, $auth);
+    }
+
+    protected function createGitHubPostChannel($uri, $postData = [], $auth = '')
+    {
+        $ch = $this->createGitHubCurlChannel($uri, $auth);
+        $this->setCurlChannelPostData($ch, $postData);
+
+        return $ch;
+    }
+
+    protected function createGitHubDeleteChannel($uri, $auth = '')
+    {
+        $ch = $this->createGitHubCurlChannel($uri, $auth);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+
+        return $ch;
+    }
+
+    public function curlGitHub($uri, $postData = [], $auth = '')
+    {
+        $this->log()->notice('Call GitHub API: {uri}', ['uri' => $uri]);
+        $ch = $this->createGitHubPostChannel($uri, $postData, $auth);
+        return $this->execCurlRequest($ch, 'GitHub');
     }
 
     /**
@@ -685,15 +1537,15 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * @return string[]
      */
-    public function getBuildMetadata()
+    public function getBuildMetadata($repositoryDir)
     {
         return [
-          'url'         => exec('git config --get remote.origin.url'),
-          'ref'         => exec('git rev-parse --abbrev-ref HEAD'),
-          'sha'         => exec('git rev-parse HEAD'),
-          'comment'     => exec('git log --pretty=format:%s -1'),
-          'commit-date' => exec('git show -s --format=%ci HEAD'),
-          'build-date'  => date('Y-m-d H:i:s O'),
+          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
+          'sha'         => exec("git -C $repositoryDir rev-parse HEAD"),
+          'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
+          'commit-date' => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
+          'build-date'  => date("Y-m-d H:i:s O"),
         ];
     }
 
@@ -702,11 +1554,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * @param string[] $metadata
      */
-    public function recordBuildMetadata($metadata)
+    public function recordBuildMetadata($metadata, $repositoryDir)
     {
-        $buildMetadataFile = 'build-metadata.json';
-        $metadataContents = json_encode($metadata);
-        $this->log()->notice('Wrote {metadata} to {file}. cwd is {cwd}', ['metadata' => $metadataContents, 'file' => $buildMetadataFile, 'cwd' => getcwd()]);
+        $buildMetadataFile = "$repositoryDir/build-metadata.json";
+        $metadataContents = json_encode($metadata, JSON_UNESCAPED_SLASHES);
+        $this->log()->notice('Set {file} to {metadata}.', ['metadata' => $metadataContents, 'file' => basename($buildMetadataFile)]);
 
         file_put_contents($buildMetadataFile, $metadataContents);
     }
@@ -756,6 +1608,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         unlink($dest);
 
         return $metadata;
+    }
+
+    /**
+     * Add or refresh the 'pantheon' remote
+     */
+    public function addPantheonRemote($env, $repositoryDir)
+    {
+        // Refresh the remote is already there (e.g. due to CI service caching), just in
+        // case. If something changes, this info is NOT removed by "rebuild without cache".
+        if ($this->hasPantheonRemote()) {
+            $this->passthru("git -C $repositoryDir remote remove pantheon");
+        }
+        $connectionInfo = $env->connectionInfo();
+        $gitUrl = $connectionInfo['git_url'];
+        $this->passthru("git -C $repositoryDir remote add pantheon $gitUrl");
     }
 
     /**
@@ -810,9 +1677,20 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $src = preg_replace('/^:/', $siteAddress, $src);
         $dest = preg_replace('/^:/', $siteAddress, $dest);
 
+        $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
         passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1", $status);
 
         return $status;
+    }
+
+    /**
+     * Return 'true' if the specified file was changed in the provided commit.
+     */
+    protected function commitChangesFile($commit, $file)
+    {
+        $outputLines = $this->exec("git show --name-only $commit $file");
+
+        return !empty($outputLines);
     }
 
     /**
@@ -820,14 +1698,25 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * @param string $command
      */
-    protected function passthru($command)
+    protected function passthru($command, $loggedCommand = '')
     {
         $result = 0;
+        $loggedCommand = empty($loggedCommand) ? $command : $loggedCommand;
+        // TODO: How noisy do we want to be?
+        $this->log()->notice("Running {cmd}", ['cmd' => $loggedCommand]);
         passthru($command, $result);
 
         if ($result != 0) {
-            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
+            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $loggedCommand, 'status' => $result]);
         }
+    }
+
+    function passthruRedacted($command, $secret)
+    {
+        $loggedCommand = str_replace($secret, 'REDACTED', $command);
+        $command .= " | sed -e 's/$secret/REDACTED/g'";
+
+        return $this->passthru($command, $loggedCommand);
     }
 
     /**
@@ -839,11 +1728,38 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     protected function exec($command)
     {
         $result = 0;
+        $this->log()->notice("Running {cmd}", ['cmd' => $command]);
         exec($command, $outputLines, $result);
 
         if ($result != 0) {
             throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
         }
         return $outputLines;
+    }
+
+    // Create a temporary directory
+    public function tempdir($prefix='php', $dir=FALSE)
+    {
+        $tempfile=tempnam($dir ? $dir : sys_get_temp_dir(), $prefix ? $prefix : '');
+        if (file_exists($tempfile)) {
+            unlink($tempfile);
+        }
+        mkdir($tempfile);
+        chmod($tempfile, 0700);
+        if (is_dir($tempfile)) {
+            $this->tmpDirs[] = $tempfile;
+            return $tempfile;
+        }
+    }
+
+    // Delete our work directory on exit.
+    public function cleanup()
+    {
+        if (empty($this->tmpDirs)) {
+            return;
+        }
+
+        $fs = new Filesystem();
+        $fs->remove($this->tmpDirs);
     }
 }
