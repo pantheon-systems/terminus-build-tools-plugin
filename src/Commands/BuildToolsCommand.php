@@ -308,8 +308,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     protected function siteHasMultidevCapability($site)
     {
         // Can our new site create multidevs?
-        // TODO: For some reason, this field is not being populated in some instances.
-        return true; // $site->get('max_num_cdes') > 0;
+        $settings = $this->get('settings');
+        if (!$settings) {
+            return false;
+        }
+        return $settings->max_num_cdes > 0;
     }
 
     /**
