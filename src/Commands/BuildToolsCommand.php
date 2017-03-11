@@ -949,8 +949,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $env_label = $options['label'];
         }
 
-        $preCommitTime = time();
-
         // If we are building against the 'dev' environment, then simply
         // commit the changes once the PR is merged.
         if ($env_id == 'dev') {
