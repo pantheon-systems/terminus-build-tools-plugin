@@ -675,6 +675,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param string $site_env_id The site and env of the SOURCE
      * @param string $multidev The name of the env to CREATE
      * @option label What to name the environment in commit comments
+     * @option clone-content Run terminus env:clone-content if the environment is re-used
+     * @option db-only Only clone the database when runing env:clone-content
      * @option notify Command to exec to notify when a build environment is created
      */
     public function createBuildEnv(
@@ -682,6 +684,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $multidev,
         $options = [
             'label' => '',
+            'clone-content' => false,
+            'db-only' => false,
             'notify' => '',
         ])
     {
@@ -699,9 +703,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Check to see if '$multidev' already exists on Pantheon.
         $environmentExists = $site->getEnvironments()->has($multidev);
 
-        // Check to see if pantheon.yml has been modified.
-        if (!$environmentExists && $this->commitChangesFile('HEAD', 'pantheon.yml')) {
-            // If it does, then we need to create the environment
+        // Check to see if we should create before pushing or after
+        $createBeforePush = $this->commitChangesFile('HEAD', 'pantheon.yml');
+
+        if (!$environmentExists && $createBeforePush) {
+            // If pantheon.yml exists, then we need to create the environment
             // in advance, before we push our change. It is more
             // efficient to push the branch first, and then create
             // the multidev, as in this instance, we do not need
@@ -710,13 +716,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // To allow pantheon.yml to be processed, we will
             // create the multidev environment, and then push the code.
             $this->create($site_env_id, $multidev);
-            $environmentExists = true;
         }
 
         $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
 
         // Create a new environment for this test.
-        if (!$environmentExists) {
+        if (!$environmentExists && !$createBeforePush) {
             // If the environment is created after the branch is pushed,
             // then there is never a race condition -- the new env is
             // created with the correct files from the specified branch.
@@ -741,10 +746,17 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         // Get (or re-fetch) a reference to our target multidev site.
-        $target_env = $site->getEnvironments()->get($multidev);
+        $target = $site->getEnvironments()->get($multidev);
+
+        // If we did not create our environment, then run clone-content
+        // instead -- but only if requested. No point in running 'clone'
+        // if the user plans on re-installing Drupal.
+        if ($environmentExists && $options['clone-content']) {
+            $this->cloneContent($target, $env_id, $options['db-only']);
+        }
 
         // Set the target environment to sftp mode
-        $this->connectionSet($target_env, 'sftp');
+        $this->connectionSet($target, 'sftp');
 
         // If '--notify' was passed, then exec the notify command
         if (!empty($options['notify'])) {
@@ -764,6 +776,40 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
             // Run notification command. Ignore errors.
             passthru($command);
+        }
+    }
+
+    /**
+     * Run an env:clone-content operation
+     * @param Pantheon\Terminus\Models\Environment $target
+     * @param string $from_name
+     * @param bool $db_only
+     * @param bool $files_only
+     */
+    public function cloneContent($target, $from_name, $db_only = false, $files_only = fasle)
+    {
+        if ($db_only) {
+            $workflow = $target->cloneFiles($from_name);
+            $this->log()->notice(
+                "Cloning files from {from_name} environment to {target_env} environment",
+                ['from_name' => $from_name, 'target_env' => $target->getName()]
+            );
+            while (!$workflow->checkProgress()) {
+                // @TODO: Add Symfony progress bar to indicate that something is happening.
+            }
+            $this->log()->notice($workflow->getMessage());
+        }
+
+        if ($files_only) {
+            $workflow = $target->cloneDatabase($from_name);
+            $this->log()->notice(
+                "Cloning database from {from_name} environment to {target_env} environment",
+                ['from_name' => $from_name, 'target_env' => $target->getName()]
+            );
+            while (!$workflow->checkProgress()) {
+                // @TODO: Add Symfony progress bar to indicate that something is happening.
+            }
+            $this->log()->notice($workflow->getMessage());
         }
     }
 
@@ -909,8 +955,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
         if ($environmentExists) {
-            $target_env = $site->getEnvironments()->get($multidev);
-            $this->connectionSet($target_env, 'git');
+            $target = $site->getEnvironments()->get($multidev);
+            $this->connectionSet($target, 'git');
         }
 
         // Push the branch to Pantheon
