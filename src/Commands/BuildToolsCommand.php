@@ -263,16 +263,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         $circle_env = $this->getCIEnvironment($site_name, $options);
 
-        // Install the site.
-        $site_install_options = [
-            'account-mail' => $circle_env['ADMIN_EMAIL'],
-            'account-name' => 'admin',
-            'account-pass' => $circle_env['ADMIN_PASSWORD'],
-            'site-mail' => $circle_env['ADMIN_EMAIL'],
-            'site-name' => $circle_env['TEST_SITE_NAME'],
-        ];
-        $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
-
         $this->configureCircle($target_project, $circle_token, $circle_env);
     }
 
@@ -765,45 +755,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // Run notification command. Ignore errors.
             passthru($command);
         }
-    }
-
-    /**
-     * Install the apporpriate CMS on the newly-created Pantheon site.
-     *
-     * @command build-env:install-site
-     */
-    public function installSite(
-        $site_env_id,
-        $siteDir = '',
-        $site_install_options = [
-            'account-mail' => '',
-            'account-name' => '',
-            'account-pass' => '',
-            'site-mail' => '',
-            'site-name' => ''
-        ])
-    {
-        // TODO: Detect WordPress sites and use wp-cli to install.
-        list($site, $env) = $this->getSiteEnv($site_env_id);
-
-        $this->log()->notice('Install site on {site}', ['site' => $site_env_id]);
-
-        // Set the target environment to sftp mode prior to installation
-        $this->connectionSet($env, 'sftp');
-
-        $command_line = "drush site-install --yes";
-        foreach ($site_install_options as $option => $value) {
-            if (!empty($value)) {
-                $command_line .= " --$option=" . $this->escapeArgument($value);
-            }
-        }
-        $this->log()->notice("Install site via {cmd}", ['cmd' => str_replace($site_install_options['account-pass'], 'REDACTED', $command_line)]);
-        $result = $env->sendCommandViaSsh(
-            $command_line,
-            function ($type, $buffer) {
-            }
-        );
-        $output = $result['output'];
     }
 
     /**
