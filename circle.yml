@@ -21,7 +21,7 @@ machine:
     TERMINUS_SITE: build-tools-$CIRCLE_BUILD_NUM
     TERMINUS_ORG: CI for Drupal 8 + Composer
     GITHUB_USERNAME: pantheon-ci-bot
-    SOURCE_COMPOSER_PROJECT: pantheon-systems/example-drops-8-composer
+    SOURCE_COMPOSER_PROJECT: stevector/example-wordpress-composer
     TARGET_REPO: $GITHUB_USERNAME/$TERMINUS_SITE
     TARGET_REPO_WORKING_COPY: $HOME/$TERMINUS_SITE
     PATH: $PATH:~/.composer/vendor/bin:~/.config/composer/vendor/bin
