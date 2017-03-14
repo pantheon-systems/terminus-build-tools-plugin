@@ -786,7 +786,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @param bool $db_only
      * @param bool $files_only
      */
-    public function cloneContent($target, $from_name, $db_only = false, $files_only = fasle)
+    public function cloneContent($target, $from_name, $db_only = false, $files_only = false)
     {
         if ($db_only) {
             $workflow = $target->cloneFiles($from_name);
