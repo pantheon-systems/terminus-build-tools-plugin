@@ -137,7 +137,7 @@ This command will commit the generated artifacts to an existing multidev environ
 `terminus build-env:list`
 
 ## Installation
-For help installing, see [Terminus's Wiki](https://github.com/pantheon-systems/terminus/wiki/Plugins)
+For help installing, see [Manage Plugins](https://pantheon.io/docs/terminus/plugins/)
 ```
 mkdir -p ~/.terminus/plugins
 composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
