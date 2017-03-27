@@ -76,7 +76,7 @@ Additional options are available to further customize the build-env:create-proje
 | --email          | The git user email address to use when committing build results |
 | --test-site-name | The name to use when installing the test site |
 | --admin-password | The password to use for the admin when installing the test site |
-| --admin-email    | The email address to sue for the admin |
+| --admin-email    | The email address to use for the admin |
 
 See `terminus help build-env:create-project` for more information.
 
