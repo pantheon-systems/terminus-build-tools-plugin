@@ -484,8 +484,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function autodetectUpstream($siteDir)
     {
+        return 'Empty Upstream';
         // or 'Drupal 7' or 'WordPress'
-        return 'Drupal 8';
+        // return 'Drupal 8';
     }
 
     /**
