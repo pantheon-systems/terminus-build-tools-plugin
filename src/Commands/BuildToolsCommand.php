@@ -789,7 +789,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     public function cloneContent($target, $from_name, $db_only = false, $files_only = false)
     {
-        if ($db_only) {
+        // Clone files if we're only doing files, or if "only do db" is not set.
+        if ($files_only || !$db_only) {
             $workflow = $target->cloneFiles($from_name);
             $this->log()->notice(
                 "Cloning files from {from_name} environment to {target_env} environment",
@@ -801,7 +802,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $this->log()->notice($workflow->getMessage());
         }
 
-        if ($files_only) {
+        // Clone database if we're only doing the database, or if "only do files" is not set.
+        if ($db_only || !$files_only) {
             $workflow = $target->cloneDatabase($from_name);
             $this->log()->notice(
                 "Cloning database from {from_name} environment to {target_env} environment",
