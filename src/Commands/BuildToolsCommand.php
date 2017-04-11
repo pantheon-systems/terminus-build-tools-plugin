@@ -1090,9 +1090,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // We will use either the GitHub API or available git branches to check.
         $environmentsWithoutPRs = [];
         if (!empty($options['preserve-prs'])) {
+            $github_token = getenv('GITHUB_TOKEN');
             // Call GitHub PR to get all open PRs.  Filter out matching branches
             // from this list that appear in $oldestEnvironments
-            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern);
+            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $github_token);
         }
         elseif (!empty($options['preserve-if-branch'])) {
             $environmentsWithoutPRs = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
@@ -1140,16 +1141,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
     }
 
-    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
+    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
-        $branchList = $this->branchesForOpenPullRequests($project);
+        $branchList = $this->branchesForOpenPullRequests($project, $auth);
         return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
     }
 
-    function branchesForOpenPullRequests($project)
+    function branchesForOpenPullRequests($project, $auth = '')
     {
-        $data = $this->curlGitHub("repos/$project/pulls?state=open");
+        $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
 
         $branchList = array_map(
             function ($item) {
