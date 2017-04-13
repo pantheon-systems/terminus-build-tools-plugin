@@ -21,6 +21,7 @@ use Symfony\Component\Process\ProcessUtils;
 use Consolidation\AnnotatedCommand\AnnotationData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Composer\Semver\Comparator;
 
 /**
  * Build Tool Commands
@@ -52,6 +53,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         // Insure that $workdir will be deleted on exit.
         register_shutdown_function([$this, 'cleanup']);
+    }
+
+    /**
+     * Terminus requires php 5.5, so we know we have at least that version
+     * if we get this far.  Warn the user if they are using php 5.5, though,
+     * as we recommend php 5.6 or later (e.g. for Drupal 8.3.0.)
+     */
+    protected function warnAboutOldPhp()
+    {
+        if (Comparator::lessThan(PHP_VERSION, '5.6.0')) {
+            $this->log()->warning('You are using php {version}; it is strongly recommended that you use at least php 5.6. Note that older versions of php will not work with newer template projects (e.g. Drupal 8.3.0).', ['version' => PHP_VERSION]);
+        }
     }
 
     /**
@@ -158,6 +171,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'stability' => '',
         ])
     {
+        $this->warnAboutOldPhp();
         $options = $this->validateOptionsAndSetDefaults($options);
 
         // Copy options into ordinary variables
