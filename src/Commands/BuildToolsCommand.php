@@ -158,6 +158,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'stability' => '',
         ])
     {
+        $options = $this->validateOptionsAndSetDefaults($options);
+
         // Copy options into ordinary variables
         $github_org = $options['org'];
         $team = $options['team'];
@@ -335,18 +337,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $test_site_name = $site_name;
         }
 
-        if (empty($admin_password)) {
-            $admin_password = mt_rand();
-        }
-
-        if (empty($git_email)) {
-            $git_email = exec('git config user.email');
-        }
-
-        if (empty($admin_email)) {
-            $admin_email = $git_email;
-        }
-
         // We should always be authenticated by the time we get here, but
         // we will test just to be sure.
         $terminus_token = $this->recoverSessionMachineToken();
@@ -376,6 +366,44 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         return $circle_env;
+    }
+
+    /**
+     * Check to see if common options are valid. Provide sensible defaults
+     * where values are unspecified.
+     */
+    protected function validateOptionsAndSetDefaults($options)
+    {
+        if (empty($options['admin-password'])) {
+            $options['admin-password'] = mt_rand();
+        }
+
+        if (empty($options['email'])) {
+            $options['email'] = exec('git config user.email');
+        }
+
+        if (empty($options['admin-email'])) {
+            $options['admin-email'] = $options['email'];
+        }
+
+        // Catch errors in email address syntax
+        $this->validateEmail('email', $options['email']);
+        $this->validateEmail('admin-email', $options['admin-email']);
+
+        return $options;
+    }
+
+    /**
+     * Check to see if the provided email address is valid.
+     */
+    protected function validateEmail($emailOptionName, $emailValue)
+    {
+        // http://www.regular-expressions.info/email.html
+        if (preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}$/i', $emailValue)) {
+            return;
+        }
+
+        throw new TerminusException("The email address '{email}'' is not valid. Please set a valid email address via 'git config --global user.email <address>', or override this setting with the --{option} option.", ['email' => $emailValue, 'option' => $emailOptionName]);
     }
 
     /**
@@ -430,6 +458,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         ])
     {
         $site = $this->getSite($site_name);
+        $options = $this->validateOptionsAndSetDefaults($options);
 
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
