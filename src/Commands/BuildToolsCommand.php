@@ -116,14 +116,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         $github_token = getenv('GITHUB_TOKEN');
         if (empty($github_token)) {
-            $github_token = $this->io()->ask("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/.\nThen, enter it here:");
+            $github_token = $this->io()->ask("Please visit the page https://github.com/settings/tokens to generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/\nThen, enter it here:");
             $github_token = trim($github_token);
             putenv("GITHUB_TOKEN=$github_token");
         }
 
         $circle_token = getenv('CIRCLE_TOKEN');
         if (empty($circle_token)) {
-            $circle_token = $this->io()->ask("Please generate a Circle CI personal API token token, as described in https://circleci.com/docs/api/#authentication.\nThen, enter it here:");
+            $circle_token = $this->io()->ask("Please visit the page https://circleci.com/account/api to generate a Circle CI personal API token, as described in https://circleci.com/docs/api/v1-reference/#getting-started\nThen, enter it here:");
             $circle_token = trim($circle_token);
             putenv("CIRCLE_TOKEN=$circle_token");
         }
