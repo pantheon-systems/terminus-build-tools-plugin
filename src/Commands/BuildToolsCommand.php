@@ -987,8 +987,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @command build-env:merge
      * @param string $site_env_id The site and env to merge and delete
      * @option label What to name the environment in commit comments
+     * @option delete Delete the multidev environment after merging.
      */
-    public function mergeBuildEnv($site_env_id, $options = ['label' => ''])
+    public function mergeBuildEnv($site_env_id, $options = ['label' => '', 'delete' => false])
     {
         // c.f. merge-pantheon-multidev script
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -1022,8 +1023,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
 
-        // Once the build environment is merged, we do not need it any more
-        $this->deleteEnv($env, true);
+        // Once the build environment is merged, delete it if we don't need it any more
+        if ($options['delete']) {
+            $this->deleteEnv($env, true);
+        }
     }
 
     /**
