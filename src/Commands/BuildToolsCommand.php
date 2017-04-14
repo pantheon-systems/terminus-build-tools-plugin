@@ -248,59 +248,68 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->log()->notice('Create GitHub project {target} from {src}', ['src' => $source, 'target' => $target_label]);
         list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability);
 
-        // Look up our upstream.
-        $upstream = $this->autodetectUpstream($siteDir);
+        $site = null;
+        try {
+            // Look up our upstream.
+            $upstream = $this->autodetectUpstream($siteDir);
 
-        // Push our site to Pantheon.
-        $this->log()->notice('Creating site {name} in org {org} with upstream {upstream}', ['name' => $site_name, 'org' => $team, 'upstream' => $upstream]);
-        $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
+            // Push our site to Pantheon.
+            $this->log()->notice('Creating site {name} in org {org} with upstream {upstream}', ['name' => $site_name, 'org' => $team, 'upstream' => $upstream]);
+            $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
 
-        // Look up the site UUID for the Pantheon dashboard link
-        $site = $this->getSite($site_name);
-        $siteInfo = $site->serialize();
-        $site_uuid = $siteInfo['id'];
+            // Look up the site UUID for the Pantheon dashboard link
+            $siteInfo = $site->serialize();
+            $site_uuid = $siteInfo['id'];
 
-        $this->log()->notice('Created a new Pantheon site with UUID {uuid}', ['uuid' => $site_uuid]);
+            $this->log()->notice('Created a new Pantheon site with UUID {uuid}', ['uuid' => $site_uuid]);
 
-        // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
-        $badgeTargetLabel = strtr($target, '-', '_');
-        $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=svg)](https://circleci.com/gh/{$target_project})";
-        $pantheonBadge = "[![Dashboard {$target}](https://img.shields.io/badge/dashboard-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
-        $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
-        $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
+            // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
+            $badgeTargetLabel = strtr($target, '-', '_');
+            $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=svg)](https://circleci.com/gh/{$target_project})";
+            $pantheonBadge = "[![Dashboard {$target}](https://img.shields.io/badge/dashboard-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
+            $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
+            $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
 
-        if (!$this->siteHasMultidevCapability($site)) {
-            $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the CircleCI environment variable configuration page](https://circleci.com/gh/{$target_project}) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
+            if (!$this->siteHasMultidevCapability($site)) {
+                $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the CircleCI environment variable configuration page](https://circleci.com/gh/{$target_project}) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
+            }
+
+            file_put_contents("$siteDir/README.md", $readme);
+
+            // Make the initial commit to our GitHub repository
+            $this->log()->notice('Make initial commit to GitHub');
+            $this->initialCommit($github_token, $target_project, $siteDir);
+
+            $this->log()->notice('Push code to Pantheon');
+
+            // Push code to newly-created project.
+            $metadata = $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+
+            $this->log()->notice('Install the site on the dev environment');
+
+            $circle_env = $this->getCIEnvironment($site_name, $options);
+
+            // Install the site.
+            $site_install_options = [
+                'account-mail' => $circle_env['ADMIN_EMAIL'],
+                'account-name' => 'admin',
+                'account-pass' => $circle_env['ADMIN_PASSWORD'],
+                'site-mail' => $circle_env['ADMIN_EMAIL'],
+                'site-name' => $circle_env['TEST_SITE_NAME'],
+            ];
+            $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
+
+            $this->configureCircle($target_project, $circle_token, $circle_env);
         }
-
-        file_put_contents("$siteDir/README.md", $readme);
-
-        // Make the initial commit to our GitHub repository
-        $this->log()->notice('Make initial commit to GitHub');
-        $this->initialCommit($github_token, $target_project, $siteDir);
-
-        $this->log()->notice('Push code to Pantheon');
-
-        // Push code to newly-created project.
-        $metadata = $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
-
-        $this->log()->notice('Install the site on the dev environment');
-
-        $circle_env = $this->getCIEnvironment($site_name, $options);
-
-        // Install the site.
-        $site_install_options = [
-            'account-mail' => $circle_env['ADMIN_EMAIL'],
-            'account-name' => 'admin',
-            'account-pass' => $circle_env['ADMIN_PASSWORD'],
-            'site-mail' => $circle_env['ADMIN_EMAIL'],
-            'site-name' => $circle_env['TEST_SITE_NAME'],
-        ];
-        $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
-
-        $this->configureCircle($target_project, $circle_token, $circle_env);
-
-        $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/$source"]);
+        catch (\Exception $e) {
+            $ch = $this->createGitHubDeleteChannel("repos/$target_project", $github_token);
+            $data = $this->execCurlRequest($ch, 'GitHub');
+            if (isset($site)) {
+                $site->delete();
+            }
+            throw $e;
+        }
+        $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/$target_project"]);
     }
 
     /**
@@ -672,6 +681,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             }
             $this->log()->notice('Deployed CMS');
         }
+
+        return $this->getSite($site_name);
     }
 
     /**
@@ -960,7 +971,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $env_label = $label;
         }
 
-        $this->log()->notice('Pushing code to {multidev} using branch {branch}.', ['multidev' => $multidev, $branch]);
+        // Sanity check: only push from directories that have .git and composer.json
+        foreach (['.git', 'composer.json'] as $item) {
+            if (!file_exists("$repositoryDir/$item")) {
+                throw new TerminusException('Cannot push from {dir}: missing {item}.', ['dir' => $repositoryDir, 'item' => $item]);
+            }
+        }
+
+        $this->log()->notice('Pushing code to {multidev} using branch {branch}.', ['multidev' => $multidev, 'branch' => $branch]);
 
         // Fetch the site id also
         $siteInfo = $site->serialize();
@@ -991,7 +1009,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $fs->remove(
           $finder
             ->directories()
-            ->in(getcwd())
+            ->in("$repositoryDir")
             ->ignoreDotFiles(false)
             ->ignoreVCS(false)
             ->depth('> 0')
@@ -1685,7 +1703,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                     return $metadata['url'];
                 }
             }
-            catch(Exception $e) {
+            catch(\Exception $e) {
             }
         }
         return '';
