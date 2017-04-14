@@ -114,18 +114,27 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
     {
+        // Ask for a GitHub token if one is not available.
         $github_token = getenv('GITHUB_TOKEN');
         if (empty($github_token)) {
-            $github_token = $this->io()->ask("Please visit the page https://github.com/settings/tokens to generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/\nThen, enter it here:");
+            $github_token = $this->io()->askHidden("Please visit the page https://github.com/settings/tokens to generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use. Give it the 'repo' and 'delete-repo' scopes.\nThen, enter it here:");
             $github_token = trim($github_token);
             putenv("GITHUB_TOKEN=$github_token");
         }
 
+        // Ask for a Circle token if one is not available.
         $circle_token = getenv('CIRCLE_TOKEN');
         if (empty($circle_token)) {
-            $circle_token = $this->io()->ask("Please visit the page https://circleci.com/account/api to generate a Circle CI personal API token, as described in https://circleci.com/docs/api/v1-reference/#getting-started\nThen, enter it here:");
+            $circle_token = $this->io()->askHidden("Please visit the page https://circleci.com/account/api to generate a Circle CI personal API token, as described in https://circleci.com/docs/api/v1-reference/#getting-started\nThen, enter it here:");
             $circle_token = trim($circle_token);
             putenv("CIRCLE_TOKEN=$circle_token");
+        }
+
+        // If the user did not specify an admin password, then prompt for one.
+        $adminPassword = $input->getOption('admin-password');
+        if (empty($adminPassword)) {
+            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site, or leave empty for a random password:");
+            $input->setOption('admin-password', $adminPassword);
         }
     }
 
@@ -256,7 +265,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
         $badgeTargetLabel = strtr($target, '-', '_');
         $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=svg)](https://circleci.com/gh/{$target_project})";
-        $pantheonBadge = "[![Pantheon {$target}](https://img.shields.io/badge/pantheon-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
+        $pantheonBadge = "[![Dashboard {$target}](https://img.shields.io/badge/dashboard-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
         $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
         $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
 
@@ -290,6 +299,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
 
         $this->configureCircle($target_project, $circle_token, $circle_env);
+
+        $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/$source"]);
     }
 
     /**
