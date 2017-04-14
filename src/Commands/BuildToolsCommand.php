@@ -265,7 +265,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
             // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
             $badgeTargetLabel = strtr($target, '-', '_');
-            $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=svg)](https://circleci.com/gh/{$target_project})";
+            $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=shield)](https://circleci.com/gh/{$target_project})";
             $pantheonBadge = "[![Dashboard {$target}](https://img.shields.io/badge/dashboard-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
             $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
             $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
