@@ -1027,6 +1027,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $env_label = $label;
         }
 
+        if (empty($repositoryDir)) {
+            $repositoryDir = getcwd();
+        }
+
         // Sanity check: only push from directories that have .git and composer.json
         foreach (['.git', 'composer.json'] as $item) {
             if (!file_exists("$repositoryDir/$item")) {
@@ -1039,9 +1043,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Fetch the site id also
         $siteInfo = $site->serialize();
         $site_id = $siteInfo['id'];
-        if (empty($repositoryDir)) {
-            $repositoryDir = getcwd();
-        }
 
         // Check to see if '$multidev' already exists on Pantheon.
         $environmentExists = $site->getEnvironments()->has($multidev);
