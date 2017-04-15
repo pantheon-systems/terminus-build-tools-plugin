@@ -288,6 +288,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $this->log()->notice('Install the site on the dev environment');
 
             $circle_env = $this->getCIEnvironment($site_name, $options);
+            $composer_json = $this->getComposerJson($siteDir);
 
             // Install the site.
             $site_install_options = [
@@ -297,7 +298,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 'site-mail' => $circle_env['ADMIN_EMAIL'],
                 'site-name' => $circle_env['TEST_SITE_NAME'],
             ];
-            $this->installSite("{$site_name}.dev", $siteDir, $site_install_options);
+            $this->doInstallSite("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
 
             $this->configureCircle($target_project, $circle_token, $circle_env);
         }
@@ -897,7 +898,25 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'site-name' => ''
         ])
     {
-        // TODO: Detect WordPress sites and use wp-cli to install.
+        if (empty($siteDir)) {
+            $siteDir = getcwd();
+        }
+        $composer_json = $this->getComposerJson($siteDir);
+        return $this->doInstallSite($site_env_id, $siteDir, $composer_json, $site_install_options);
+    }
+
+    public function doInstallSite(
+        $site_env_id,
+        $siteDir = '',
+        $composer_json = [],
+        $site_install_options = [
+            'account-mail' => '',
+            'account-name' => '',
+            'account-pass' => '',
+            'site-mail' => '',
+            'site-name' => ''
+        ])
+    {
         list($site, $env) = $this->getSiteEnv($site_env_id);
 
         $this->log()->notice('Install site on {site}', ['site' => $site_env_id]);
@@ -905,19 +924,56 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Set the target environment to sftp mode prior to installation
         $this->connectionSet($env, 'sftp');
 
-        $command_line = "drush site-install --yes";
-        foreach ($site_install_options as $option => $value) {
-            if (!empty($value)) {
-                $command_line .= " --$option=" . $this->escapeArgument($value);
-            }
-        }
-        $this->log()->notice("Install site via {cmd}", ['cmd' => str_replace($site_install_options['account-pass'], 'REDACTED', $command_line)]);
+        $command_template = $this->getInstallCommandTemplate($composer_json);
+        $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $site_install_options);
+        $command_line = $this->interpolate($command_template, $metadata);
+        $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
+        $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
+
+        $this->log()->notice("Install site via {cmd}", ['cmd' => $redacted_metadata]);
         $result = $env->sendCommandViaSsh(
             $command_line,
             function ($type, $buffer) {
             }
         );
         $output = $result['output'];
+    }
+
+    /**
+     * Remove sensitive information from a metadata array.
+     */
+    protected function redactMetadata($metadata, $keys_to_redact)
+    {
+        foreach ($keys_to_redact as $key) {
+            $metadata[$key] = '"[REDACTED]"';
+        }
+        return $metadata;
+    }
+
+    /**
+     * Determine the command to use to install the site.
+     */
+    protected function getInstallCommandTemplate($composer_json)
+    {
+        if (isset($composer_json['extra']['build-env']['install-cms'])) {
+            return $composer_json['extra']['build-env']['install-cms'];
+        }
+        // TODO: Select a different default template based on the cms type (Drupal or WordPress).
+        $defaultTemplate = 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
+
+        return $defaultTemplate;
+    }
+
+    /**
+     * Read the composer.json file from the provided site directory.
+     */
+    protected function getComposerJson($siteDir)
+    {
+        $composer_json_file = "$siteDir/composer.json";
+        if (!file_exists($composer_json_file)) {
+            return [];
+        }
+        return json_decode(file_get_contents($composer_json_file), true);
     }
 
     /**
