@@ -178,6 +178,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'admin-password' => '',
             'admin-email' => '',
             'stability' => '',
+            'env' => [],
         ])
     {
         $this->warnAboutOldPhp();
@@ -363,10 +364,19 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         $site = $this->getSite($site_name);
 
+        $options += [
+            'test-site-name' => '',
+            'email' => '',
+            'admin-password' => '',
+            'admin-email' => '',
+            'env' => [],
+        ];
+
         $test_site_name = $options['test-site-name'];
         $git_email = $options['email'];
         $admin_password = $options['admin-password'];
         $admin_email = $options['admin-email'];
+        $extra_env = $options['env'];
 
         if (empty($test_site_name)) {
             $test_site_name = $site_name;
@@ -398,6 +408,15 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $github_token = getenv('GITHUB_TOKEN');
         if ($github_token) {
             $circle_env['GITHUB_TOKEN'] = $github_token;
+        }
+
+        // Add in extra environment provided on command line via
+        // --env='key=value' --env='another=v2'
+        foreach ($extra_env as $env) {
+            list($key, $value) = explode('=', $env, 2) + ['',''];
+            if (!empty($key) && !empty($value)) {
+                $circle_env[$key] = $value;
+            }
         }
 
         return $circle_env;
@@ -490,6 +509,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'email' => '',
             'admin-password' => '',
             'admin-email' => '',
+            'env' => [],
         ])
     {
         $site = $this->getSite($site_name);
