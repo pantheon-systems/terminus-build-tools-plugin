@@ -278,13 +278,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             file_put_contents("$siteDir/README.md", $readme);
 
             // Make the initial commit to our GitHub repository
-            $this->log()->notice('Make initial commit to GitHub');
-            $this->initialCommit($github_token, $target_project, $siteDir);
+            $this->log()->notice('Make initial commit');
+            $initial_commit = $this->initialCommit($siteDir);
+            $this->log()->notice('Push initial commit to GitHub');
+            $this->pushToGitHub($github_token, $target_project, $siteDir);
 
             $this->log()->notice('Push code to Pantheon');
 
             // Push code to newly-created project.
             $metadata = $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+
+            // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
+            $this->resetToCommit($siteDir, $initial_commit);
 
             $this->log()->notice('Install the site on the dev environment');
 
@@ -299,8 +304,17 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 'site-mail' => $circle_env['ADMIN_EMAIL'],
                 'site-name' => $circle_env['TEST_SITE_NAME'],
             ];
-            $this->doInstallSite("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
+            $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 
+            // Before any tests have been configured, export the
+            // configuration set up by the installer.
+            $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
+
+            // Push our exported configuration to GitHub
+            $this->log()->notice('Push exported configuration to GitHub');
+            $this->pushToGitHub($github_token, $target_project, $siteDir);
+
+            // Set up CircleCI to test our project.
             $this->configureCircle($target_project, $circle_token, $circle_env);
         }
         catch (\Exception $e) {
@@ -651,15 +665,38 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     /**
      * Make the initial commit to our new GitHub project.
      */
-    protected function initialCommit($github_token, $target_project, $local_site_path)
+    protected function initialCommit($repositoryDir)
     {
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
-
         // Add the canonical repository files to the new GitHub project
         // respecting .gitignore.
-        $this->passthru("git -C $local_site_path add .");
-        $this->passthru("git -C $local_site_path commit -m 'Initial commit'");
-        $this->passthruRedacted("git -C $local_site_path push --progress $remote_url master", $github_token);
+        $this->passthru("git -C $repositoryDir add .");
+        $this->passthru("git -C $repositoryDir commit -m 'Initial commit'");
+        return $this->getHeadCommit($repositoryDir);
+    }
+
+    /**
+     * Return the sha of the HEAD commit.
+     */
+    protected function getHeadCommit($repositoryDir)
+    {
+        return exec("git -C $repositoryDir rev-parse HEAD");
+    }
+
+    /**
+     * Reset to the specified commit (or remove the last commit)
+     */
+    protected function resetToCommit($repositoryDir, $resetToCommit = 'HEAD^')
+    {
+        $this->passthru("git -C $repositoryDir reset --hard $resetToCommit");
+    }
+
+    /**
+     * Make the initial commit to our new GitHub project.
+     */
+    protected function pushToGitHub($github_token, $target_project, $repositoryDir)
+    {
+        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
+        $this->passthruRedacted("git -C $repositoryDir push --progress $remote_url master", $github_token);
     }
 
     // TODO: if we could look up the commandfile for
@@ -905,7 +942,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     /**
      * Install the apporpriate CMS on the newly-created Pantheon site.
      *
-     * @command build-env:install-site
+     * @command build-env:site-install
      */
     public function installSite(
         $site_env_id,
@@ -922,12 +959,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $siteDir = getcwd();
         }
         $composer_json = $this->getComposerJson($siteDir);
-        return $this->doInstallSite($site_env_id, $siteDir, $composer_json, $site_install_options);
+        return $this->doInstallSite($site_env_id, $composer_json, $site_install_options);
     }
 
-    public function doInstallSite(
+    protected function doInstallSite(
         $site_env_id,
-        $siteDir = '',
         $composer_json = [],
         $site_install_options = [
             'account-mail' => '',
@@ -937,26 +973,64 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'site-name' => ''
         ])
     {
+        $command_template = $this->getInstallCommandTemplate($composer_json);
+        return $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Install site", $site_install_options);
+    }
+
+    protected function runCommandTemplateOnRemoteEnv(
+        $site_env_id,
+        $command_templates,
+        $operation_label,
+        $options
+    ) {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+        $this->log()->notice('{op} on {site}', ['op' => $operation_label, 'site' => $site_env_id]);
 
-        $this->log()->notice('Install site on {site}', ['site' => $site_env_id]);
-
-        // Set the target environment to sftp mode prior to installation
+        // Set the target environment to sftp mode prior to running the command
         $this->connectionSet($env, 'sftp');
 
-        $command_template = $this->getInstallCommandTemplate($composer_json);
-        $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $site_install_options);
-        $command_line = $this->interpolate($command_template, $metadata);
-        $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
-        $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
+        foreach ((array)$command_templates as $command_template) {
+            $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $options);
+            $command_line = $this->interpolate($command_template, $metadata);
+            $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
+            $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
 
-        $this->log()->notice("Install site via {cmd}", ['cmd' => $redacted_metadata]);
-        $result = $env->sendCommandViaSsh(
-            $command_line,
-            function ($type, $buffer) {
+            $this->log()->notice(' - {cmd}', ['cmd' => $redacted_command_line]);
+            $result = $env->sendCommandViaSsh(
+                $command_line,
+                function ($type, $buffer) {
+                }
+            );
+            $output = $result['output'];
+            if ($result['exit_code']) {
+                throw new TerminusException('{op} failed with exit code {status}', ['op' => $operation_label, 'status' => $result['exit_code']]);
             }
-        );
-        $output = $result['output'];
+        }
+    }
+
+    protected function exportInitialConfiguration($site_env_id, $repositoryDir, $composer_json, $options)
+    {
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+        $command_template = $this->getExportConfigurationTemplate($composer_json);
+        if (empty($command_template)) {
+            return;
+        }
+
+        // Run the 'export configuration' command
+        $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Export configuration", $options);
+
+        // Commit the changes. Quicksilver is not set up to push these back
+        // to GitHub from the dev branch, but we don't want to leave these changes
+        // uncommitted.
+        $env->commitChanges('Install site and export configuration.');
+
+        // TODO: How do we know where the configuration will be exported to?
+        // Perhaps we need to export to a temporary directory where we control
+        // the path. Perhaps export to ':tmp/config' instead of ':code/config'.
+        $this->rsync($site_env_id, ':code/config', $repositoryDir);
+
+        $this->passthru("git -C $repositoryDir add config");
+        $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
     }
 
     /**
@@ -982,6 +1056,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $defaultTemplate = 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
 
         return $defaultTemplate;
+    }
+
+    /**
+     * Determine the command to use to export configuration.
+     */
+    protected function getExportConfigurationTemplate($composer_json)
+    {
+        if (isset($composer_json['extra']['build-env']['export-configuration'])) {
+            return $composer_json['extra']['build-env']['export-configuration'];
+        }
+
+        return '';
     }
 
     /**
@@ -1697,11 +1783,46 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function waitForCodeSync($startTime, $site, $env_name)
     {
-        $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+        $this->waitForWorkflow($startTime, $site, $env_name);
+    }
 
-        // Wait for at most one minute.
+    /**
+     * Wait for a workflow to complete. Usually this will be used to wait
+     * for code commits, since Terminus will already wait for workflows
+     * that it starts through the API.
+     *
+     * @command workflow:wait
+     * @param $site_env_id The pantheon site to wait for.
+     * @param $description The workflow description to wait for. Optional; default is code sync.
+     * @option start Ignore any workflows started prior to the start time (epoch)
+     * @option max Maximum time in seconds to wait
+     */
+    public function workflowWait(
+        $site_env_id,
+        $description = '',
+        $options = [
+          'start' => 0,
+          'max' => 60,
+        ])
+    {
+        list($site, $env) = $this->getSiteEnv($site_env_id);
+        $env_name = $env->getName();
+
+        $startTime = $options['start'];
+        if (!$startTime) {
+            $startTime = time() - 60;
+        }
+        $this->waitForWorkflow($startTime, $site, $env_name, $description, $options['max']);
+    }
+
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 60)
+    {
+        if (empty($expectedWorkflowDescription)) {
+            $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+        }
+
         $startWaiting = time();
-        while(time() - $startWaiting < 60) {
+        while(time() - $startWaiting < $maxWaitInSeconds) {
             $workflow = $this->getLatestWorkflow($site);
             $workflowCreationTime = $workflow->get('created_at');
             $workflowDescription = $workflow->get('description');
@@ -1742,7 +1863,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return [
           'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
-          'sha'         => exec("git -C $repositoryDir rev-parse HEAD"),
+          'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
           'commit-date' => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
           'build-date'  => date("Y-m-d H:i:s O"),
