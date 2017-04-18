@@ -14,22 +14,22 @@ An [example circle.yml file](example.circle.yml) has been provided to show how t
 - A new multidev environment is created for testing.
 - The build artifacts are pushed up to the test environment.
 
-When a PR is merged to the master branch, then the test PR is merged into the dev environment if the test passes.
-
-Testing multidev environments are divided into two groups: environments used for testing pull requests, and environments used for testing other kinds of builds (e.g. tagged releases, commits or merges to master, and so on). PR test environments persist until the PR branch on GitHub is deleted. The other test environments are deleted just before a new testing environment is created. The most recent three of these environments remain, and the rest are deleted.
+The multidev environment created to test the pull request persists until the pull request is merged. Pantheon on-server development (SFTP) mode may be used as usual on these environments; any commits made on the Pantheon dashboard will be pushed back to the GitHub repository on the PR branch. Once the PR is merged to the master branch, then the corresponding multidev environment is also merged into the Pantheon dev environment. When using this workflow, all work is done in pull requests; the dev environment is never used for development.
 
 See below for the list of supported commands. This plugin is only available for Terminus 1.x.
 
 ## Configuration
 
-In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up.
+In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up. Most of the work can be done for you automatically using the New Project Quickstart below, or you may set everything up manually.
 
 ### Credentials
 
 In order to use the build-env:create-project command, the first thing that you need to do is set up credentials to access GitHub and Circle CI. Instructions on creating these credentials can be found on the pages listed below:
 
 - GitHub: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
-- Circle CI: https://circleci.com/docs/api/#authentication
+- Circle CI: https://circleci.com/account/api
+
+The GitHub token needs the "repo" and "delete repo" scopes.
 
 These credentials may be exported as environment variables. For example:
 ```
@@ -39,9 +39,9 @@ export CIRCLE_TOKEN=[REDACTED]
 ```
 If you do not export these environment variables, you will be prompted to enter them when you run the build-env:create-project command.
 
-### Create a New Project Quickstart
+### New Project Quickstart
 
-EXPERIMENTAL: The build-env:create-project is under development. Backwards compatibility not guarenteed until version 1.3.0.
+EXPERIMENTAL: The build-env:create-project is in beta. Backwards compatibility not guarenteed until version 1.4.0.
 
 To create a new project consisting of a GitHub project, a Pantheon site, and Circle CI tests, first set up credentials as shown in the previous section, and then run the `build-env:create-project` command as shown below:
 ```
@@ -52,6 +52,7 @@ This single command will:
 
 - Create a new GitHub repository named `example-site`, cloned from the started site repository.
 - Create a new Pantheon site built from the GitHub repository.
+- Install the specified CMS and commit the exported configuration to the GitHub repository.
 - Configure CircleCI to run Behat tests on the site on every pull request.
 - Configure credentials on all of these services to allow the test scripts to run.
 
