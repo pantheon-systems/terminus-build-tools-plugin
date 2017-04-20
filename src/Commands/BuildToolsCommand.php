@@ -185,12 +185,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Ask for a GitHub token if one is not available.
         $github_token = getenv('GITHUB_TOKEN');
         while (empty($github_token)) {
-            $github_token = $this->io()->askHidden("Please visit the page https://github.com/settings/tokens to generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use. Give it the 'repo' and 'delete-repo' scopes.\nThen, enter it here:");
+            $github_token = $this->io()->askHidden("Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.\n Then, enter it here:");
             $github_token = trim($github_token);
             putenv("GITHUB_TOKEN=$github_token");
 
             // Validate that the GitHub token looks correct. If not, prompt again.
-            if ((count($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
+            if ((strlen($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
                 $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
                 $github_token = '';
             }
@@ -199,12 +199,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Ask for a Circle token if one is not available.
         $circle_token = getenv('CIRCLE_TOKEN');
         while (empty($circle_token)) {
-            $circle_token = $this->io()->askHidden("Please visit the page https://circleci.com/account/api to generate a Circle CI personal API token, as described in https://circleci.com/docs/api/v1-reference/#getting-started\nThen, enter it here:");
+            $circle_token = $this->io()->askHidden("Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started\n\n Then, enter it here:");
             $circle_token = trim($circle_token);
             putenv("CIRCLE_TOKEN=$circle_token");
 
             // Validate that the CircleCI token looks correct. If not, prompt again.
-            if ((count($circle_token) < 40) || preg_match('#[^0-9a-fA-F]#', $circle_token)) {
+            if ((strlen($circle_token) < 40) || preg_match('#[^0-9a-fA-F]#', $circle_token)) {
                 $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
                 $circle_token = '';
             }
@@ -216,7 +216,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $adminPassword = getenv('ADMIN_PASSWORD');
         }
         if (empty($adminPassword)) {
-            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site, or leave empty for a random password:");
+            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function () { return true; });
         }
         $input->setOption('admin-password', $adminPassword);
 
