@@ -227,8 +227,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
         if (empty($team)) {
             $orgs = array_values($this->availableOrgs());
-            array_unshift($orgs, '-');
-            $team = $this->io()->choice('Select a team for this site', $orgs);
+            if (!empty($orgs)) {
+                array_unshift($orgs, '-');
+                $team = $this->io()->choice('Select a team for this site', $orgs);
+            }
         }
         if ($team != '-') {
             $input->setOption('team', $team);
