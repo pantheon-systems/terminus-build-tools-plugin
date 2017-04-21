@@ -19,6 +19,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Process\ProcessUtils;
 use Consolidation\AnnotatedCommand\AnnotationData;
+use Consolidation\AnnotatedCommand\CommandData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Semver\Comparator;
@@ -216,7 +217,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $adminPassword = getenv('ADMIN_PASSWORD');
         }
         if (empty($adminPassword)) {
-            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function () { return true; });
+            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function ($value) { return $value; });
         }
         $input->setOption('admin-password', $adminPassword);
 
@@ -234,6 +235,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
         if ($team != '-') {
             $input->setOption('team', $team);
+        }
+    }
+
+    /**
+     * Ensure that the user has not supplied any parameters with invalid values.
+     *
+     * @hook validate build-env:create-project
+     */
+    public function validateCreateProject(CommandData $commandData)
+    {
+        $input = $commandData->input();
+        $adminPassword = $input->getOption('admin-password');
+
+        if (strpbrk($adminPassword, '!;$`') !== false) {
+            throw new TerminusException("Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.");
         }
     }
 
