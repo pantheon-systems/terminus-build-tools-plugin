@@ -717,12 +717,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // TODO: Do we need to remove $local_site_path/.git? (-n should obviate this need)
         $this->passthru("composer create-project $source $local_site_path -n $stability_flag");
 
+        // Create a GitHub repository
         $this->log()->notice('Creating repository {repo} from {source}', ['repo' => $target_project, 'source' => $source]);
         $postData = ['name' => $target];
         $result = $this->curlGitHub($createRepoUrl, $postData, $github_token);
 
-        // Create a GitHub repository
+        // Create a git repository. Add an origin just to have the data there
+        // when collecting the build metadata later. We use the 'pantheon'
+        // remote when pushing.
         $this->passthru("git -C $local_site_path init");
+        $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
 
         return [$target_project, $local_site_path];
     }
