@@ -23,6 +23,7 @@ use Consolidation\AnnotatedCommand\CommandData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Semver\Comparator;
+use Pantheon\TerminusBuildTools\Providers\GitProvider;
 
 /**
  * Build Tool Commands
@@ -126,7 +127,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     public function validateSiteName(InputInterface $input, AnnotationData $annotationData)
     {
-        $github_org = $input->getOption('org');
+        $git_org = $input->getOption('org');
+        $git_provider = $input->getOption('git-provider');
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
@@ -148,7 +150,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // If an org was provided for the target, then extract it into
         // the `$org` variable
         if (strpos($target, '/') !== FALSE) {
-            list($github_org, $target) = explode('/', $target, 2);
+            list($git_org, $target) = explode('/', $target, 2);
         }
 
         // If the user did not explicitly provide a Pantheon site name,
@@ -166,10 +168,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
         }
 
+        if (!in_array($git_provider, ['github', 'gitlab'])) {
+          throw new TerminusException('The git provider {git_provider} is not currently supported.', compact('git_provider'));
+        }
+
         // Assign variables back to $input after filling in defaults.
         $input->setArgument('source', $source);
         $input->setArgument('target', $target);
-        $input->setOption('org', $github_org);
+        $input->setOption('org', $git_org);
         $input->setOption('pantheon-site', $site_name);
     }
 
@@ -183,19 +189,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
     {
-        // Ask for a GitHub token if one is not available.
-        $github_token = getenv('GITHUB_TOKEN');
-        while (empty($github_token)) {
-            $github_token = $this->io()->askHidden("Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.\n Then, enter it here:");
-            $github_token = trim($github_token);
-            putenv("GITHUB_TOKEN=$github_token");
-
-            // Validate that the GitHub token looks correct. If not, prompt again.
-            if ((strlen($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
-                $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
-                $github_token = '';
-            }
-        }
+        $provider = $this->getGitProvider($input->getOption('git-provider'));
+        // Ensure we have a Git token.
+        $git_token = $provider->getToken();
 
         // Ask for a Circle token if one is not available.
         $circle_token = getenv('CIRCLE_TOKEN');
@@ -254,8 +250,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
-     * Create a new project from the requested source GitHub project.
-     *  - Creates a GitHub repository forked from the source project.
+     * Create a new project from the requested source Git project.
+     *  - Creates a Git repository forked from the source project.
      *  - Creates a Pantheon site to run the tests on.
      *  - Sets up Circle CI to test the repository.
      * In order to use this command, it is also necessary to provide
@@ -294,17 +290,20 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'admin-email' => '',
             'stability' => '',
             'env' => [],
+            'git-provider' => '',
         ])
     {
         $this->warnAboutOldPhp();
         $options = $this->validateOptionsAndSetDefaults($options);
 
         // Copy options into ordinary variables
-        $github_org = $options['org'];
+        $git_org = $options['org'];
         $site_name = $options['pantheon-site'];
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
+        $git_provider = $options['git-provider'];
+        $provider = $this->getGitProvider($git_provider);
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -312,18 +311,18 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         // Get our authenticated credentials from environment variables.
-        $github_token = $this->getRequiredGithubToken();
+        $git_token = $provider->getToken();
         $circle_token = $this->getRequiredCircleToken();
 
         // This target label is only used for the log messages below.
         $target_label = $target;
-        if (!empty($github_org)) {
-            $target_label = "$github_org/$target";
+        if (!empty($git_org)) {
+            $target_label = "$git_org/$target";
         }
 
         // Create the github repository
-        $this->log()->notice('Create GitHub project {target} from {src}', ['src' => $source, 'target' => $target_label]);
-        list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability);
+        $this->log()->notice('Create Git project {target} from {src}', ['src' => $source, 'target' => $target_label]);
+        list($target_project, $siteDir) = $provider->create($source, $target, $git_org, $git_token, $stability);
 
         $site = null;
         try {
@@ -356,8 +355,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // Make the initial commit to our GitHub repository
             $this->log()->notice('Make initial commit');
             $initial_commit = $this->initialCommit($siteDir);
-            $this->log()->notice('Push initial commit to GitHub');
-            $this->pushToGitHub($github_token, $target_project, $siteDir);
+            $provider->push($git_token, $target_project, $siteDir);
 
             $this->log()->notice('Push code to Pantheon');
 
@@ -386,22 +384,22 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // configuration set up by the installer.
             $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
 
-            // Push our exported configuration to GitHub
-            $this->log()->notice('Push exported configuration to GitHub');
-            $this->pushToGitHub($github_token, $target_project, $siteDir);
+            // Push our exported configuration to Git
+            $provider->push($git_token, $target_project, $siteDir);
 
             // Set up CircleCI to test our project.
             $this->configureCircle($target_project, $circle_token, $circle_env);
         }
         catch (\Exception $e) {
-            $ch = $this->createGitHubDeleteChannel("repos/$target_project", $github_token);
-            $data = $this->execCurlRequest($ch, 'GitHub');
+            if (isset($provider)) {
+              $provider->delete($target_project, $git_token);
+            }
             if (isset($site)) {
                 $site->delete();
             }
             throw $e;
         }
-        $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/$target_project"]);
+        $this->log()->notice('Your new site repository is {git}', ['git' => $provider->site($target_project)]);
     }
 
     /**
@@ -683,66 +681,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
-     * Use the GitHub API to create a new GitHub project.
-     */
-    protected function createGitHub($source, $target, $github_org, $github_token, $stability = '')
-    {
-        // We need a different URL here if $github_org is an org; if no
-        // org is provided, then we use a simpler URL to create a repository
-        // owned by the currently-authenitcated user.
-        $createRepoUrl = "orgs/$github_org/repos";
-        $target_org = $github_org;
-        if (empty($github_org)) {
-            $createRepoUrl = 'user/repos';
-            $userData = $this->curlGitHub('user', [], $github_token);
-            $target_org = $userData['login'];
-        }
-        $target_project = "$target_org/$target";
-
-        $source_project = $this->sourceProjectFromSource($source);
-        $tmpsitedir = $this->tempdir('local-site');
-
-        $local_site_path = "$tmpsitedir/$target";
-
-        $this->log()->notice('Creating project and resolving dependencies.');
-
-        // If the source is 'org/project:dev-branch', then automatically
-        // set the stability to 'dev'.
-        if (empty($stability) && preg_match('#:dev-#', $source)) {
-            $stability = 'dev';
-        }
-        // Pass in --stability to `composer create-project` if user requested it.
-        $stability_flag = empty($stability) ? '' : "--stability $stability";
-
-        // TODO: Do we need to remove $local_site_path/.git? (-n should obviate this need)
-        $this->passthru("composer create-project $source $local_site_path -n $stability_flag");
-
-        // Create a GitHub repository
-        $this->log()->notice('Creating repository {repo} from {source}', ['repo' => $target_project, 'source' => $source]);
-        $postData = ['name' => $target];
-        $result = $this->curlGitHub($createRepoUrl, $postData, $github_token);
-
-        // Create a git repository. Add an origin just to have the data there
-        // when collecting the build metadata later. We use the 'pantheon'
-        // remote when pushing.
-        $this->passthru("git -C $local_site_path init");
-        $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
-
-        return [$target_project, $local_site_path];
-    }
-
-    /**
-     * Given a source, such as:
-     *    pantheon-systems/example-drops-8-composer:dev-lightning-fist-2
-     * Return the 'project' portion, including the org, e.g.:
-     *    pantheon-systems/example-drops-8-composer
-     */
-    protected function sourceProjectFromSource($source)
-    {
-        return preg_replace('/:.*/', '', $source);
-    }
-
-    /**
      * Make the initial commit to our new GitHub project.
      */
     protected function initialCommit($repositoryDir)
@@ -768,15 +706,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     protected function resetToCommit($repositoryDir, $resetToCommit = 'HEAD^')
     {
         $this->passthru("git -C $repositoryDir reset --hard $resetToCommit");
-    }
-
-    /**
-     * Make the initial commit to our new GitHub project.
-     */
-    protected function pushToGitHub($github_token, $target_project, $repositoryDir)
-    {
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
-        $this->passthruRedacted("git -C $repositoryDir push --progress $remote_url master", $github_token);
     }
 
     // TODO: if we could look up the commandfile for
@@ -1582,19 +1511,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return $this->execCurlRequest($ch, 'CircleCI');
     }
 
-    protected function createGitHubCurlChannel($uri, $auth = '')
-    {
-        $url = "https://api.github.com/$uri";
-        return $this->createAuthorizationHeaderCurlChannel($url, $auth);
-    }
 
-    protected function createGitHubPostChannel($uri, $postData = [], $auth = '')
-    {
-        $ch = $this->createGitHubCurlChannel($uri, $auth);
-        $this->setCurlChannelPostData($ch, $postData);
-
-        return $ch;
-    }
 
     protected function createGitHubDeleteChannel($uri, $auth = '')
     {
@@ -1602,13 +1519,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
 
         return $ch;
-    }
-
-    public function curlGitHub($uri, $postData = [], $auth = '')
-    {
-        $this->log()->notice('Call GitHub API: {uri}', ['uri' => $uri]);
-        $ch = $this->createGitHubPostChannel($uri, $postData, $auth);
-        return $this->execCurlRequest($ch, 'GitHub');
     }
 
     /**
@@ -2162,5 +2072,42 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         $fs = new Filesystem();
         $fs->remove($this->tmpDirs);
+    }
+
+    public function getGitProvider($provider) {
+      $candidates = $this->getCandidateGitProviders();
+      $provider = strtolower($provider);
+
+      if (isset($candidates[$provider])) {
+        return $candidates[$provider];
+      }
+
+      $this->log()->warning('No suitable git provider specified.  Using GitHub.');
+      return $candidates['github'];
+    }
+
+    public function getCandidateGitProviders() {
+      $iterator = new \DirectoryIterator(__DIR__ . '/../Providers');
+
+      $candidate_instances = [];
+
+      // Autoload plugins.
+      foreach ($iterator as $file) {
+        $plugin = 'Pantheon\TerminusBuildTools\Providers\\' . $file->getBasename('.php');
+
+        // Don't load the base plugin.
+        if (GitProvider::class === $plugin || !$file->isFile()) {
+          continue;
+        }
+
+        /* @var $candidate_instance GitProvider */
+        $candidate_instance = new $plugin();
+
+        $candidate_instances[$candidate_instance->provider] = $candidate_instance;
+      }
+
+      ksort($candidate_instances);
+
+      return $candidate_instances;
     }
 }
