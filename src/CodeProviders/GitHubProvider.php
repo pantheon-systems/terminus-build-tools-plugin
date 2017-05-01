@@ -1,6 +1,6 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\Providers;
+namespace Pantheon\TerminusBuildTools\CodeProviders;
 
 /**
  * Build tools integration with GitHub.
@@ -81,16 +81,25 @@ class GitHubProvider extends GitProvider {
     return [$target_project, $local_site_path];
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function push($git_token, $target_project, $repositoryDir) {
     $this->log()->notice('Push initial commit to GitHub');
     $remote_url = "https://$git_token:x-oauth-basic@github.com/${target_project}.git";
     $this->passthruRedacted("git -C $repositoryDir push --progress $remote_url master", $git_token);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function site($target_project) {
     return "https://github.com/" . $target_project;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function delete($target_project, $git_token) {
     $ch = $this->createGitHubDeleteChannel("repos/$target_project", $git_token);
     $data = $this->execCurlRequest($ch, 'GitHub');

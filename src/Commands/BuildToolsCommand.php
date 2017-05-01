@@ -23,7 +23,7 @@ use Consolidation\AnnotatedCommand\CommandData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Semver\Comparator;
-use Pantheon\TerminusBuildTools\Providers\GitProvider;
+use Pantheon\TerminusBuildTools\CodeProviders\GitProvider;
 
 /**
  * Build Tool Commands
@@ -36,7 +36,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     const PR_BRANCH_DELETE_PATTERN = '^pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
 
-    protected $tmpDirs = [];
 
     /**
      * Object constructor
@@ -129,6 +128,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         $git_org = $input->getOption('org');
         $git_provider = $input->getOption('git-provider');
+        $ci_provider = $input->getOption('ci-provider');
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
@@ -168,8 +168,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
         }
 
-        if (!in_array($git_provider, ['github', 'gitlab'])) {
+        // @TODO -- this list of Git Providers shouldn't be hard coded.
+        if (!in_array(strtolower($git_provider), ['github', 'gitlab'])) {
           throw new TerminusException('The git provider {git_provider} is not currently supported.', compact('git_provider'));
+        }
+
+        if (!in_array(strtolower($ci_provider), ['circleci'])) {
+          throw new TerminusException('The CI provider {ci_provider} is not currently supported.', compact('ci_provider'));
         }
 
         // Assign variables back to $input after filling in defaults.
@@ -189,23 +194,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
     {
-        $provider = $this->getGitProvider($input->getOption('git-provider'));
+        $git_provider = $this->getGitProvider($input->getOption('git-provider'));
         // Ensure we have a Git token.
-        $git_token = $provider->getToken();
+        $git_token = $git_provider->getToken();
 
-        // Ask for a Circle token if one is not available.
-        $circle_token = getenv('CIRCLE_TOKEN');
-        while (empty($circle_token)) {
-            $circle_token = $this->io()->askHidden("Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started\n\n Then, enter it here:");
-            $circle_token = trim($circle_token);
-            putenv("CIRCLE_TOKEN=$circle_token");
-
-            // Validate that the CircleCI token looks correct. If not, prompt again.
-            if ((strlen($circle_token) < 40) || preg_match('#[^0-9a-fA-F]#', $circle_token)) {
-                $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
-                $circle_token = '';
-            }
-        }
+        $ci_provider = $this->getCIProvider($input->getOption('ci-provider'));
+        // Ensure we have a CI Token.
+        $ci_token = $ci_provider->getToken();
 
         // If the user did not specify an admin password, then prompt for one.
         $adminPassword = $input->getOption('admin-password');
@@ -291,6 +286,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'stability' => '',
             'env' => [],
             'git-provider' => '',
+            'ci-provider' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -302,8 +298,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
-        $git_provider = $options['git-provider'];
-        $provider = $this->getGitProvider($git_provider);
+        $git_provider = $this->getGitProvider($options['git-provider']);
+        $ci_provider = $this->getCIProvider($options['ci_provider']);
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -311,8 +307,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         // Get our authenticated credentials from environment variables.
-        $git_token = $provider->getToken();
-        $circle_token = $this->getRequiredCircleToken();
+        $git_token = $git_provider->getToken();
+        $ci_token = $ci_provider->getToken();
 
         // This target label is only used for the log messages below.
         $target_label = $target;
@@ -322,7 +318,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Create the github repository
         $this->log()->notice('Create Git project {target} from {src}', ['src' => $source, 'target' => $target_label]);
-        list($target_project, $siteDir) = $provider->create($source, $target, $git_org, $git_token, $stability);
+        list($target_project, $siteDir) = $git_provider->create($source, $target, $git_org, $git_token, $stability);
 
         $site = null;
         try {
@@ -341,10 +337,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
             // Create a new README file to point to this project's Circle tests and the dev site on Pantheon
             $badgeTargetLabel = strtr($target, '-', '_');
-            $circleBadge = "[![CircleCI](https://circleci.com/gh/{$target_project}.svg?style=shield)](https://circleci.com/gh/{$target_project})";
+            $ciBadge = $ci_provider->getBadge($target_project);
             $pantheonBadge = "[![Dashboard {$target}](https://img.shields.io/badge/dashboard-{$badgeTargetLabel}-yellow.svg)](https://dashboard.pantheon.io/sites/{$site_uuid}#dev/code)";
             $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
-            $readme = "# $target\n\n$circleBadge\n$pantheonBadge\n$siteBadge";
+            $readme = "# $target\n\n$ciBadge\n$pantheonBadge\n$siteBadge";
 
             if (!$this->siteHasMultidevCapability($site)) {
                 $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the CircleCI environment variable configuration page](https://circleci.com/gh/{$target_project}) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
@@ -355,7 +351,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             // Make the initial commit to our GitHub repository
             $this->log()->notice('Make initial commit');
             $initial_commit = $this->initialCommit($siteDir);
-            $provider->push($git_token, $target_project, $siteDir);
+            $git_provider->push($git_token, $target_project, $siteDir);
 
             $this->log()->notice('Push code to Pantheon');
 
@@ -367,16 +363,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
             $this->log()->notice('Install the site on the dev environment');
 
-            $circle_env = $this->getCIEnvironment($site_name, $options);
+            $ci_env = $ci_provider->prepare($this->getSite($site_name), $options, $this->recoverSessionMachineToken(), $git_token);
             $composer_json = $this->getComposerJson($siteDir);
 
             // Install the site.
             $site_install_options = [
-                'account-mail' => $circle_env['ADMIN_EMAIL'],
+                'account-mail' => $ci_env['ADMIN_EMAIL'],
                 'account-name' => 'admin',
-                'account-pass' => $circle_env['ADMIN_PASSWORD'],
-                'site-mail' => $circle_env['ADMIN_EMAIL'],
-                'site-name' => $circle_env['TEST_SITE_NAME'],
+                'account-pass' => $ci_env['ADMIN_PASSWORD'],
+                'site-mail' => $ci_env['ADMIN_EMAIL'],
+                'site-name' => $ci_env['TEST_SITE_NAME'],
             ];
             $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 
@@ -385,21 +381,21 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
 
             // Push our exported configuration to Git
-            $provider->push($git_token, $target_project, $siteDir);
+            $git_provider->push($git_token, $target_project, $siteDir);
 
             // Set up CircleCI to test our project.
-            $this->configureCircle($target_project, $circle_token, $circle_env);
+            $ci_provider->configure($target_project, $ci_token, $ci_env, $this->session());
         }
         catch (\Exception $e) {
-            if (isset($provider)) {
-              $provider->delete($target_project, $git_token);
+            if (isset($git_provider)) {
+              $git_provider->delete($target_project, $git_token);
             }
             if (isset($site)) {
                 $site->delete();
             }
             throw $e;
         }
-        $this->log()->notice('Your new site repository is {git}', ['git' => $provider->site($target_project)]);
+        $this->log()->notice('Your new site repository is {git}', ['git' => $git_provider->site($target_project)]);
     }
 
     /**
@@ -659,25 +655,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return 'Empty Upstream';
         // or 'Drupal 7' or 'WordPress'
         // return 'Drupal 8';
-    }
-
-    /**
-     * Create a unique ssh key pair to use in testing
-     *
-     * @param string $ssh_key_email
-     * @param string $prefix
-     * @return [string, string]
-     */
-    protected function createSshKeyPair($ssh_key_email, $prefix = 'id')
-    {
-        $tmpkeydir = $this->tempdir('ssh-keys');
-
-        $privateKey = "$tmpkeydir/$prefix";
-        $publicKey = "$privateKey.pub";
-
-        $this->passthru("ssh-keygen -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
-
-        return [$publicKey, $privateKey];
     }
 
     /**
@@ -1429,12 +1406,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return $ch;
     }
 
-    protected function createBasicAuthenticationCurlChannel($url, $username, $password = '')
-    {
-        $ch = $this->createAuthorizationHeaderCurlChannel($url);
-        curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-        return $ch;
-    }
+
 
     protected function setCurlChannelPostData($ch, $postData, $force = false)
     {
@@ -1474,44 +1446,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         return $data;
     }
-
-    protected function setCircleEnvironmentVars($circle_url, $token, $env)
-    {
-        foreach ($env as $key => $value) {
-            $data = ['name' => $key, 'value' => $value];
-            $this->curlCircleCI($data, "$circle_url/envvar", $token);
-        }
-    }
-
-    protected function circleFollow($circle_url, $token)
-    {
-        $this->curlCircleCI([], "$circle_url/follow", $token);
-    }
-
-    protected function addPublicKeyToPantheonUser($publicKey)
-    {
-        $this->session()->getUser()->getSSHKeys()->addKey($publicKey);
-    }
-
-    protected function addPrivateKeyToCircleProject($circle_url, $token, $privateKey)
-    {
-        $privateKeyContents = file_get_contents($privateKey);
-        $data = [
-            'hostname' => 'drush.in',
-            'private_key' => $privateKeyContents,
-        ];
-        $this->curlCircleCI($data, "$circle_url/ssh-key", $token);
-    }
-
-    protected function curlCircleCI($data, $url, $auth)
-    {
-        $this->log()->notice('Call CircleCI API: {uri}', ['uri' => $url]);
-        $ch = $this->createBasicAuthenticationCurlChannel($url, $auth);
-        $this->setCurlChannelPostData($ch, $data, true);
-        return $this->execCurlRequest($ch, 'CircleCI');
-    }
-
-
 
     protected function createGitHubDeleteChannel($uri, $auth = '')
     {
@@ -1857,6 +1791,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
           'commit-date' => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
           'build-date'  => date("Y-m-d H:i:s O"),
+          'git-provider' => 'github',
+          'ci-provider' => 'circleci',
         ];
     }
 
@@ -2075,7 +2011,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     public function getGitProvider($provider) {
-      $candidates = $this->getCandidateGitProviders();
+      $candidates = $this->getCandidateProviders('CodeProviders', 'GitProvider');
       $provider = strtolower($provider);
 
       if (isset($candidates[$provider])) {
@@ -2086,21 +2022,33 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
       return $candidates['github'];
     }
 
-    public function getCandidateGitProviders() {
-      $iterator = new \DirectoryIterator(__DIR__ . '/../Providers');
+    public function getCIProvider($provider) {
+      $candidates = $this->getCandidateProviders('CIProviders', 'CIProvider');
+      $provider = strtolower($provider);
+
+      if (isset($candidates[$provider])) {
+        return $candidates[$provider];
+      }
+
+      $this->log()->warning('No suitable CI provider specified.  Using CircleCI.');
+      return $candidates['circleci'];
+    }
+
+    public function getCandidateProviders($namespace, $base) {
+      $iterator = new \DirectoryIterator(__DIR__ . '/../' . $namespace);
 
       $candidate_instances = [];
 
       // Autoload plugins.
       foreach ($iterator as $file) {
-        $plugin = 'Pantheon\TerminusBuildTools\Providers\\' . $file->getBasename('.php');
+        $plugin = 'Pantheon\TerminusBuildTools\\' . $namespace . '\\' . $file->getBasename('.php');
 
         // Don't load the base plugin.
-        if (GitProvider::class === $plugin || !$file->isFile()) {
+        if ($base === $plugin || !$file->isFile()) {
           continue;
         }
 
-        /* @var $candidate_instance GitProvider */
+        /* @var $candidate_instance $base */
         $candidate_instance = new $plugin();
 
         $candidate_instances[$candidate_instance->provider] = $candidate_instance;
