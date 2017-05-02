@@ -53,6 +53,11 @@ class GitProvider extends Provider {
   public function site($target_project) {}
 
   /**
+   * Get the ssh git repo URL of the given target project.
+   */
+  public function desiredURL($target_project) {}
+
+  /**
    * Delete a given project from a git provider.
    */
   public function delete($target_project, $git_token) {}

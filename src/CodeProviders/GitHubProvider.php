@@ -100,6 +100,13 @@ class GitHubProvider extends GitProvider {
   /**
    * {@inheritdoc}
    */
+  public function desiredURL($target_project) {
+    return "git@github.com:{$target_project}.git";
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function delete($target_project, $git_token) {
     $ch = $this->createGitHubDeleteChannel("repos/$target_project", $git_token);
     $data = $this->execCurlRequest($ch, 'GitHub');

@@ -299,7 +299,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $label = $options['label'];
         $stability = $options['stability'];
         $git_provider = $this->getGitProvider($options['git-provider']);
-        $ci_provider = $this->getCIProvider($options['ci_provider']);
+        $ci_provider = $this->getCIProvider($options['ci-provider']);
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -602,17 +602,25 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
         $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
-        $desired_url = "git@github.com:{$target_project}.git";
+        if (empty($buildMetadata['git-provider'])) {
+          throw new TerminusException('The site {site} does not have a defined git provider.', ['site' => $site_name]);
+        }
+
+        $git_provider = $this->getGitProvider($buildMetadata['git-provider']);
+        $desired_url = $git_provider->desiredURL($target_project);
         if (!empty($buildMetadata['url']) && ($desired_url != $buildMetadata['url'])) {
             throw new TerminusException('The site {site} is already configured to test {url}; you cannot use this site to test {desired}.', ['site' => $site_name, 'url' => $buildMetadata['url'], 'desired' => $desired_url]);
         }
 
+
+        $ci_provider = $this->getCIProvider($buildMetadata['ci-provider']);
+
         // Get our authenticated credentials from environment variables.
-        $github_token = $this->getRequiredGithubToken();
-        $circle_token = $this->getRequiredCircleToken();
+        $git_token = $git_provider->getToken();
+        $ci_token = $ci_provider->getToken();
 
         $circle_env = $this->getCIEnvironment($site_name, $options);
-        $this->configureCircle($target_project, $circle_token, $circle_env);
+        $this->configureCircle($target_project, $ci_token, $circle_env);
     }
 
     /**
