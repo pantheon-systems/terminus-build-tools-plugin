@@ -168,6 +168,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
         }
 
+        if (empty($git_provider)) {
+          $input->setOption('git-provider', 'github');
+          $git_provider = 'github';
+        }
+
+        if (empty($ci_provider)) {
+          $input->setOption('ci-provider', 'circleci');
+          $ci_provider = 'circleci';
+        }
+
         // @TODO -- this list of Git Providers shouldn't be hard coded.
         if (!in_array(strtolower($git_provider), ['github', 'gitlab'])) {
           throw new TerminusException('The git provider {git_provider} is not currently supported.', compact('git_provider'));
@@ -399,32 +409,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
-     * Fetch the environment variable 'GITHUB_TOKEN', or throw an exception if it is not set.
-     * @return string
-     */
-    protected function getRequiredGithubToken()
-    {
-        $github_token = getenv('GITHUB_TOKEN');
-        if (empty($github_token)) {
-            throw new TerminusException("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/. Then run: \n\nexport GITHUB_TOKEN=my_personal_access_token_value");
-        }
-        return $github_token;
-    }
-
-    /**
-     * Fetch the environment variable 'CIRCLE_TOKEN', or throw an exception if it is not set.
-     * @return string
-     */
-    protected function getRequiredCircleToken()
-    {
-        $circle_token = getenv('CIRCLE_TOKEN');
-        if (empty($circle_token)) {
-            throw new TerminusException("Please generate a Circle CI personal API token token, as described in https://circleci.com/docs/api/#authentication. Then run: \n\nexport CIRCLE_TOKEN=my_personal_api_token_value");
-        }
-        return $circle_token;
-    }
-
-    /**
      * Determine whether or not this site can create multidev environments.
      */
     protected function siteHasMultidevCapability($site)
@@ -435,75 +419,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             return false;
         }
         return $settings->max_num_cdes > 0;
-    }
-
-    /**
-     * Return the set of environment variables to save on the CI server.
-     *
-     * @param string $site_name
-     * @param array $options
-     * @return array
-     */
-    public function getCIEnvironment($site_name, $options)
-    {
-        $site = $this->getSite($site_name);
-
-        $options += [
-            'test-site-name' => '',
-            'email' => '',
-            'admin-password' => '',
-            'admin-email' => '',
-            'env' => [],
-        ];
-
-        $test_site_name = $options['test-site-name'];
-        $git_email = $options['email'];
-        $admin_password = $options['admin-password'];
-        $admin_email = $options['admin-email'];
-        $extra_env = $options['env'];
-
-        if (empty($test_site_name)) {
-            $test_site_name = $site_name;
-        }
-
-        // We should always be authenticated by the time we get here, but
-        // we will test just to be sure.
-        $terminus_token = $this->recoverSessionMachineToken();
-        if (empty($terminus_token)) {
-            throw new TerminusException("Please generate a Pantheon machine token, as described in https://pantheon.io/docs/machine-tokens/. Then log in via: \n\nterminus auth:login --machine-token=my_machine_token_value");
-        }
-
-        // Set up Circle CI and run our first test.
-        $circle_env = [
-            'TERMINUS_TOKEN' => $terminus_token,
-            'TERMINUS_SITE' => $site_name,
-            'TEST_SITE_NAME' => $test_site_name,
-            'ADMIN_PASSWORD' => $admin_password,
-            'ADMIN_EMAIL' => $admin_email,
-            'GIT_EMAIL' => $git_email,
-        ];
-        // If this site cannot create multidev environments, then configure
-        // it to always run tests on the dev environment.
-        if (!$this->siteHasMultidevCapability($site)) {
-            $circle_env['TERMINUS_ENV'] = 'dev';
-        }
-
-        // Add the github token if available
-        $github_token = getenv('GITHUB_TOKEN');
-        if ($github_token) {
-            $circle_env['GITHUB_TOKEN'] = $github_token;
-        }
-
-        // Add in extra environment provided on command line via
-        // --env='key=value' --env='another=v2'
-        foreach ($extra_env as $env) {
-            list($key, $value) = explode('=', $env, 2) + ['',''];
-            if (!empty($key) && !empty($value)) {
-                $circle_env[$key] = $value;
-            }
-        }
-
-        return $circle_env;
     }
 
     /**
@@ -542,37 +457,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         throw new TerminusException("The email address '{email}'' is not valid. Please set a valid email address via 'git config --global user.email <address>', or override this setting with the --{option} option.", ['email' => $emailValue, 'option' => $emailOptionName]);
-    }
-
-    /**
-     * Write the CI environment variables to the Circle "envrionment variables" configuration section.
-     *
-     * @param string $target_project
-     * @param string $circle_token
-     * @param array $circle_env
-     */
-    public function configureCircle($target_project, $circle_token, $circle_env)
-    {
-        $this->log()->notice('Configure Circle CI');
-
-        $site_name = $circle_env['TERMINUS_SITE'];
-        $git_email = $circle_env['GIT_EMAIL'];
-        $target_label = strtr($target_project, '/', '-');
-
-        $circle_url = "https://circleci.com/api/v1.1/project/github/$target_project";
-        $this->setCircleEnvironmentVars($circle_url, $circle_token, $circle_env);
-
-        // Create an ssh key pair dedicated to use in these tests.
-        // Change the email address to "user+ci-SITE@domain.com" so
-        // that these keys can be differentiated in the Pantheon dashboard.
-        $ssh_key_email = str_replace('@', "+ci-{$target_label}@", $git_email);
-        $this->log()->notice('Create ssh key pair for {email}', ['email' => $ssh_key_email]);
-        list($publicKey, $privateKey) = $this->createSshKeyPair($ssh_key_email, $site_name . '-key');
-        $this->addPublicKeyToPantheonUser($publicKey);
-        $this->addPrivateKeyToCircleProject($circle_url, $circle_token, $privateKey);
-
-        // Follow the project (start a build)
-        $this->circleFollow($circle_url, $circle_token);
     }
 
     /**
@@ -618,9 +502,10 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Get our authenticated credentials from environment variables.
         $git_token = $git_provider->getToken();
         $ci_token = $ci_provider->getToken();
+        $terminus_token = $this->recoverSessionMachineToken();
 
-        $circle_env = $this->getCIEnvironment($site_name, $options);
-        $this->configureCircle($target_project, $ci_token, $circle_env);
+        $circle_env = $ci_provider->prepare($site_name, $options, $terminus_token, $git_token);
+        $ci_provider->configure($target_project, $ci_token, $circle_env, $this->session());
     }
 
     /**
@@ -749,36 +634,37 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
         $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
-        if (empty($buildMetadata['url'])) {
+        if (empty($buildMetadata['url']) || empty($buildMetadata['git-provider'])) {
             throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be deleted via build-env:obliterate.', ['site' => $site_name]);
         }
-        $github_url = $buildMetadata['url'];
+
+        $git_provider = $this->getGitProvider($buildMetadata['git-provider']);
 
         // Look up the GitHub authentication token
-        $github_token = $this->getRequiredGithubToken();
+        $git_token = $git_provider->getToken();
+        $git_url = $buildMetadata['url'];
 
         // Do nothing without confirmation
-        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {github_url} and CircleCI configuration?', ['site' => $site->getName(), 'github_url' => $github_url])) {
+        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding Git repository {git_url}?', ['site' => $site->getName(), 'git_url' => $git_url])) {
             return;
         }
 
-        $this->log()->notice('About to delete {site} and its corresponding GitHub repository {github_url} and CircleCI configuration.', ['site' => $site->getName(), 'github_url' => $github_url]);
+        $this->log()->notice('About to delete {site} and its corresponding Git repository {git_url}.', ['site' => $site->getName(), 'git_url' => $git_url]);
 
         // We don't need to do anything with CircleCI; the project is
         // automatically removed when the GitHub project is deleted.
 
         // Use the GitHub API to delete the GitHub project.
-        $project = $this->projectFromRemoteUrl($github_url);
-        $ch = $this->createGitHubDeleteChannel("repos/$project", $github_token);
-        $data = $this->execCurlRequest($ch, 'GitHub');
+        $project = $this->projectFromRemoteUrl($git_url);
+        $data = $git_provider->delete($project, $git_token);
 
         // GitHub oddity: if DELETE fails, the message is set,
         // but 'errors' is not set. Force an error in this case.
         if (isset($data['message'])) {
-            throw new TerminusException('GitHub error: {message}.', ['message' => $data['message']]);
+            throw new TerminusException('Git error: {message}.', ['message' => $data['message']]);
         }
 
-        $this->log()->notice('Deleted {project} from GitHub', ['project' => $project,]);
+        $this->log()->notice('Deleted {project} from Git', ['project' => $project,]);
 
         // Use the Terminus API to delete the Pantheon site.
         $site->delete();
@@ -1312,23 +1198,29 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Find the URL of the remote origin stored in the build metadata
         $remoteUrl = $this->retrieveRemoteUrlFromBuildMetadata($site_id, $oldestEnvironments);
+        // In theory, the git provider should be the same everywhere...so dev is safe.
+        $buildMetadata = $this->retrieveBuildMetadata($site_id . ".dev");
 
         // Bail if there is a URL mismatch
         if (!empty($remoteUrlFromGit) && ($remoteUrlFromGit != $remoteUrl)) {
             throw new TerminusException('Remote repository mismatch: local repository, {gitrepo} is different than the repository {metadatarepo} associated with the site {site}.', ['gitrepo' => $remoteUrlFromGit, 'metadatarepo' => $remoteUrl, 'site' => $site_id]);
         }
+        if (empty($buildMetadata['git-provider'])) {
+            throw new TerminusException('Unable to determine git provider.');
+        }
+
+        $git_provider = $this->getGitProvider($buildMetadata['git-provider']);
 
         // Reduce result list down to just those that do NOT have open PRs.
         // We will use either the GitHub API or available git branches to check.
         $environmentsWithoutPRs = [];
         if (!empty($options['preserve-prs'])) {
-            $github_token = getenv('GITHUB_TOKEN');
-            // Call GitHub PR to get all open PRs.  Filter out matching branches
+            // Call Git PR to get all open PRs.  Filter out matching branches
             // from this list that appear in $oldestEnvironments
-            $environmentsWithoutPRs = $this->preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $github_token);
+            $environmentsWithoutPRs = $git_provider->preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $git_provider->getToken());
         }
         elseif (!empty($options['preserve-if-branch'])) {
-            $environmentsWithoutPRs = $this->preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern);
+            $environmentsWithoutPRs = $git_provider->preserveEnvsWithBranches($oldestEnvironments, $multidev_delete_pattern);
         }
         $environmentsToKeep = array_diff($oldestEnvironments, $environmentsWithoutPRs);
         $oldestEnvironments = $environmentsWithoutPRs;
@@ -1371,96 +1263,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             list (, $env) = $this->getSiteEnv($site_env_id);
             $this->deleteEnv($env, $options['delete-branch']);
         }
-    }
-
-    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
-    {
-        $project = $this->projectFromRemoteUrl($remoteUrl);
-        $branchList = $this->branchesForOpenPullRequests($project, $auth);
-        return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
-    }
-
-    function branchesForOpenPullRequests($project, $auth = '')
-    {
-        $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
-
-        $branchList = array_map(
-            function ($item) {
-                return $item['head']['ref'];
-            },
-            $data
-        );
-
-        return $branchList;
-    }
-
-    protected function createAuthorizationHeaderCurlChannel($url, $auth = '')
-    {
-        $headers = [
-            'Content-Type: application/json',
-            'User-Agent: pantheon/terminus-build-tools-plugin'
-        ];
-
-        if (!empty($auth)) {
-            $headers[] = "Authorization: token $auth";
-        }
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        return $ch;
-    }
-
-
-
-    protected function setCurlChannelPostData($ch, $postData, $force = false)
-    {
-        if (!empty($postData) || $force) {
-            $payload = json_encode($postData);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        }
-    }
-
-    public function execCurlRequest($ch, $service = 'API request')
-    {
-        $result = curl_exec($ch);
-        if(curl_errno($ch))
-        {
-            throw new TerminusException(curl_error($ch));
-        }
-        $data = json_decode($result, true);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $errors = [];
-        if (isset($data['errors'])) {
-            foreach ($data['errors'] as $error) {
-                $errors[] = $error['message'];
-            }
-        }
-        if ($httpCode && ($httpCode >= 300)) {
-            $errors[] = "Http status code: $httpCode";
-        }
-
-        $message = isset($data['message']) ? "{$data['message']}." : '';
-
-        if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
-        }
-
-        return $data;
-    }
-
-    protected function createGitHubDeleteChannel($uri, $auth = '')
-    {
-        $ch = $this->createGitHubCurlChannel($uri, $auth);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-
-        return $ch;
     }
 
     /**
@@ -1523,80 +1325,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         ];
 
         return $this->deleteBuildEnv($site_id, self::PR_BRANCH_DELETE_PATTERN, $options);
-    }
-
-    // TODO: At the moment, this takes multidev environment names,
-    // e.g.:
-    //   pr-dc-worka
-    // And compares them against a list of branches, e.g.:
-    //   dc-workaround
-    //   lightning-fist-2
-    //   composer-merge-pantheon
-    // In its current form, the 'pr-' is stripped from the beginning of
-    // the environment name, and then a 'begins-with' test is done. This
-    // is not perfect, but if it goes wrong, the result will be that a
-    // multidev environment that should have been eligible for deletion will
-    // not be deleted.
-    //
-    // This could be made better if we could fetch the build-metadata.json
-    // file from the repository root of each multidev environment, which would
-    // give us the correct branch name for every environment. We could do
-    // this without too much trouble via rsync; this might be a little slow, though.
-    protected function preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern)
-    {
-        $remoteBranch = 'origin';
-
-        // Update the local repository -- prune / add remote branches.
-        // We could use `git remote prune origin` to only prune remote branches.
-        $this->passthru('git remote update --prune origin');
-
-        // List all of the remote branches
-        $outputLines = $this->exec('git branch -ar');
-
-        // Remove branch lines that do not begin with 'origin/'
-        $outputLines = array_filter(
-            $outputLines,
-            function ($item) use ($remoteBranch) {
-                return preg_match("%^ *$remoteBranch/%", $item);
-            }
-        );
-
-        // Strip the 'origin/' from the beginning of each branch line
-        $outputLines = array_map(
-            function ($item) use ($remoteBranch) {
-                return preg_replace("%^ *$remoteBranch/%", '', $item);
-            },
-            $outputLines
-        );
-
-        return $this->filterBranches($oldestEnvironments, $outputLines, $multidev_delete_pattern);
-    }
-
-    protected function filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
-    {
-        // Filter environments that have matching remote branches in origin
-        return array_filter(
-            $oldestEnvironments,
-            function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $item;
-                // If the name is less than the maximum length, then require
-                // an exact match; otherwise, do a 'starts with' test.
-                if (strlen($item) < 11) {
-                    $match .= '$';
-                }
-                // Strip the multidev delete pattern from the beginning of
-                // the match. The multidev env name was composed by prepending
-                // the delete pattern to the branch name, so this recovers
-                // the branch name.
-                $match = preg_replace("%$multidev_delete_pattern%", '', $match);
-                // Constrain match to only match from the beginning
-                $match = "^$match";
-
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
-                return empty($matches);
-            }
-        );
     }
 
     protected function deleteEnv($env, $deleteBranch = false)

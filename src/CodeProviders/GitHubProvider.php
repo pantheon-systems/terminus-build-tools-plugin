@@ -112,6 +112,25 @@ class GitHubProvider extends GitProvider {
     $data = $this->execCurlRequest($ch, 'GitHub');
   }
 
+  public function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '') {
+    $project = $this->projectFromRemoteUrl($remoteUrl);
+    $branchList = $this->branchesForOpenPullRequests($project, $auth);
+    return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
+  }
+
+  protected function branchesForOpenPullRequests($project, $auth = '') {
+    $data = $this->curl("repos/$project/pulls?state=open", [], $auth);
+
+    $branchList = array_map(
+      function ($item) {
+        return $item['head']['ref'];
+      },
+      $data
+    );
+
+    return $branchList;
+  }
+
   protected function createGitHubDeleteChannel($uri, $auth) {
     $ch = $this->createGitHubCurlChannel($uri, $auth);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
