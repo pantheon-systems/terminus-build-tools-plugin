@@ -702,8 +702,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $source_project = $this->sourceProjectFromSource($source);
         $tmpsitedir = $this->tempdir('local-site');
 
-        $local_site_path = "$tmpsitedir/$target";
-
         $this->log()->notice('Creating project and resolving dependencies.');
 
         // If the source is 'org/project:dev-branch', then automatically
@@ -714,8 +712,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
 
-        // TODO: Do we need to remove $local_site_path/.git? (-n should obviate this need)
-        $this->passthru("composer create-project $source $local_site_path -n $stability_flag");
+        $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
 
         // Create a GitHub repository
         $this->log()->notice('Creating repository {repo} from {source}', ['repo' => $target_project, 'source' => $source]);
@@ -725,6 +722,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
         // remote when pushing.
+        // TODO: Do we need to remove $local_site_path/.git? (-n in create-project should obviate this need)
+        $local_site_path = "$tmpsitedir/$target";
         $this->passthru("git -C $local_site_path init");
         $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
 
