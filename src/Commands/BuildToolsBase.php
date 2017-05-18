@@ -1228,7 +1228,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface
      * @param string[] $context
      * @return string[]
      */
-    private function interpolate($message, array $context)
+    protected function interpolate($message, array $context)
     {
         // build a replacement array with braces around the context keys
         $replace = array();
