@@ -41,7 +41,7 @@ dependencies:
     # in Terminus, so that all build-env commands run the System-Under-Test.
     - mkdir -p $HOME/.terminus/plugins
     - ln -s $(pwd) $HOME/.terminus/plugins
-    - terminus list -n build-env
+    - terminus list -n build
   post:
     - terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
 test:
