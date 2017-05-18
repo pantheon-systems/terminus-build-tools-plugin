@@ -46,17 +46,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface
     }
 
     /**
-     * Register our shutdown function if any of our commands are executed.
-     *
-     * @hook init
-     */
-    public function initialize(InputInterface $input, AnnotationData $annotationData)
-    {
-        // Insure that $workdir will be deleted on exit.
-        register_shutdown_function([$this, 'cleanup']);
-    }
-
-    /**
      * Terminus requires php 5.5, so we know we have at least that version
      * if we get this far.  Warn the user if they are using php 5.5, though,
      * as we recommend php 5.6 or later (e.g. for Drupal 8.3.0.)
@@ -117,140 +106,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface
             $this->session()->getUser()->getOrganizations()
         );
         return $orgs;
-    }
-
-    /**
-     * Validate requested site name before prompting for additional information.
-     *
-     * @hook init build-env:create-project
-     */
-    public function validateSiteName(InputInterface $input, AnnotationData $annotationData)
-    {
-        $github_org = $input->getOption('org');
-        $site_name = $input->getOption('pantheon-site');
-        $source = $input->getArgument('source');
-        $target = $input->getArgument('target');
-
-        // If only one parameter was provided, then it is the TARGET
-        if (empty($target)) {
-            $target = $source;
-            $source = 'd8';
-        }
-
-        // If the source site is a common alias, then replace it with its expanded value
-        $source = $this->expandSourceAliases($source);
-
-        // If an org was not provided for the source, then assume pantheon-systems
-        if (strpos($source, '/') === FALSE) {
-            $source = "pantheon-systems/$source";
-        }
-
-        // If an org was provided for the target, then extract it into
-        // the `$org` variable
-        if (strpos($target, '/') !== FALSE) {
-            list($github_org, $target) = explode('/', $target, 2);
-        }
-
-        // If the user did not explicitly provide a Pantheon site name,
-        // then use the target name for that purpose. This will probably
-        // be the most common usage -- with matching GitHub / Pantheon
-        // site names.
-        if (empty($site_name)) {
-            $site_name = $target;
-        }
-
-        // Before we begin, check to see if the requested site name is
-        // available on Pantheon, and fail if it is not.
-        $site_name = strtr(strtolower($site_name), '_ ', '--');
-        if ($this->sites()->nameIsTaken($site_name)) {
-            throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
-        }
-
-        // Assign variables back to $input after filling in defaults.
-        $input->setArgument('source', $source);
-        $input->setArgument('target', $target);
-        $input->setOption('org', $github_org);
-        $input->setOption('pantheon-site', $site_name);
-    }
-
-    /**
-     * Ensure that the user has provided credentials for GitHub and Circle CI,
-     * and prompt for them if they have not.
-     *
-     * n.b. This hook is not called in --no-interaction mode.
-     *
-     * @hook interact build-env:create-project
-     */
-    public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
-    {
-        // Ask for a GitHub token if one is not available.
-        $github_token = getenv('GITHUB_TOKEN');
-        while (empty($github_token)) {
-            $github_token = $this->io()->askHidden("Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.\n Then, enter it here:");
-            $github_token = trim($github_token);
-            putenv("GITHUB_TOKEN=$github_token");
-
-            // Validate that the GitHub token looks correct. If not, prompt again.
-            if ((strlen($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
-                $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
-                $github_token = '';
-            }
-        }
-
-        // Ask for a Circle token if one is not available.
-        $circle_token = getenv('CIRCLE_TOKEN');
-        while (empty($circle_token)) {
-            $circle_token = $this->io()->askHidden("Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started\n\n Then, enter it here:");
-            $circle_token = trim($circle_token);
-            putenv("CIRCLE_TOKEN=$circle_token");
-
-            // Validate that the CircleCI token looks correct. If not, prompt again.
-            if ((strlen($circle_token) < 40) || preg_match('#[^0-9a-fA-F]#', $circle_token)) {
-                $this->log()->warning('GitHub tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
-                $circle_token = '';
-            }
-        }
-
-        // If the user did not specify an admin password, then prompt for one.
-        $adminPassword = $input->getOption('admin-password');
-        if (empty($adminPassword)) {
-            $adminPassword = getenv('ADMIN_PASSWORD');
-        }
-        if (empty($adminPassword)) {
-            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function ($value) { return $value; });
-        }
-        $input->setOption('admin-password', $adminPassword);
-
-        // Encourage the user to select a team
-        $team = $input->getOption('team');
-        if (empty($team)) {
-            $team = getenv('TERMINUS_TEAM');
-        }
-        if (empty($team)) {
-            $orgs = array_values($this->availableOrgs());
-            if (!empty($orgs)) {
-                array_unshift($orgs, '-');
-                $team = $this->io()->choice('Select a team for this site', $orgs);
-            }
-        }
-        if ($team != '-') {
-            $input->setOption('team', $team);
-        }
-    }
-
-    /**
-     * Ensure that the user has not supplied any parameters with invalid values.
-     *
-     * @hook validate build-env:create-project
-     */
-    public function validateCreateProject(CommandData $commandData)
-    {
-        $input = $commandData->input();
-        $adminPassword = $input->getOption('admin-password');
-
-        if (strpbrk($adminPassword, '!;$`') !== false) {
-            throw new TerminusException("Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.");
-        }
     }
 
     /**
@@ -1471,6 +1326,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface
     // Create a temporary directory
     public function tempdir($prefix='php', $dir=FALSE)
     {
+        $this->registerCleanupFunction();
         $tempfile=tempnam($dir ? $dir : sys_get_temp_dir(), $prefix ? $prefix : '');
         if (file_exists($tempfile)) {
             unlink($tempfile);
@@ -1481,6 +1337,21 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface
             $this->tmpDirs[] = $tempfile;
             return $tempfile;
         }
+    }
+
+    /**
+     * Register our shutdown function if it hasn't already been registered.
+     */
+    public function registerCleanupFunction()
+    {
+        static $registered = false;
+        if ($registered) {
+            return;
+        }
+
+        // Insure that $workdir will be deleted on exit.
+        register_shutdown_function([$this, 'cleanup']);
+        $registered = true;
     }
 
     // Delete our work directory on exit.
