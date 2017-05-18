@@ -27,7 +27,7 @@ machine:
     BRANCH: $(echo $CIRCLE_BRANCH | grep -v '^\(master\|[0-9]\+.x\)$')
     PR_BRANCH: ${BRANCH:+dev-$BRANCH}
     BUILD_TOOLS_VERSION: ${PR_BRANCH:-$CIRCLE_BRANCH}
-    PATH: $PATH:~/.composer/vendor/bin:~/.config/composer/vendor/bin
+    PATH: $PATH:~/bin
 
 dependencies:
   cache_directories:
@@ -38,8 +38,7 @@ dependencies:
   override:
     - gem install circle-cli
     - composer global require -n "hirak/prestissimo:^0.3"
-    - composer global require -n "consolidation/cgr"
-    - cgr "pantheon-systems/terminus:~1" --stability beta
+    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME require pantheon-systems/terminus "^1"
     - terminus --version
     # Install the copy of the Build Tools Plugin cloned by CircleCI as a plugin
     # in Terminus, so that all build-env commands run the System-Under-Test.
