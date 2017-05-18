@@ -24,7 +24,7 @@ machine:
     SOURCE_COMPOSER_PROJECT: pantheon-systems/example-drops-8-composer:dev-test
     TARGET_REPO: $GITHUB_USERNAME/$TERMINUS_SITE
     TARGET_REPO_WORKING_COPY: $HOME/$TERMINUS_SITE
-    PATH: $PATH:~/.composer/vendor/bin:~/.config/composer/vendor/bin
+    PATH: $PATH:~/bin
 
 dependencies:
   cache_directories:
@@ -35,8 +35,7 @@ dependencies:
   override:
     - gem install circle-cli
     - composer global require -n "hirak/prestissimo:^0.3"
-    - composer global require -n "consolidation/cgr"
-    - cgr "pantheon-systems/terminus:~1" --stability beta
+    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME require "pantheon-systems/terminus:^1.3"
     - terminus --version
     # Install the copy of the Build Tools Plugin cloned by CircleCI as a plugin
     # in Terminus, so that all build-env commands run the System-Under-Test.
@@ -50,7 +49,7 @@ test:
     # Clone from the `test` branch of pantheon-systems/example-drops-8-composer.
     # Tell that project to install dev-$CIRCLE_BRANCH of the Build Tools Plugin
     # so that we are running the same System-Under-Test in both places.
-    - terminus build-env:create-project -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=dev-$CIRCLE_BRANCH"
+    - terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=dev-$CIRCLE_BRANCH"
     # Confirm that the Pantheon site was created
     - terminus site:info "$TERMINUS_SITE"
     # Confirm that the Github project was created
@@ -64,4 +63,4 @@ test:
 
   post:
     # Delete the Pantheon site, the Github project, and the Circle configuration
-    - terminus build-env:obliterate -n "$TERMINUS_SITE"
+    - terminus build:env:obliterate -n "$TERMINUS_SITE"
