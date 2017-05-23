@@ -395,11 +395,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             $this->configureCircle($target_project, $circle_token, $circle_env);
         }
         catch (\Exception $e) {
-//            $ch = $this->createGitHubDeleteChannel("repos/$target_project", $github_token);
-//            $data = $this->execCurlRequest($ch, 'GitHub');
-//            if (isset($site)) {
-//                $site->delete();
-//            }
+            $ch = $this->createGitHubDeleteChannel("repos/$target_project", $github_token);
+            $data = $this->execCurlRequest($ch, 'GitHub');
+            if (isset($site)) {
+                $site->delete();
+            }
             throw $e;
         }
         $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/$target_project"]);
@@ -487,9 +487,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'TEST_SITE_NAME' => $test_site_name,
             'ADMIN_PASSWORD' => $admin_password,
             'ADMIN_EMAIL' => $admin_email,
-            'WORDPRESS_ADMIN_PASSWORD' => $admin_password,
-          'WORDPRESS_ADMIN_USERNAME' => 'admin',
-
             'GIT_EMAIL' => $git_email,
         ];
         // If this site cannot create multidev environments, then configure
@@ -662,10 +659,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function autodetectUpstream($siteDir)
     {
-        return 'WordPress';
-        return 'Empty Upstream';
-        // or 'Drupal 7' or 'WordPress'
-        // return 'Drupal 8';
+        if (file_exists($siteDir . 'wp-cli.yml')) {
+            return 'WordPress';
+        }
+        else {
+            // This upstream works for Drupal 8 and Drupal 7.
+            return 'Empty Upstream';
+        }
     }
 
     /**
