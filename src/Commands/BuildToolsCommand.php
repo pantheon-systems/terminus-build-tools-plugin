@@ -659,7 +659,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function autodetectUpstream($siteDir)
     {
-        if (file_exists($siteDir . 'wp-cli.yml')) {
+        if (file_exists($siteDir . '/wp-cli.yml')) {
             return 'WordPress';
         }
         else {
