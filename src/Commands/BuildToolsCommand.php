@@ -255,23 +255,26 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
     /**
      * Create a new project from the requested source GitHub project.
+     * Does the following operations:
      *  - Creates a GitHub repository forked from the source project.
      *  - Creates a Pantheon site to run the tests on.
      *  - Sets up Circle CI to test the repository.
      * In order to use this command, it is also necessary to provide
      * a set of secrets that are used to create the necessary projects,
      * and that are subsequentially cached in Circle CI for use during
-     * the test run. Currently, these secrets must be provided via
+     * the test run. Currently, these secrets should be provided via
      * environment variables; this keeps them out of the command history
      * and other places they may be inadvertantly observed.
      *
-     * export TERMINUS_TOKEN machine_token_from_pantheon_dashboard
-     * export GITHUB_TOKEN github_personal_access_token
-     * export CIRCLE_TOKEN circle_personal_api_token
+     *   export GITHUB_TOKEN github_personal_access_token
+     *   export CIRCLE_TOKEN circle_personal_api_token
+     *
+     * Secrets that are not exported will be prompted.
      *
      * @authorize
      *
      * @command build-env:create-project
+     * @aliases build:project:create
      * @param string $source Packagist org/name of source template project to fork.
      * @param string $target Simple name of project to create.
      * @option org GitHub organization (defaults to authenticated user)
@@ -588,6 +591,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * @authorize
      *
      * @command build-env:ci:configure
+     * @aliases build:ci:configure
      * @param $site_name The pantheon site to test.
      * @param $target_project The GitHub org/project to build the Pantheon site from.
      */
@@ -826,6 +830,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * Destroy a Pantheon site that was created by the build-env:create-project command.
      *
      * @command build-env:obliterate
+     * @aliases build:env:obliterate
      */
     public function obliterate($site_name)
     {
@@ -875,6 +880,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * site from the build assets at the current working directory.
      *
      * @command build-env:create
+     * @aliases build:env:create
      * @param string $site_env_id The site and env of the SOURCE
      * @param string $multidev The name of the env to CREATE
      * @option label What to name the environment in commit comments
@@ -1022,6 +1028,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * Install the apporpriate CMS on the newly-created Pantheon site.
      *
      * @command build-env:site-install
+     * @aliases build:env:install
      */
     public function installSite(
         $site_env_id,
@@ -1180,6 +1187,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * Push code to a specific Pantheon site and environment that already exists.
      *
      * @command build-env:push-code
+     * @aliases build:env:push
      *
      * @param string $site_env_id Site and environment to push to. May be any dev or multidev environment.
      * @param string $repositoryDir Code to push. Defaults to cwd.
@@ -1299,6 +1307,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
     /**
      * @command build-env:merge
+     * @aliases build:env:merge
      * @param string $site_env_id The site and env to merge and delete
      * @option label What to name the environment in commit comments
      * @option delete Delete the multidev environment after merging.
@@ -1349,6 +1358,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * any environment that still has a remote branch on GitHub may be preserved.
      *
      * @command build-env:delete
+     * @aliases build:env:delete
      *
      * @param string $site_id Site name
      * @param string $multidev_delete_pattern Pattern used for build environments
@@ -1615,6 +1625,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * CI builds, i.e., all multidevs whose name begins with "ci-".
      *
      * @command build-env:delete:ci
+     * @aliases build:env:delete:ci
      *
      * @param string $site_id Site name
      * @option keep Number of environments to keep
@@ -1648,6 +1659,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * request branches, i.e., all multidevs whose name begins with "pr-".
      *
      * @command build-env:delete:pr
+     * @aliases build:env:delete:pr
      *
      * @param string $site_id Site name
      * @option dry-run Only print what would be deleted; do not delete anything.
@@ -1761,6 +1773,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * Displays a list of the site's ci build environments, sorted with oldest first.
      *
      * @command build-env:list
+     * @aliases build:env:list
      * @authorize
      *
      * @field-labels
@@ -1871,6 +1884,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      * that it starts through the API.
      *
      * @command workflow:wait
+     * @aliases build:workflow:wait
      * @param $site_env_id The pantheon site to wait for.
      * @param $description The workflow description to wait for. Optional; default is code sync.
      * @option start Ignore any workflows started prior to the start time (epoch)
