@@ -659,11 +659,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function autodetectUpstream($siteDir)
     {
-        if (file_exists($siteDir . '/wp-cli.yml')) {
+        if (file_exists($siteDir . '/web/wp-config.php')) {
             return 'WordPress';
         }
         else {
-            // This upstream works for Drupal 8 and Drupal 7.
+            // This upstream works for Drupal 8.
             return 'Empty Upstream';
         }
     }
