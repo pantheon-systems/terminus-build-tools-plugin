@@ -47,6 +47,7 @@ dependencies:
     - terminus list -n build
   post:
     - terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+    - terminus site:list
 test:
   override:
     # Clone from the `test` branch of pantheon-systems/example-drops-8-composer.
