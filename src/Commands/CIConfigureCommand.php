@@ -68,6 +68,16 @@ class CIConfigureCommand extends BuildToolsBase
         $circle_token = $this->getRequiredCircleToken();
 
         $circle_env = $this->getCIEnvironment($site_name, $options);
+        // TODO: check to see if we need to downgrade to only use dev environment
+
+        // Add the github token if available
+        // TODO: How do we determine which Repository provider to use here?
+        $github_token = getenv('GITHUB_TOKEN');
+        if ($github_token) {
+            $repositoryState['GITHUB_TOKEN'] = $github_token;
+            $ci_env->storeState('repository', $repositoryState);
+        }
+
         $this->configureCircle($target_project, $circle_token, $circle_env);
     }
 }
