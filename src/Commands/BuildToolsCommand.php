@@ -275,13 +275,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * @command build-env:create-project
      * @aliases build:project:create
-     * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem.
+     * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem. Paths must either start with ./ or be an absolute path.
      * @param string $target Simple name of project to create.
      * @option org GitHub organization (defaults to authenticated user)
      * @option team Pantheon team
      * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
+     * @preserve-local-repository If the source argument is a local directory, then use the local working repository already present in the .git directory.
      */
     public function createProject(
         $source,
@@ -297,6 +298,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
             'admin-email' => '',
             'stability' => '',
             'env' => [],
+            'preserve-local-repository' => false,
         ])
     {
         $this->warnAboutOldPhp();
@@ -326,7 +328,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Create the github repository
         $this->log()->notice('Create GitHub project {target} from {src}', ['src' => $source, 'target' => $target_label]);
-        list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability);
+        list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability, $options);
 
         $site = null;
         try {
@@ -689,7 +691,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     /**
      * Use the GitHub API to create a new GitHub project.
      */
-    protected function createGitHub($source, $target, $github_org, $github_token, $stability = '')
+    protected function createGitHub($source, $target, $github_org, $github_token, $stability = '', $options = [])
     {
         // We need a different URL here if $github_org is an org; if no
         // org is provided, then we use a simpler URL to create a repository
@@ -705,8 +707,15 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         $tmpsitedir = $this->tempdir('local-site');
         if (is_dir($source)) {
-            if (is_dir("$source/.git")) {
-                throw new TerminusException('The directory {source} already contains a .git directory. Aborting for safety, as continuing would remove it.', compact('$source'));
+            if ($options['preserve-local-repository']) {
+                if (!is_dir("$source/.git")) {
+                    throw new TerminusException('Specified --preserve-local-repository, but the directory {source} does not contains a .git directory.', compact('$source'));
+                }
+            }
+            else {
+                if (is_dir("$source/.git")) {
+                    throw new TerminusException('The directory {source} already contains a .git directory. Use --preserve-local-repository if you wish to use this existing repository.', compact('$source'));
+                }
             }
             $local_site_path = $source;
         }
@@ -737,7 +746,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // when collecting the build metadata later. We use the 'pantheon'
         // remote when pushing.
         // TODO: Do we need to remove $local_site_path/.git? (-n in create-project should obviate this need)
-        $this->passthru("git -C $local_site_path init");
+        if (!is_dir("$local_site_path/.git")) {
+            $this->passthru("git -C $local_site_path init");
+        }
         $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
 
         return [$target_project, $local_site_path];
