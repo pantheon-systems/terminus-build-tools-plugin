@@ -230,6 +230,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'admin-email' => '',
             'stability' => '',
             'env' => [],
+            'preserve-local-repository' => false,
         ])
     {
         $this->warnAboutOldPhp();
@@ -256,9 +257,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             $target_label = "$target_org/$target";
         }
 
-        // Create a working directory
-        $tmpsitedir = $this->tempdir('local-site');
-
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($site_name, $options);
 
@@ -270,12 +268,27 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
-        $siteDir = $this->createFromSourceProject($source, $target, $tmpsitedir, $stability);
+        $siteDir = $this->createFromSource($source, $target, $stability, $options);
 
         $builder = $this->collectionBuilder();
-        $builder
+        // $builder->setStateValue('ci-env', $ci_env)
 
-            // ->setStateValue('ci-env', $ci_env)
+        // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
+        exec("composer -d $siteDir help build-assets", $outputLines, $status);
+        if (!$status) {
+            $builder
+                // Run build assets
+                ->progressMessage('Run build assets for project')
+                ->addCode(
+                    function ($state) use ($siteDir) {
+                            $this->log()->notice('Building assets for project');
+                            $this->passthru("composer -d $siteDir build-assets");
+                        }
+                    }
+                );
+        }
+
+        $builder
 
             // Create a GitHub repository
             ->progressMessage('Create GitHub project {target}', ['target' => $target_label])

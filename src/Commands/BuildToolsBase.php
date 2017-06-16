@@ -284,7 +284,32 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Use composer create-project to create a new local copy of the source project.
      */
-    protected function createFromSourceProject($source, $target, $tmpsitedir, $stability = '')
+    protected function createFromSource($source, $target, $stability = '', $options = [])
+    {
+        if (is_dir($source)) {
+            return useExistingSourceDirectory($source, $options['preserve-local-repository']);
+        }
+        else {
+            return createFromSourceProject($source, $target, $stability);
+        }
+    }
+
+    protected function useExistingSourceDirectory($source, $preserve_local_repository)
+    {
+        if ($preserve_local_repository) {
+            if (!is_dir("$source/.git")) {
+                throw new TerminusException('Specified --preserve-local-repository, but the directory {source} does not contains a .git directory.', compact('$source'));
+            }
+        }
+        else {
+            if (is_dir("$source/.git")) {
+                throw new TerminusException('The directory {source} already contains a .git directory. Use --preserve-local-repository if you wish to use this existing repository.', compact('$source'));
+            }
+        }
+        return $source;
+    }
+
+    protected function createFromSourceProject($source, $target, $stability = '')
     {
         $source_project = $this->sourceProjectFromSource($source);
 
@@ -297,6 +322,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
+
+        // Create a working directory
+        $tmpsitedir = $this->tempdir('local-site');
 
         $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
         $local_site_path = "$tmpsitedir/$target";
@@ -325,8 +353,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
         // remote when pushing.
-        // TODO: Do we need to remove $local_site_path/.git? (-n in create-project should obviate this need)
-        $this->passthru("git -C $local_site_path init");
+        // TODO: Do we need to remove $local_site_path/.git? (-n in create-project should obviate this need) We preserve this here because it may be user-provided via --preserve-local-repository
+        if (!is_dir("$local_site_path/.git")) {
+            $this->passthru("git -C $local_site_path init");
+        }
         $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
 
         return $target_project;
