@@ -5,7 +5,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Robo\Result;
 
-class Configure extends CIBaseTask
+class Setup extends Base
 {
     protected $dir;
     protected $hasMultidevCapability;

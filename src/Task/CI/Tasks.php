@@ -4,11 +4,11 @@ namespace Pantheon\TerminusBuildTools\Task\CI;
 trait Tasks
 {
     /**
-     * @return Configure
+     * @return Setup
      */
-    protected function taskCIConfigure()
+    protected function taskCISetup()
     {
-        return $this->task(Configure::class);
+        return $this->task(Setup::class);
     }
 
     /**

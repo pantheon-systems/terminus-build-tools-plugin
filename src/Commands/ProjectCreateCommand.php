@@ -42,6 +42,11 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
     protected $ci_provider;
 
+    public function __construct()
+    {
+        \Pantheon\TerminusBuildTools\Task\CI\Base::configure('provider', '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider');
+    }
+
     /**
      * Validate requested site name before prompting for additional information.
      *
@@ -326,7 +331,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // TODO: rollback Pantheon site create
 
             // Set up CircleCI to test our project.
-            ->taskCIConfigure()
+            ->taskCISetup()
                 ->provider($this->ci_provider)
                 ->environment($ci_env)
                 ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')

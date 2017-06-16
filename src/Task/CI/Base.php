@@ -5,7 +5,7 @@ use Robo\Task\BaseTask;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 
-abstract class CIBaseTask extends BaseTask
+abstract class Base extends BaseTask
 {
     /** var CIProvider */
     protected $provider;

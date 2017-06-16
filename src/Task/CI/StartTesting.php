@@ -5,7 +5,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Robo\Result;
 
-class StartTesting extends CIBaseTask
+class StartTesting extends Base
 {
     public function run()
     {
