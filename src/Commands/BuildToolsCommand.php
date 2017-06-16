@@ -275,7 +275,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      *
      * @command build-env:create-project
      * @aliases build:project:create
-     * @param string $source Packagist org/name of source template project to fork.
+     * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem.
      * @param string $target Simple name of project to create.
      * @option org GitHub organization (defaults to authenticated user)
      * @option team Pantheon team
