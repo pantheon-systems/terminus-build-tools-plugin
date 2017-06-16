@@ -73,7 +73,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $source = $this->expandSourceAliases($source);
 
         // If an org was not provided for the source, then assume pantheon-systems
-        if (strpos($source, '/') === FALSE) {
+        if (preg_match('#^[a-zA-Z0-9_-]*$#', $source)) {
             $source = "pantheon-systems/$source";
         }
 
@@ -208,7 +208,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      *
      * @command build:project:create
      * @alias build-env:create-project
-     * @param string $source Packagist org/name of source template project to fork.
+     * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem. Paths must either start with ./ or be an absolute path.
      * @param string $target Simple name of project to create.
      * @option org Organization for the new project (defaults to authenticated user)
      * @option team Pantheon team
