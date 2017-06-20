@@ -287,10 +287,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function createFromSource($source, $target, $stability = '', $options = [])
     {
         if (is_dir($source)) {
-            return useExistingSourceDirectory($source, $options['preserve-local-repository']);
+            return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
         }
         else {
-            return createFromSourceProject($source, $target, $stability);
+            return $this->createFromSourceProject($source, $target, $stability);
         }
     }
 
