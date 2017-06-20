@@ -284,7 +284,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                             $this->log()->notice('Building assets for project');
                             $this->passthru("composer -d $siteDir build-assets");
                         }
-                    }
                 );
         }
 
