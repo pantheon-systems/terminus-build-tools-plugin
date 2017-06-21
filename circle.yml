@@ -39,9 +39,8 @@ dependencies:
     - gem install circle-cli
     - composer global require -n "hirak/prestissimo:^0.3"
     - mkdir -p $HOME/terminus
-    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:^1.3"
+    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:^1.4"
     - composer --working-dir=$HOME/terminus config minimum-stability dev
-    - composer --working-dir=$HOME/terminus require consolidation/robo:dev-state
     - terminus --version
     # Install the copy of the Build Tools Plugin cloned by CircleCI as a plugin
     # in Terminus, so that all build-env commands run the System-Under-Test.
