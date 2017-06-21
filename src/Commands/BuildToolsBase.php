@@ -323,6 +323,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
 
+        $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
+
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
