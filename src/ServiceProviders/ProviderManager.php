@@ -2,6 +2,7 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
+use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
