@@ -6,18 +6,22 @@ use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
+use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
+use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
+
 /**
  * Holds state information destined to be registered with the CI service.
  */
-class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever
+class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
     use LoggerAwareTrait;
+
+    const CIRCLE_TOKEN = 'CIRCLE_TOKEN';
 
     protected $circle_token;
 
     public function __construct()
     {
-        $this->circle_token = getenv('CIRCLE_TOKEN');
     }
 
     public function hasToken()
@@ -28,6 +32,30 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function setToken($circle_token)
     {
         $this->circle_token = $circle_token;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function credentialRequests()
+    {
+        $circleTokenRequest = new CredentialRequest(
+            CIRCLE_TOKEN,
+            "Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started.",
+            "Enter Circle CI personal API token: ",
+            '#^[0-9a-fA-F]{40}$#',
+            'Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
+        );
+
+        return [ $circleTokenRequest ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setCredentials(CredentialProviderInterface $credentials_provider)
+    {
+        $this->setToken($credentials_provider->fetch(CIRCLE_TOKEN));
     }
 
     public function projectUrl(CIState $ci_env)

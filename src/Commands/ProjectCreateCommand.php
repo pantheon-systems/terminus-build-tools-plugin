@@ -28,6 +28,9 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
+use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 
 /**
  * Project Create Command
@@ -40,13 +43,25 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
 
+    protected $provider_manager;
     protected $ci_provider;
 
-    public function __construct()
+    public function __construct($provider_manager = null)
     {
-        \Pantheon\TerminusBuildTools\Task\CI\Base::configure('provider', '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider');
+        $this->provider_manager = $provider_manager;
     }
 
+    public function providerManager()
+    {
+        if (!$this->provider_manager) {
+            // TODO: how can we do DI from within a Terminus Plugin? Huh?
+            $credentialManager = new CredentialManager();
+            $credentialManager->setUserId($this->loggedInUserEmail());
+            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager->setLogger($this->logger);
+        }
+        return $this->provider_manager;
+    }
     /**
      * Validate requested site name before prompting for additional information.
      *
@@ -60,8 +75,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $target = $input->getArgument('target');
 
         // TODO: select kind of CI provider to create from user options
-        $this->ci_provider = new CircleCIProvider();
-        $this->ci_provider->setLogger($this->log());
+        $ciProviderClass = '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider';
+        $this->ci_provider = $this->providerManager()->createProvider($ciProviderClass);
 
         // If only one parameter was provided, then it is the TARGET
         if (empty($target)) {
@@ -113,8 +128,11 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      *
      * @hook interact build:project:create
      */
-    public function ensureCredentials(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
+    public function interact(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
     {
+        $io = new SymfonyStyle($input, $output);
+        $this->providerManager()->credentialManager()->ask($io);
+
         // Ask for a GitHub token if one is not available.
         $github_token = getenv('GITHUB_TOKEN');
         while (empty($github_token)) {
@@ -126,21 +144,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             if ((strlen($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
                 $this->log()->warning('GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
                 $github_token = '';
-            }
-        }
-
-        // Ask for a Circle token if one is not available.
-        $circle_token = getenv('CIRCLE_TOKEN');
-        while (!$this->ci_provider->hasToken()) {
-            // TODO: Get info for prompt from provider
-            $circle_token = $this->io()->askHidden("Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started\n\n Then, enter it here:");
-            $circle_token = trim($circle_token);
-            $this->ci_provider->setToken($circle_token);
-
-            // TODO: validate token via method in provider
-            // Validate that the CircleCI token looks correct. If not, prompt again.
-            if ((strlen($circle_token) < 40) || preg_match('#[^0-9a-fA-F]#', $circle_token)) {
-                $this->log()->warning('Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
             }
         }
 
@@ -184,6 +187,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         if (strpbrk($adminPassword, '!;$`') !== false) {
             throw new TerminusException("Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.");
         }
+
+        // Ensure that all of our providers are given the credentials they requested.
+        $this->providerManager()->validateCredentials();
     }
 
     /**

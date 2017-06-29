@@ -65,9 +65,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Recover the session's machine token.
+     * Get the email address of the logged-in user
      */
-    protected function recoverSessionMachineToken()
+    protected function loggedInUserEmail()
     {
         if (!$this->session()->isActive()) {
             $this->log()->notice('No active session.');
@@ -81,7 +81,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         // Look up the email address of the active user (as auth:whoami does).
-        $email_address = $user_data['email'];
+        return $user_data['email'];
+    }
+
+    /**
+     * Recover the session's machine token.
+     */
+    protected function recoverSessionMachineToken()
+    {
+        $email_address = $this->loggedInUserEmail();
+        if (!$email_address) {
+            return;
+        }
 
         // Try to look up the machine token using the Terminus API.
         $tokens = $this->session()->getTokens();
