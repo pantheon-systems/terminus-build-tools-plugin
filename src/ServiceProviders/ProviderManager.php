@@ -20,6 +20,9 @@ class ProviderManager implements LoggerAwareInterface
 
     public function createProvider($providerClass)
     {
+        if (!class_exists($providerClass)) {
+            throw new Exception("Could not load class $providerClass");
+        }
         $provider = new $providerClass();
         if ($provider instanceof LoggerAwareInterface) {
             $provider->setLogger($this->logger);
@@ -29,6 +32,8 @@ class ProviderManager implements LoggerAwareInterface
             $this->credential_manager->add($provider->credentialRequests());
         }
         $this->providers[] = $provider;
+
+        return $provider;
     }
 
     public function credentialManager()

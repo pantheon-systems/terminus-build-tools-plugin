@@ -70,11 +70,12 @@ class CredentialManager implements CredentialProviderInterface
             return $this->fetchTransient($id);
         }
         $path = $this->credentialPath($id);
-        if (empty($path)) {
+        if (empty($path) || !is_dir(dirname($path))) {
             return;
         }
         $credential = file_get_contents($path);
         $credential = trim($credential);
+        $this->storeTransient($id, $credential);
 
         return $credential;
     }
@@ -84,12 +85,12 @@ class CredentialManager implements CredentialProviderInterface
      */
     public function store($id, $credential)
     {
-        $path = $this->credentialPath($id);
-        if (empty($path)) {
-            return;
-        }
         $credential = trim($credential);
-        file_put_contents($path, $credential);
+        $this->storeTransient($id, $credential);
+        $path = $this->credentialPath($id);
+        if (!empty($path) && is_dir(dirname($path))) {
+            file_put_contents($path, $credential);
+        }
     }
 
     /**
@@ -124,12 +125,14 @@ class CredentialManager implements CredentialProviderInterface
 
         while (true) {
             $io->write("\n\n");
-            $credential = $this->io()->askHidden($prompt);
+            $credential = $io->askHidden($prompt);
             $credential = trim($credential);
 
             if ($request->validate($credential)) {
                 $this->store($request->id(), $credential);
+                return;
             }
+            $io->write($request->validationErrorMessage());
         }
     }
 

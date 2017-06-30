@@ -1139,8 +1139,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     {
         // Refresh the remote is already there (e.g. due to CI service caching), just in
         // case. If something changes, this info is NOT removed by "rebuild without cache".
-        if ($this->hasPantheonRemote()) {
-            $this->passthru("git -C $repositoryDir remote remove pantheon");
+        if ($this->hasPantheonRemote($repositoryDir)) {
+            passthru("git -C $repositoryDir remote remove pantheon");
         }
         $connectionInfo = $env->connectionInfo();
         $gitUrl = $connectionInfo['git_url'];
@@ -1150,9 +1150,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Check to see if there is a remote named 'pantheon'
      */
-    protected function hasPantheonRemote()
+    protected function hasPantheonRemote($repositoryDir)
     {
-        exec('git remote show', $output);
+        exec("git -C $repositoryDir remote show", $output);
         return array_search('pantheon', $output) !== false;
     }
 

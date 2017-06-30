@@ -277,21 +277,27 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $siteDir = $this->createFromSource($source, $target, $stability, $options);
 
         $builder = $this->collectionBuilder();
+
         // $builder->setStateValue('ci-env', $ci_env)
 
+        $this->log()->notice('Determine whether build-assets exists for {project}', ['project' => $target_label]);
+
+/*
         // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
-        exec("composer -d $siteDir help build-assets", $outputLines, $status);
+        exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
         if (!$status) {
+            $this->log()->notice('build-assets command exists for {project}', ['project' => $target_label]);
             $builder
                 // Run build assets
                 ->progressMessage('Run build assets for project')
                 ->addCode(
                     function ($state) use ($siteDir) {
                             $this->log()->notice('Building assets for project');
-                            $this->passthru("composer -d $siteDir build-assets");
+                            $this->passthru("composer --working-dir=$siteDir build-assets");
                         }
                 );
         }
+*/
 
         $builder
 
@@ -348,6 +354,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
             // TODO: rollback Pantheon site create
 
+            ->progressMessage('Set up CI services')
+
             // Set up CircleCI to test our project.
             ->taskCISetup()
                 ->provider($this->ci_provider)
@@ -359,7 +367,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->progressMessage('Make initial commit')
             ->addCode(
                 function ($state) use ($siteDir) {
-                    $this->initialCommit($siteDir);
+                    $headCommit = $this->initialCommit($siteDir);
+
+                    print "\n\nHEAD COMMIT IS: $headCommit\n\n";
                 })
 
             // n.b. Existing algorithm also pushes to GitHub here, but this is not necessary
