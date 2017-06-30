@@ -330,13 +330,6 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $this->log()->notice('Create GitHub project {target} from {src}', ['src' => $source, 'target' => $target_label]);
         list($target_project, $siteDir) = $this->createGitHub($source, $target, $github_org, $github_token, $stability, $options);
 
-        // Run the 'build assets' step, if possible. Do nothing if it does not exist.
-        exec('composer help build-assets', $outputLines, $status);
-        if (!$status) {
-            $this->log()->notice('Building assets for project');
-            $this->passthru('composer build-assets');
-        }
-
         $site = null;
         try {
             // Look up our upstream.
