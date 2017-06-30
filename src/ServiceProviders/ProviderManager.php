@@ -26,7 +26,7 @@ class ProviderManager implements LoggerAwareInterface
         }
 
         if ($provider instanceof CredentialClientInterface) {
-            $this->credential_manager->add($provider);
+            $this->credential_manager->add($provider->credentialRequests());
         }
         $this->providers[] = $provider;
     }
