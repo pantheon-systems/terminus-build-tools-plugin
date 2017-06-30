@@ -8,6 +8,7 @@ use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
+use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 
 /**
  * Holds state information destined to be registered with the CI service.
