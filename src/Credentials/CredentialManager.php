@@ -144,7 +144,7 @@ class CredentialManager implements CredentialProviderInterface
         if (empty($credential)) {
             return;
         }
-        $this->storeTransient($id, $credential);
+        $this->storeTransient($request->id(), $credential);
     }
 
     protected function hasTransient($id)

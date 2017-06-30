@@ -41,7 +41,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function credentialRequests()
     {
         $circleTokenRequest = new CredentialRequest(
-            CIRCLE_TOKEN,
+            self::CIRCLE_TOKEN,
             "Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started.",
             "Enter Circle CI personal API token: ",
             '#^[0-9a-fA-F]{40}$#',
@@ -56,7 +56,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
      */
     public function setCredentials(CredentialProviderInterface $credentials_provider)
     {
-        $this->setToken($credentials_provider->fetch(CIRCLE_TOKEN));
+        $this->setToken($credentials_provider->fetch(self::CIRCLE_TOKEN));
     }
 
     public function projectUrl(CIState $ci_env)
