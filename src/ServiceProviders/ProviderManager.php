@@ -18,12 +18,40 @@ class ProviderManager implements LoggerAwareInterface
         $this->credential_manager = $credential_manager;
     }
 
-    public function createProvider($providerClass)
+    // TODO: filter available providers by expected interface?
+    protected function lookupProvider($alias)
     {
+        // TODO: create some way to register providers. Plugin plugins?
+        $available_providers = [
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider',
+        ];
+
+        // Only compare the alphanumeric parts of the provided alias.
+        // i.e. --ci=circle-ci is the same as --ci=circleci
+        $test_alias = preg_replace('#[^a-z0-9]#', '', $alias);
+
+        // Allow providers to be specified
+        foreach ($available_providers as $provider) {
+            $provider_class = basename(strtr($provider, '\\', '/'));
+            if (stristr($provider_class, $test_alias) !== false) {
+                return $provider;
+            }
+        }
+
+        // Nothing found? Return our input value.
+        return $alias;
+    }
+
+    public function createProvider($providerClass, $expectedInterface)
+    {
+        $providerClass = $this->lookupProvider($providerClass);
         if (!class_exists($providerClass)) {
             throw new Exception("Could not load class $providerClass");
         }
         $provider = new $providerClass();
+        if (!$provider instanceof $expectedInterface) {
+            throw new Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
+        }
         if ($provider instanceof LoggerAwareInterface) {
             $provider->setLogger($this->logger);
         }

@@ -69,14 +69,14 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      */
     public function validateSiteName(InputInterface $input, AnnotationData $annotationData)
     {
+        $ci_provider_class = $input->getOption('ci');
         $target_org = $input->getOption('org');
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
 
-        // TODO: select kind of CI provider to create from user options
-        $ciProviderClass = '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider';
-        $this->ci_provider = $this->providerManager()->createProvider($ciProviderClass);
+        // Create the providers via the provider manager
+        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
 
         // If only one parameter was provided, then it is the TARGET
         if (empty($target)) {
@@ -237,6 +237,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'stability' => '',
             'env' => [],
             'preserve-local-repository' => false,
+            'ci' => 'circle',
         ])
     {
         $this->warnAboutOldPhp();
