@@ -31,6 +31,7 @@ use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
+use Pantheon\Terminus\DataStore\FileStore;
 
 /**
  * Project Create Command
@@ -55,7 +56,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     {
         if (!$this->provider_manager) {
             // TODO: how can we do DI from within a Terminus Plugin? Huh?
-            $credentialManager = new CredentialManager();
+            $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
+            $credentialManager = new CredentialManager($credential_store);
             $credentialManager->setUserId($this->loggedInUserEmail());
             $this->provider_manager = new ProviderManager($credentialManager);
             $this->provider_manager->setLogger($this->logger);

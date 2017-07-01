@@ -3,6 +3,7 @@
 namespace Pantheon\TerminusBuildTools\Credentials;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Pantheon\Terminus\DataStore\DataStoreInterface;
 
 /**
  * The credential manager stores and fetches credentials from a cache.
@@ -13,6 +14,11 @@ class CredentialManager implements CredentialProviderInterface
     protected $credentialRequests = [];
     protected $transientCache = [];
     protected $userId;
+
+    public function __construct(DataStoreInterface $storage)
+    {
+        $this->cache = $storage;
+    }
 
     /**
      * Identify the user that owns the cache. We segregate cached
@@ -57,8 +63,8 @@ class CredentialManager implements CredentialProviderInterface
         if ($this->hasTransient($id)) {
             return true;
         }
-        $path = $this->credentialPath($id);
-        return file_exists($path);
+        $key = $this->credentialKey($id);
+        return $this->cache->has($key);
     }
 
     /**
@@ -69,11 +75,11 @@ class CredentialManager implements CredentialProviderInterface
         if ($this->hasTransient($id)) {
             return $this->fetchTransient($id);
         }
-        $path = $this->credentialPath($id);
-        if (empty($path) || !is_dir(dirname($path))) {
+        $key = $this->credentialKey($id);
+        if (empty($key)) {
             return;
         }
-        $credential = file_get_contents($path);
+        $credential = $this->cache->get($key);
         $credential = trim($credential);
         $this->storeTransient($id, $credential);
 
@@ -87,19 +93,21 @@ class CredentialManager implements CredentialProviderInterface
     {
         $credential = trim($credential);
         $this->storeTransient($id, $credential);
-        $path = $this->credentialPath($id);
-        if (!empty($path) && is_dir(dirname($path))) {
-            file_put_contents($path, $credential);
+        $key = $this->credentialKey($id);
+        if (!empty($key)) {
+            $this->cache->set($key, $credential);
         }
     }
 
     /**
      * Remove a credential from the cache
      */
-    public function flush($id)
+    public function remove($id)
     {
-        $path = $this->credentialPath($id);
-        unlink($path);
+        $key = $this->credentialKey($id);
+        if (!empty($key)) {
+            $this->cache->remove($key);
+        }
     }
 
     /**
@@ -168,12 +176,11 @@ class CredentialManager implements CredentialProviderInterface
     /**
      * Determine the path to the cache file.
      */
-    protected function credentialPath($id)
+    protected function credentialKey($id)
     {
         if (empty($this->userId)) {
             return;
         }
-        // TODO: What is the best path to use here?
-        return '/tmp/' . $this->userId . '/' . $id;
+        return $this->userId . '-' . $id;
     }
 }
