@@ -1,0 +1,55 @@
+<?php
+namespace Pantheon\TerminusBuildTools\Task\CI;
+
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
+use Robo\Result;
+
+class Setup extends Base
+{
+    protected $dir;
+    protected $hasMultidevCapability;
+
+    public function dir($dir)
+    {
+        $this->dir = $dir;
+    }
+
+    public function hasMultidevCapability($hasMultidevCapability)
+    {
+        $this->hasMultidevCapability = $hasMultidevCapability;
+    }
+
+    public function run()
+    {
+        $siteAttributes = $this->ci_env->getState('site');
+        $site_name = $siteAttributes->siteName();
+
+        $readme = file_get_contents("{$this->dir}/README.md");
+
+        $circleBadge = $this->provider->badge($this->ci_env);
+
+        // Replace the 'ci | none' badge with the Circle bagde. If
+        // there is no badge placeholder, then put the Circle badge
+        // near the front of the README, ideally after the '# Project Title'.
+        if (preg_match('#!\[CI none\]\([^)]*\)#', $readme)) {
+            $readme = preg_replace('#!\[CI none\]\([^)]*\)#', $circleBadge, $readme);
+        }
+        else {
+            $readme = preg_replace('/^(#[^\n]*\n\n|)/', "\\1$circleBadge", $readme);
+        }
+
+        // If this site cannot create multidev environments, then configure
+        // it to always run tests on the dev environment.
+        if (!$this->hasMultidevCapability) {
+            $this->ci_env->set('env', 'TERMINUS_ENV', 'dev');
+            $ci_page = $this->provider->projectUrl($this->ci_env);
+            $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the environment variable configuration page]($ci_page) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
+        }
+        file_put_contents("{$this->dir}/README.md", $readme);
+
+        $this->provider->configureServer($this->ci_env);
+
+        return Result::success($this);
+    }
+}
