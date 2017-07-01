@@ -37,11 +37,11 @@ These credentials may be exported as environment variables. For example:
 export GITHUB_TOKEN=[REDACTED]
 export CIRCLE_TOKEN=[REDACTED]
 ```
-If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command.
+If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command. Credentials that you enter will be cached in the ~/.terminus/cache folder; `terminus self:cc` will erase cached credentials.
 
 ### New Project Quickstart
 
-EXPERIMENTAL: The build:project:create is in beta. Backwards compatibility not guarenteed until version 1.4.0.
+EXPERIMENTAL: The build:project:create is in beta. Backwards compatibility not guarenteed.
 
 To create a new project consisting of a GitHub project, a Pantheon site, and Circle CI tests, first set up credentials as shown in the previous section, and then run the `build:project:create` command as shown below:
 ```
@@ -78,6 +78,8 @@ Additional options are available to further customize the build:project:create c
 | --test-site-name | The name to use when installing the test site |
 | --admin-password | The password to use for the admin when installing the test site |
 | --admin-email    | The email address to use for the admin |
+| --ci             | The CI provider to use. Defaults to "circle" |
+| --git            | The git repository provider to use. Not yet implemented. Will default to "github" |
 
 See `terminus help build:project:create` for more information.
 
@@ -108,6 +110,29 @@ To use this tool on a Pantheon site that does not have multidev environments sup
     TERMINUS_ENV: dev
 ```
 ** IMPORTANT NOTE: ** If you initially set up your site using `terminus build:project:create`, and you do **not** use the `--team` option, or the team you specify is not an Agency organization, then your Circle configuration will automatically be set up to use only the dev environment. If you later add multidev capabilities to your site, you will need to [visit the Circle CI environment variables configuration page](https://circleci.com/docs/api/#authentication) and **delete** the entry for TERMINUS_ENV.
+
+## Adding More Providers
+
+At the moment, the build:project:create command only supports GitHub and Circle CI. It is possible to add other providers.
+
+There is no plugin mechanism for providers; additional implementations must be added to the Terminus Build Tools plugin. Pull requests are welcome.
+
+### Declare the Provider Class
+
+In the [ProviderManager](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/ProviderManager.php) class, add the classname to the list in the `findProvider` method.
+
+### Impementing a New CI Provider
+
+Follow the example provided by the [CircleCIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CircleCIProvider.php) class. A number of interfaces should be implemented:
+
+- [CredentialClientInterface](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Credentials/CredentialClientInterface.php): declare the credentials (e.g. OAuth tokens) the CredentialManager shoud look up or prompt for on behalf of your CI Provider.
+- [CIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CIProvider.php): set environment variables and configure the CI service to begin running tests.
+- [PrivateKeyReceiver](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Task/Ssh/PrivateKeyReciever.php): receive the private key that will be generated for your CI Provider. The corresponding public key is added to Pantheon.
+- [LoggerAwareInterface](https://github.com/php-fig/log/blob/master/Psr/Log/LoggerAwareInterface.php): A logger will be injected into your class.
+
+### Implement a New Git Repository Provider
+
+Additional refactoring of the Build Tools plugin will be required before this is possible. The procedure will be similar to implementing a CI Provider.
 
 ## Examples
 
