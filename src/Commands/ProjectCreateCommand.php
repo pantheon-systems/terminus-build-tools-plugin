@@ -46,6 +46,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
     protected $provider_manager;
     protected $ci_provider;
+    protected $git_provider;
 
     public function __construct($provider_manager = null)
     {
@@ -71,14 +72,16 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      */
     public function validateSiteName(InputInterface $input, AnnotationData $annotationData)
     {
-        $ci_provider_class = $input->getOption('ci');
+        $ci_provider_class_or_alias = $input->getOption('ci');
+        $git_provider_class_or_alias = $input->getOption('git');
         $target_org = $input->getOption('org');
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
 
         // Create the providers via the provider manager
-        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
+        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
+        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
 
         // If only one parameter was provided, then it is the TARGET
         if (empty($target)) {
@@ -134,20 +137,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     {
         $io = new SymfonyStyle($input, $output);
         $this->providerManager()->credentialManager()->ask($io);
-
-        // Ask for a GitHub token if one is not available.
-        $github_token = getenv('GITHUB_TOKEN');
-        while (empty($github_token)) {
-            $github_token = $this->io()->askHidden("Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.\n Then, enter it here:");
-            $github_token = trim($github_token);
-            putenv("GITHUB_TOKEN=$github_token");
-
-            // Validate that the GitHub token looks correct. If not, prompt again.
-            if ((strlen($github_token) < 40) || preg_match('#[^0-9a-fA-F]#', $github_token)) {
-                $this->log()->warning('GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.');
-                $github_token = '';
-            }
-        }
 
         // If the user did not specify an admin password, then prompt for one.
         $adminPassword = $input->getOption('admin-password');
@@ -240,6 +229,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'env' => [],
             'preserve-local-repository' => false,
             'ci' => 'circle',
+            'git' => 'github',
         ])
     {
         $this->warnAboutOldPhp();
@@ -257,9 +247,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
           $label = $site_name;
         }
 
-        // Get our authenticated credentials from environment variables.
-        $github_token = $this->getRequiredGithubToken();
-
         // This target label is only used for the log messages below.
         $target_label = $target;
         if (!empty($target_org)) {
@@ -269,11 +256,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($site_name, $options);
 
-        // TEMPORARY: We'll fetch this from the repository provider later
-        $repositoryAttributes = (new RepositoryEnvironment())
-            ->setServiceName('github')
-            ->setToken('GITHUB_TOKEN', $github_token);
-        $ci_env->storeState('repository', $repositoryAttributes);
+        // Add the environment variables from the git provider to the CI environment.
+        $ci_env->storeState('repository', $this->git_provider->getEnvironment());
 
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
@@ -307,15 +291,16 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // Create a GitHub repository
             ->progressMessage('Create GitHub project {target}', ['target' => $target_label])
             /*
-            ->taskRepositoryCreate() // 'github' for now, becomes plugable via configuration in future
+            ->taskRepositoryCreate()
+                ->provider($this->git_provider)
                 ->target($target)
                 ->owningOrganization($target_org)
-                ->token($github_token)
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $target, $target_org, $github_token, $siteDir) {
+                function ($state) use ($ci_env, $target, $target_org, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
+                    $github_token = $repositoryAttributes->token();
 
                     $target_project = $this->createGitHub($target, $siteDir, $target_org, $github_token);
                     $this->log()->notice('The target is {target}', ['target' => $target_project]);
@@ -371,8 +356,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->addCode(
                 function ($state) use ($siteDir) {
                     $headCommit = $this->initialCommit($siteDir);
-
-                    print "\n\nHEAD COMMIT IS: $headCommit\n\n";
                 })
 
             // n.b. Existing algorithm also pushes to GitHub here, but this is not necessary
@@ -383,6 +366,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 function ($state) use ($site_name, $siteDir) {
                     // Remember the initial commit sha
                     $initial_commit = $this->getHeadCommit($siteDir);
+
+                    // TODO: build assets should happen here
 
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
@@ -415,13 +400,14 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->progressMessage('Push code and configuration to {target}', ['target' => $target_label])
             /*
             ->taskRepositoryPush()
+                ->provider($this->git_provider)
                 ->target($this->target_project)
-                ->token($github_token)
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $github_token, $siteDir) {
+                function ($state) use ($ci_env, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
+                    $github_token = $repositoryAttributes->token();
                     $this->pushToGitHub($github_token, $repositoryAttributes->projectId(), $siteDir);
                 })
 
