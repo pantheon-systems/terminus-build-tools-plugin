@@ -12,7 +12,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 /**
  * Holds state information destined to be registered with the CI service.
  */
-class GithubProvider implements CIProvider, LoggerAwareInterface, CredentialClientInterface
+class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
 
