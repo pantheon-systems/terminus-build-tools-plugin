@@ -306,12 +306,12 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->addCode(
                 function ($state) use ($ci_env, $target, $target_org, $siteDir) {
 
-                    // $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
+                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
 
                     $repositoryAttributes = $ci_env->getState('repository');
-                    $github_token = $repositoryAttributes->token();
+                    // $github_token = $repositoryAttributes->token();
 
-                    $target_project = $this->createGitHub($target, $siteDir, $target_org, $github_token);
+                    // $target_project = $this->createGitHub($target, $siteDir, $target_org, $github_token);
                     $this->log()->notice('The target is {target}', ['target' => $target_project]);
                     $repositoryAttributes->setProjectId($target_project);
                 })

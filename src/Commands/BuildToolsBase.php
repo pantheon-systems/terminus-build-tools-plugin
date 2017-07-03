@@ -841,15 +841,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         return $ch;
     }
-/*
-    public function curlGitHub($uri, $postData = [], $auth = '')
-    {
-        $this->log()->notice('Call GitHub API: {uri}', ['uri' => $uri]);
-        $ch = $this->createGitHubPostChannel($uri, $postData, $auth);
-        return $this->execCurlRequest($ch, 'GitHub');
-    }
-*/
 
+    // This function is using guzzle rather than curl now, so the name is not super-accurate. :)
     protected function curlGitHub($uri, $data = [], $auth = '')
     {
         $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
