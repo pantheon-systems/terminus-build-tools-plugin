@@ -857,20 +857,47 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $url = "https://api.github.com/$uri";
 
         $headers = [
-            'Content-Type: application/json',
-            'User-Agent: pantheon/terminus-build-tools-plugin'
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
         ];
 
         if (!empty($auth)) {
-            $headers[] = "Authorization: token $auth";
+            $headers['Authorization'] = "token $auth";
         }
 
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request('POST', $url, [
+        $method = 'GET';
+        $guzzleParams = [
             'headers' => $headers,
-            'form_params' => $data,
-        ]);
-        return $res->getStatusCode();
+        ];
+        if (!empty($data)) {
+            $method = 'POST';
+            $guzzleParams['json'] = $data;
+        }
+
+        $this->log()->notice('Calling GitHub API via guzzle: {method} {uri} {data}', ['method' => $method, 'uri' => $uri, 'data' => var_export($guzzleParams, true)]);
+
+        $client = new \GuzzleHttp\Client();
+        $res = $client->request($method, $url, $guzzleParams);
+        $resultData = json_decode($res->getBody(), true);
+        $httpCode = $res->getStatusCode();
+
+        $errors = [];
+        if (isset($resultData['errors'])) {
+            foreach ($resultData['errors'] as $error) {
+                $errors[] = $error['message'];
+            }
+        }
+        if ($httpCode && ($httpCode >= 300)) {
+            $errors[] = "Http status code: $httpCode";
+        }
+
+        $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
+
+        if (!empty($message) || !empty($errors)) {
+            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
+        }
+
+        return $resultData;
     }
 
     // TODO: At the moment, this takes multidev environment names,
