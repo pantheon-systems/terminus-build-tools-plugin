@@ -96,7 +96,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $target_project = "$target_org/$target";
 
         // Create a GitHub repository
-        $this->log()->notice('Creating repository {repo}', ['repo' => $target_project]);
+        $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
         $postData = ['name' => $target];
         $result = $this->curlGitHub($createRepoUrl, $postData);
 
