@@ -43,7 +43,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function token()
     {
         $repositoryEnvironment = $this->getEnvironment();
-        return $repositoryEnvironment->hasToken();
+        return $repositoryEnvironment->token();
     }
 
     public function setToken($token)
@@ -90,7 +90,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $target_org = $github_org;
         if (empty($github_org)) {
             $createRepoUrl = 'user/repos';
-            $userData = $this->curlGitHub('user');
+            $userData = $this->gitHubAPI('user');
             $target_org = $userData['login'];
         }
         $target_project = "$target_org/$target";
@@ -98,7 +98,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         // Create a GitHub repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
         $postData = ['name' => $target];
-        $result = $this->curlGitHub($createRepoUrl, $postData);
+        $result = $this->gitHubAPI($createRepoUrl, $postData);
 
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
@@ -112,7 +112,17 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return $target_project;
     }
 
-    protected function curlGitHub($uri, $data = [])
+    /**
+     * Push the repository at the provided working directory back to GitHub.
+     */
+    protected function pushRepository($dir, $target_project)
+    {
+        $github_token = $this->token();
+        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
+        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+    }
+
+    protected function gitHubAPI($uri, $data = [])
     {
         $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
 
@@ -163,14 +173,44 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     }
 
 
-    // TODO: Make an abstract base class to move this to
-    protected function execGit($dir, $cmd)
+    // TODO: Make a trait or something similar, maybe in Robo, for handling
+    // replacements with redaction.
+    protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
-        $command = 'git -C ' . escapeshellarg($dir) . ' ' . $cmd;
+        $redactedCommand = $this->interpolate("git $cmd", $this->redactedReplacements($replacements, $redacted));
+        $command = $this->interpolate("git -C {dir} $cmd", ['dir' => $dir] + $replacements);
 
+        $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
         passthru($command, $result);
         if ($result != 0) {
-            throw new \Exception("Command `$command` failed with exit code $result");
+            throw new \Exception("Command `$redactedCommand` failed with exit code $result");
         }
+    }
+
+    private function redactedReplacements($replacements, $redacted)
+    {
+        $result = $replacements;
+        foreach ($redacted as $key => $value) {
+            if (is_numeric($key)) {
+                $result[$value] = '[REDACTED]';
+            } else {
+                $result[$key] = $value;
+            }
+        }
+        return $result;
+    }
+
+    private function interpolate($str, array $context)
+    {
+        // build a replacement array with braces around the context keys
+        $replace = array();
+        foreach ($context as $key => $val) {
+            if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
+                $replace[sprintf('{%s}', $key)] = $val;
+            }
+        }
+
+        // interpolate replacement values into the message and return
+        return strtr($str, $replace);
     }
 }

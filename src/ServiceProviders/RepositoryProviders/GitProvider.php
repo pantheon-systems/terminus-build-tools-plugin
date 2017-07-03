@@ -20,4 +20,12 @@ interface GitProvider
      * @param $github_org Which org to create the project in; leave off to create a user repository.
      */
     public function createRepository($dir, $target, $github_org = '');
+
+    /**
+     * Push repository back to repository service.
+     *
+     * @param $dir Local working copy of repository to push
+     * @param $target_project Project to push to; usually org/projectname
+     */
+    protected function pushRepository($dir, $target_project);
 }

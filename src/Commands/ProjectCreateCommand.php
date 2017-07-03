@@ -416,15 +416,19 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->addCode(
                 function ($state) use ($ci_env, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
-                    $github_token = $repositoryAttributes->token();
-                    $this->pushToGitHub($github_token, $repositoryAttributes->projectId(), $siteDir);
+
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+
+                    //$github_token = $repositoryAttributes->token();
+                    //$this->pushToGitHub($github_token, $repositoryAttributes->projectId(), $siteDir);
                 })
 
-            // Set up CircleCI to test our project.
-            // TODO: Add repository provider also
+            // Create public and private key pair and add them to any provider
+            // that requested them.
             ->taskCreateKeys()
                 ->environment($ci_env)
                 ->provider($this->ci_provider)
+                ->provider($this->git_provider)
                 ->provider($this) // TODO: replace with site provider
 
             // Tell the CI server to start testing our project

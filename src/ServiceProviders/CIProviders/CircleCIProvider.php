@@ -119,14 +119,14 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
             $data = ['name' => $key, 'value' => $value];
-            $this->curlCircleCI($data, "$circle_url/envvar");
+            $this->circleCIAPI($data, "$circle_url/envvar");
         }
     }
 
     public function startTesting(CIState $ci_env)
     {
         $circle_url = $this->apiUrl($ci_env);
-        $this->curlCircleCI([], "$circle_url/follow");
+        $this->circleCIAPI([], "$circle_url/follow");
     }
 
     public function addPrivateKey(CIState $ci_env, $privateKey)
@@ -137,10 +137,10 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             'hostname' => 'drush.in',
             'private_key' => $privateKeyContents,
         ];
-        $this->curlCircleCI($data, "$circle_url/ssh-key");
+        $this->circleCIAPI($data, "$circle_url/ssh-key");
     }
 
-    protected function curlCircleCI($data, $url)
+    protected function circleCIAPI($data, $url)
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 
