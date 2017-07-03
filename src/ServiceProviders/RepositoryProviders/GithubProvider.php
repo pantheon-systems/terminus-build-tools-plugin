@@ -115,7 +115,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     /**
      * Push the repository at the provided working directory back to GitHub.
      */
-    protected function pushRepository($dir, $target_project)
+    public function pushRepository($dir, $target_project)
     {
         $github_token = $this->token();
         $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";

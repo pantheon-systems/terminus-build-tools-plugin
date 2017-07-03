@@ -27,5 +27,5 @@ interface GitProvider
      * @param $dir Local working copy of repository to push
      * @param $target_project Project to push to; usually org/projectname
      */
-    protected function pushRepository($dir, $target_project);
+    public function pushRepository($dir, $target_project);
 }
