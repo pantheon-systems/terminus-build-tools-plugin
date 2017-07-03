@@ -22,7 +22,10 @@ interface GitProvider
     public function createRepository($dir, $target, $github_org = '');
 
     /**
-     * Push repository back to repository service.
+     * Push repository back to repository service. Note that, in essence,
+     * this is simply a `git push` command; however, it also provides the
+     * credentials for the push operation, and does not require a remote
+     * be set for the target.
      *
      * @param $dir Local working copy of repository to push
      * @param $target_project Project to push to; usually org/projectname

@@ -107,6 +107,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
+        // TODO: maybe in the future we will not need to set this?
         $this->execGit($local_site_path, "remote add origin 'git@github.com:{$target_project}.git'");
 
         return $target_project;
