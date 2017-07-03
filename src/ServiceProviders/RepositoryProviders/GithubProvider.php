@@ -81,7 +81,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $this->setToken($credentials_provider->fetch(self::GITHUB_TOKEN));
     }
 
-    protected function createRepository($local_site_path, $target, $github_org = '')
+    public function createRepository($local_site_path, $target, $github_org = '')
     {
         // We need a different URL here if $github_org is an org; if no
         // org is provided, then we use a simpler URL to create a repository
