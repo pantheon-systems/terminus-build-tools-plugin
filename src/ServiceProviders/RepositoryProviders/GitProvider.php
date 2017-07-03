@@ -7,5 +7,8 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
  */
 interface GitProvider
 {
-
+    // TODO: Perhaps there should be a base interface shared by GitProvider
+    // and CIProvider. getEnvironment would then move there. The CIProvider
+    // environment would just be empty at the moment, though.
+    public function getEnvironment();
 }

@@ -57,6 +57,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     {
         if (!$this->provider_manager) {
             // TODO: how can we do DI from within a Terminus Plugin? Huh?
+            // Delayed initialization is one option.
             $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
             $credentialManager = new CredentialManager($credential_store);
             $credentialManager->setUserId($this->loggedInUserEmail());
@@ -65,6 +66,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         }
         return $this->provider_manager;
     }
+
     /**
      * Validate requested site name before prompting for additional information.
      *
@@ -253,6 +255,10 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             $target_label = "$target_org/$target";
         }
 
+        // TODO: Maybe getCIEnvironment could be moved to a pantheonProvider,
+        // and we could build $ci_env in the provider manager by calling
+        // `getEnvironment()` on each provider.
+
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($site_name, $options);
 
@@ -299,6 +305,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             */
             ->addCode(
                 function ($state) use ($ci_env, $target, $target_org, $siteDir) {
+
+                    // $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
+
                     $repositoryAttributes = $ci_env->getState('repository');
                     $github_token = $repositoryAttributes->token();
 

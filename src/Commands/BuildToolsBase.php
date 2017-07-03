@@ -841,12 +841,36 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         return $ch;
     }
-
+/*
     public function curlGitHub($uri, $postData = [], $auth = '')
     {
         $this->log()->notice('Call GitHub API: {uri}', ['uri' => $uri]);
         $ch = $this->createGitHubPostChannel($uri, $postData, $auth);
         return $this->execCurlRequest($ch, 'GitHub');
+    }
+*/
+
+    protected function curlGitHub($uri, $data = [], $auth = '')
+    {
+        $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
+
+        $url = "https://api.github.com/$uri";
+
+        $headers = [
+            'Content-Type: application/json',
+            'User-Agent: pantheon/terminus-build-tools-plugin'
+        ];
+
+        if (!empty($auth)) {
+            $headers[] = "Authorization: token $auth";
+        }
+
+        $client = new \GuzzleHttp\Client();
+        $res = $client->request('POST', $url, [
+            'headers' => $headers,
+            'form_params' => $data,
+        ]);
+        return $res->getStatusCode();
     }
 
     // TODO: At the moment, this takes multidev environment names,
