@@ -24,6 +24,7 @@ class ProviderManager implements LoggerAwareInterface
         // TODO: create some way to register providers. Plugin plugins?
         $available_providers = [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GithubProvider',
         ];
 
         // Only compare the alphanumeric parts of the provided alias.
@@ -46,11 +47,11 @@ class ProviderManager implements LoggerAwareInterface
     {
         $providerClass = $this->lookupProvider($providerClass);
         if (!class_exists($providerClass)) {
-            throw new Exception("Could not load class $providerClass");
+            throw new \Exception("Could not load class $providerClass");
         }
         $provider = new $providerClass();
         if (!$provider instanceof $expectedInterface) {
-            throw new Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
+            throw new \Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
         }
         if ($provider instanceof LoggerAwareInterface) {
             $provider->setLogger($this->logger);

@@ -11,7 +11,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 
 /**
- * Holds state information destined to be registered with the CI service.
+ * Manages the configuration of a project to be tested on Circle CI.
  */
 class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
@@ -25,14 +25,26 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
     }
 
+    /**
+     * Return 'true' if our token has been set yet.
+     */
     public function hasToken()
     {
         return isset($this->circle_token);
     }
 
+    /**
+     * Set our token. This will be called via 'setCredentials()', which is
+     * called by the provider manager.
+     */
     public function setToken($circle_token)
     {
         $this->circle_token = $circle_token;
+    }
+
+    public function token()
+    {
+        return $this->circle_token;
     }
 
     /**
@@ -40,6 +52,8 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
      */
     public function credentialRequests()
     {
+        // Tell the credential manager that we require one credential: the
+        // CIRCLE_TOKEN that will be used to authenticate with the CircleCI server.
         $circleTokenRequest = new CredentialRequest(
             self::CIRCLE_TOKEN,
             "Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started.",
@@ -56,6 +70,9 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
      */
     public function setCredentials(CredentialProviderInterface $credentials_provider)
     {
+        // Since the `credentialRequests()` method declared that we need a
+        // CIRCLE_TOKEN credential, it will be available for us to copy from
+        // the credentials provider when this method is called.
         $this->setToken($credentials_provider->fetch(self::CIRCLE_TOKEN));
     }
 
@@ -102,14 +119,14 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
             $data = ['name' => $key, 'value' => $value];
-            $this->curlCircleCI($data, "$circle_url/envvar");
+            $this->circleCIAPI($data, "$circle_url/envvar");
         }
     }
 
     public function startTesting(CIState $ci_env)
     {
         $circle_url = $this->apiUrl($ci_env);
-        $this->curlCircleCI([], "$circle_url/follow");
+        $this->circleCIAPI([], "$circle_url/follow");
     }
 
     public function addPrivateKey(CIState $ci_env, $privateKey)
@@ -120,10 +137,10 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             'hostname' => 'drush.in',
             'private_key' => $privateKeyContents,
         ];
-        $this->curlCircleCI($data, "$circle_url/ssh-key");
+        $this->circleCIAPI($data, "$circle_url/ssh-key");
     }
 
-    protected function curlCircleCI($data, $url)
+    protected function circleCIAPI($data, $url)
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 

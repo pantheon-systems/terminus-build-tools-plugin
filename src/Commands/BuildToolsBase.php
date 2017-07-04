@@ -842,11 +842,55 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $ch;
     }
 
-    public function curlGitHub($uri, $postData = [], $auth = '')
+    // This function is using guzzle rather than curl now, so the name is not super-accurate. :)
+    protected function curlGitHub($uri, $data = [], $auth = '')
     {
-        $this->log()->notice('Call GitHub API: {uri}', ['uri' => $uri]);
-        $ch = $this->createGitHubPostChannel($uri, $postData, $auth);
-        return $this->execCurlRequest($ch, 'GitHub');
+        $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
+
+        $url = "https://api.github.com/$uri";
+
+        $headers = [
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+        ];
+
+        if (!empty($auth)) {
+            $headers['Authorization'] = "token $auth";
+        }
+
+        $method = 'GET';
+        $guzzleParams = [
+            'headers' => $headers,
+        ];
+        if (!empty($data)) {
+            $method = 'POST';
+            $guzzleParams['json'] = $data;
+        }
+
+        $this->log()->notice('Calling GitHub API via guzzle: {method} {uri} {data}', ['method' => $method, 'uri' => $uri, 'data' => var_export($guzzleParams, true)]);
+
+        $client = new \GuzzleHttp\Client();
+        $res = $client->request($method, $url, $guzzleParams);
+        $resultData = json_decode($res->getBody(), true);
+        $httpCode = $res->getStatusCode();
+
+        $errors = [];
+        if (isset($resultData['errors'])) {
+            foreach ($resultData['errors'] as $error) {
+                $errors[] = $error['message'];
+            }
+        }
+        if ($httpCode && ($httpCode >= 300)) {
+            $errors[] = "Http status code: $httpCode";
+        }
+
+        $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
+
+        if (!empty($message) || !empty($errors)) {
+            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
+        }
+
+        return $resultData;
     }
 
     // TODO: At the moment, this takes multidev environment names,

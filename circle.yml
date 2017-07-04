@@ -39,7 +39,7 @@ dependencies:
     - gem install circle-cli
     - composer global require -n "hirak/prestissimo:^0.3"
     - mkdir -p $HOME/terminus
-    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:^1.4"
+    - /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:dev-master"
     - composer --working-dir=$HOME/terminus config minimum-stability dev
     - terminus --version
     # Install the copy of the Build Tools Plugin cloned by CircleCI as a plugin

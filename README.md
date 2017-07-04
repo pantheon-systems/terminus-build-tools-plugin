@@ -132,7 +132,12 @@ Follow the example provided by the [CircleCIProvider](https://github.com/pantheo
 
 ### Implement a New Git Repository Provider
 
-Additional refactoring of the Build Tools plugin will be required before this is possible. The procedure will be similar to implementing a CI Provider.
+Follow the example provided by the [GithubProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/RepositoryProviders/GithubProvider.php) class. A number of interfaces should be implemented:
+
+- [CredentialClientInterface](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Credentials/CredentialClientInterface.php): declare the credentials (e.g. OAuth tokens) the CredentialManager shoud look up or prompt for on behalf of your CI Provider.
+- [GitProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/RepositoryProviders/GitProvider.php): create a repository on the remote Git service, and push a local repository to the remote service.
+- [LoggerAwareInterface](https://github.com/php-fig/log/blob/master/Psr/Log/LoggerAwareInterface.php): A logger will be injected into your class.
+
 
 ## Examples
 

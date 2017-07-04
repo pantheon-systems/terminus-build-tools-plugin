@@ -6,6 +6,15 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 
 /**
  * Holds state information destined to be registered with the CI service.
+ *
+ * For every provider that needs to store state in the CI service, a
+ * "ProviderEnvironment" should be provided to this class via the
+ * 'storeState' method. The '$owner' parameter is an arbitrary identifier.
+ *
+ * The CI provider will ask for all of the necessary state via the
+ * 'getAggregateState()' method.  Every ProviderEnvironment has a method
+ * 'ciState()' that will return the environment variables (key:value pairs)
+ * that should be stored in the CI provier's configuration.
  */
 class CIState
 {

@@ -10,6 +10,11 @@ class RepositoryEnvironment extends ProviderEnvironment
     protected $serviceName;
     protected $projectId;
 
+    public function hasToken()
+    {
+        return isset($this[$this->token_key]);
+    }
+
     public function token()
     {
         return $this[$this->token_key];
