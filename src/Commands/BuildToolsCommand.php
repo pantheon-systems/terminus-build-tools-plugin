@@ -1245,7 +1245,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         // Sanity check: only push from directories that have .git and composer.json
-        foreach (['.git', 'composer.json'] as $item) {
+        // Note: we might want to use push-to-pantheon even if there isn't a composer.json,
+        // e.g. when using build:env:create with drops-7.
+        foreach (['.git'] as $item) {
             if (!file_exists("$repositoryDir/$item")) {
                 throw new TerminusException('Cannot push from {dir}: missing {item}.', ['dir' => $repositoryDir, 'item' => $item]);
             }
