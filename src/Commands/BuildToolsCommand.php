@@ -1245,7 +1245,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         }
 
         // Sanity check: only push from directories that have .git and composer.json
-        foreach (['.git', 'composer.json'] as $item) {
+        // Note: we might want to use push-to-pantheon even if there isn't a composer.json,
+        // e.g. when using build:env:create with drops-7.
+        foreach (['.git'] as $item) {
             if (!file_exists("$repositoryDir/$item")) {
                 throw new TerminusException('Cannot push from {dir}: missing {item}.', ['dir' => $repositoryDir, 'item' => $item]);
             }
@@ -1268,6 +1270,15 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Record the metadata for this build
         $metadata = $this->getBuildMetadata($repositoryDir);
         $this->recordBuildMetadata($metadata, $repositoryDir);
+
+        // Drupal 7: Drush requires a settings.php file. Add one to the
+        // build results if one does not already exist.
+        $default_dir = "$repositoryDir/" . (is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default');
+        $settings_file = "$default_dir/settings.php";
+        if (is_dir($default_dir) && !is_file($settings_file)) {
+          file_put_contents($settings_file, "<?php\n");
+          $this->log()->notice('Created empty settings.php file {settingsphp}.', ['settingsphp' => $settings_file]);
+        }
 
         // Remove any .git directories added by composer from the set of files
         // being committed. Ideally, there will be none. We cannot allow any to
@@ -2122,9 +2133,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function commitChangesFile($commit, $file)
     {
-        $outputLines = $this->exec("git show --name-only $commit $file");
+        // If there are any errors, we will presume that the file in
+        // question does not exist in the repository and treat that as
+        // "file did not change" (in other words, ignore errors).
+        exec("git show --name-only $commit -- $file", $outputLines, $result);
 
-        return !empty($outputLines);
+        return ($result == 0) && !empty($outputLines);
     }
 
     /**
