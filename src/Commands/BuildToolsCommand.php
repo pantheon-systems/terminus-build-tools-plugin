@@ -1273,7 +1273,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Drupal 7: Drush requires a settings.php file. Add one to the
         // build results if one does not already exist.
-        $default_dir = "$repositoryDir/" . is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default';
+        $default_dir = "$repositoryDir/" . (is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default');
         $settings_file = "$default_dir/settings.php";
         if (!is_dir($default_dir)) {
           $this->log()->notice('Defaults dir {dir} does not exist.', ['dir' => $default_dir]);
