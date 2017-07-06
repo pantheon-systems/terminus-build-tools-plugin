@@ -384,6 +384,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 'account-pass' => $circle_env['ADMIN_PASSWORD'],
                 'site-mail' => $circle_env['ADMIN_EMAIL'],
                 'site-name' => $circle_env['TEST_SITE_NAME'],
+                'site-url' => "https://dev-{$site_name}.pantheonsite.io"
             ];
             $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 
@@ -664,9 +665,13 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function autodetectUpstream($siteDir)
     {
-        return 'Empty Upstream';
-        // or 'Drupal 7' or 'WordPress'
-        // return 'Drupal 8';
+        if (file_exists($siteDir . '/web/wp-config.php')) {
+            return 'WordPress';
+        }
+        else {
+            // This upstream works for Drupal 8.
+            return 'Empty Upstream';
+        }
     }
 
     /**
