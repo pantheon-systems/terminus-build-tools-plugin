@@ -2122,9 +2122,12 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
      */
     protected function commitChangesFile($commit, $file)
     {
-        $outputLines = $this->exec("git show --name-only $commit $file");
+        // If there are any errors, we will presume that the file in
+        // question does not exist in the repository and treat that as
+        // "file did not change" (in other words, ignore errors).
+        exec("git show --name-only $commit $file", $outputLines, $result);
 
-        return !empty($outputLines);
+        return ($result == 0) && !empty($outputLines);
     }
 
     /**
