@@ -1271,6 +1271,14 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $metadata = $this->getBuildMetadata($repositoryDir);
         $this->recordBuildMetadata($metadata, $repositoryDir);
 
+        // Drupal 7: Drush requires a settings.php file. Add one to the
+        // build results if one does not already exist.
+        $default_dir = "$repositoryDir/" . is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default';
+        $settings_file = "$default_dir/settings.php";
+        if (is_dir($default_dir) && !is_file($settings_file)) {
+          file_put_contents($settings_file, '<?php');
+        }
+
         // Remove any .git directories added by composer from the set of files
         // being committed. Ideally, there will be none. We cannot allow any to
         // remain, though, as git will interpret these as submodules, which
