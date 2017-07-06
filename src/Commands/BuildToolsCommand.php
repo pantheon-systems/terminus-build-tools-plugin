@@ -1275,15 +1275,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // build results if one does not already exist.
         $default_dir = "$repositoryDir/" . (is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default');
         $settings_file = "$default_dir/settings.php";
-        if (!is_dir($default_dir)) {
-          $this->log()->notice('Defaults dir {dir} does not exist.', ['dir' => $default_dir]);
-        }
-        if (is_file($settings_file)) {
-          $this->log()->notice('Found settings.php file at {settingsphp}.', ['settingsphp' => $settings_file]);
-        }
         if (is_dir($default_dir) && !is_file($settings_file)) {
-          file_put_contents($settings_file, '<?php');
-          $this->log()->notice('Created settings.php file {settingsphp}.', ['settingsphp' => $settings_file]);
+          file_put_contents($settings_file, "<?php\n");
+          $this->log()->notice('Created empty settings.php file {settingsphp}.', ['settingsphp' => $settings_file]);
         }
 
         // Remove any .git directories added by composer from the set of files
