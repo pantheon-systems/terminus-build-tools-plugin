@@ -25,6 +25,7 @@ class ProviderManager implements LoggerAwareInterface
         $available_providers = [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GithubProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BitbucketProvider',
         ];
 
         // Only compare the alphanumeric parts of the provided alias.
