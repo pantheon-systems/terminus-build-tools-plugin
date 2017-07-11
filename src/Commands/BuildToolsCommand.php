@@ -1371,7 +1371,8 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // because "master" as a branch name is likely ambiguous as it can exist
         // on both Pantheon and the source repo
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout -B temp-local-copy-of-pantheon-master remote/pantheon/master');
+        $this->passthru('git checkout remote/pantheon/master');
+        $this->passthru('git checkout -B temp-local-copy-of-pantheon-master');
         // Replace the entire contents of the master branch with the branch we just tested.
         $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' -X theirs $env_id");
 
