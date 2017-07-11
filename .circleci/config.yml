@@ -4,7 +4,9 @@ jobs:
     # @todo, separate build and test phases.
     build:
         docker:
-            - image: drupaldocker/php:7.0-cli
+            #- image: drupaldocker/php:7.0-cli
+            # @todo, generate a base image
+            - image: circleci/build-image:ubuntu-14.04-XL-922-9410082
         working_directory: ~/terminus_build_tools_plugin
         environment:
             BASH_ENV: ~/.bashrc
@@ -18,6 +20,7 @@ jobs:
             - run:
                 name: dependencies
                 command: |
+                  gem install circle-cli
                   composer global require -n "hirak/prestissimo:^0.3"
                   git clone https://github.com/pantheon-systems/terminus.git ~/terminus
                   cd ~/terminus && composer install
@@ -33,13 +36,14 @@ jobs:
             - run:
                 name: git config
                 command: |
-
                   git config --global user.email "$GIT_EMAIL"
                   git config --global user.name "Circle CI"
             - run:
                 name: Terminus Login
                 command: |
                   terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+                  touch $HOME/.ssh/config
+                  echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test D8
                 command: |
