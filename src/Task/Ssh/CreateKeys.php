@@ -70,8 +70,9 @@ class CreateKeys extends BaseTask
         // TODO: tmp dir strategy
         // $tmpkeydir = $this->tempdir('ssh-keys');
         $tmpkeydir = '/tmp/ssh-keys';
-        mkdir($tmpkeydir);
-
+        if (!is_dir($tmpkeydir)) {
+            mkdir($tmpkeydir);
+        }
         $privateKey = "$tmpkeydir/$prefix";
         $publicKey = "$privateKey.pub";
 

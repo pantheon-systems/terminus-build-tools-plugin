@@ -287,9 +287,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function autodetectUpstream($siteDir)
     {
+        $upstream = $this->autodetectUpstreamAtDir("$siteDir/web");
+        if ($upstream) {
+            return $upstream;
+        }
+        $upstream = $this->autodetectUpstreamAtDir($siteDir);
+        if ($upstream) {
+            return $upstream;
+        }
+        // Can't tell? Assume Drupal 8.
         return 'Empty Upstream';
-        // or 'Drupal 7' or 'WordPress'
-        // return 'Drupal 8';
+    }
+
+    protected function autodetectUpstreamAtDir($siteDir)
+    {
+        $upstream_map = [
+          'web/core/misc/drupal.js' => 'Empty Upstream', // Drupal 8
+          'web/misc/drupal.js' => 'Empty 7', // Drupal 7
+          'wp-config.php' => 'Empty WordPress', // WordPress
+        ];
+
+        foreach ($upstream_map as $file => $upstream) {
+            if (file_exists("$siteDir/$file")) {
+                return $upstream;
+            }
+        }
+
+        return false;
     }
 
     /**

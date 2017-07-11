@@ -367,7 +367,22 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $headCommit = $this->initialCommit($siteDir);
                 })
 
-            // n.b. Existing algorithm also pushes to GitHub here, but this is not necessary
+            // It is not necessary to push to GitHub so soon, but it's helpful
+            // for debugging et. al. to have the initial repo contents available.
+
+            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
+            /*
+            ->taskRepositoryPush()
+                ->provider($this->git_provider)
+                ->target($this->target_project)
+                ->dir($siteDir)
+            */
+            ->addCode(
+                function ($state) use ($ci_env, $siteDir) {
+                    $repositoryAttributes = $ci_env->getState('repository');
+
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+                })
 
             // Push code to newly-created project.
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
@@ -406,7 +421,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 })
 
             // Push the local working repository to the server
-            ->progressMessage('Push code and configuration to {target}', ['target' => $target_label])
+            ->progressMessage('Push updated configuration to {target}', ['target' => $target_label])
             /*
             ->taskRepositoryPush()
                 ->provider($this->git_provider)
@@ -416,7 +431,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->addCode(
                 function ($state) use ($ci_env, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
-
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
 
                     //$github_token = $repositoryAttributes->token();
