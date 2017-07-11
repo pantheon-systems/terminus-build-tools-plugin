@@ -19,14 +19,10 @@ jobs:
                 name: dependencies
                 command: |
                   composer global require -n "hirak/prestissimo:^0.3"
-
-
                   git clone https://github.com/pantheon-systems/terminus.git ~/terminus
                   cd ~/terminus && composer install
                   ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
-
-
-
+                  cd ~/terminus_build_tools_plugin
                   mkdir -p $HOME/.terminus/plugins
                   ln -s $(pwd) $HOME/.terminus/plugins
                   terminus list -n build
