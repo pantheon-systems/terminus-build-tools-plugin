@@ -302,9 +302,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function autodetectUpstreamAtDir($siteDir)
     {
         $upstream_map = [
-          'web/core/misc/drupal.js' => 'Empty Upstream', // Drupal 8
-          'web/misc/drupal.js' => 'Empty 7', // Drupal 7
-          'wp-config.php' => 'Empty WordPress', // WordPress
+          'web/core/misc/drupal.js' => 'empty', // Drupal 8
+          'web/misc/drupal.js' => 'empty-7', // Drupal 7
+          'wp-config.php' => 'empty-wordpress', // WordPress
         ];
 
         foreach ($upstream_map as $file => $upstream) {
