@@ -18,8 +18,6 @@ jobs:
             - run:
                 name: dependencies
                 command: |
-                  sudo apt-get install ruby
-                #  gem install circle-cli
                   composer global require -n "hirak/prestissimo:^0.3"
                   mkdir -p $HOME/terminus
                   /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:dev-master"
