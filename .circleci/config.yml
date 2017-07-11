@@ -19,10 +19,14 @@ jobs:
                 name: dependencies
                 command: |
                   composer global require -n "hirak/prestissimo:^0.3"
-                  mkdir -p $HOME/terminus
-                  /usr/bin/env COMPOSER_BIN_DIR=$HOME/bin composer --working-dir=$HOME/terminus require "pantheon-systems/terminus:dev-master"
-                  composer --working-dir=$HOME/terminus config minimum-stability dev
-                  terminus --version
+
+
+                  git clone https://github.com/pantheon-systems/terminus.git ~/terminus
+                  cd ~/terminus && composer install
+                  ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
+
+
+
                   mkdir -p $HOME/.terminus/plugins
                   ln -s $(pwd) $HOME/.terminus/plugins
                   terminus list -n build
