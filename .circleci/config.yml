@@ -30,9 +30,17 @@ jobs:
             #     key: dependency-cache-{{ checksum "composer.lock" }}
             #     paths:
             #       - ~/.composer/cache
-            # - run:
-            #     name: git config
-            #     command: |
-            #
-            #       git config --global user.email "$GIT_EMAIL"
-            #       git config --global user.name "Circle CI"
+            - run:
+                name: git config
+                command: |
+
+                  git config --global user.email "$GIT_EMAIL"
+                  git config --global user.name "Circle CI"
+            - run:
+                name: Terminus Login
+                command: |
+                  terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+            - run:
+                name: Test D8
+                command: |
+                  ./.circleci/test-example-repo.sh
