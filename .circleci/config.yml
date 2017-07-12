@@ -6,7 +6,7 @@ jobs:
         docker:
             #- image: drupaldocker/php:7.0-cli
             # @todo, generate a base image
-            - image: circleci/build-image:ubuntu-14.04-XL-922-9410082
+            - image: drupaldocker/php:7.0-cli
         working_directory: ~/terminus_build_tools_plugin
         environment:
             BASH_ENV: ~/.bashrc
@@ -20,6 +20,8 @@ jobs:
             - run:
                 name: dependencies
                 command: |
+                  apt-get update
+                  apt-get install -y ruby
                   gem install circle-cli
                   composer global require -n "hirak/prestissimo:^0.3"
                   git clone https://github.com/pantheon-systems/terminus.git ~/terminus
