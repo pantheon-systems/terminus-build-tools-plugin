@@ -1,18 +1,24 @@
+# https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
+defaults: &defaults
+  docker:
+    - image: drupaldocker/php:7.0-cli
+  working_directory: ~/terminus_build_tools_plugin
+  environment:
+    BASH_ENV: ~/.bashrc
+    TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+    TERMINUS_ORG: CI for Drupal 8 + Composer
+    GITHUB_USERNAME: pantheon-ci-bot
+
 version: 2
-# https://circleci.com/docs/configuration#machine
 jobs:
-    # @todo, separate build and test phases.
+    # @todo: common initialization, maybe
     build:
-        docker:
-            #- image: drupaldocker/php:7.0-cli
-            # @todo, generate a base image
-            - image: drupaldocker/php:7.0-cli
-        working_directory: ~/terminus_build_tools_plugin
-        environment:
-            BASH_ENV: ~/.bashrc
-            TZ: "/usr/share/zoneinfo/America/Los_Angeles"
-            TERMINUS_ORG: CI for Drupal 8 + Composer
-            GITHUB_USERNAME: pantheon-ci-bot
+        <<: *defaults
+        steps:
+            - run: echo "Nothing in the build step for now."
+    
+    test_drupal_8:
+        <<: *defaults
         steps:
             - checkout
             # - restore_cache:
@@ -51,3 +57,65 @@ jobs:
                 name: Test D8
                 command: |
                   ./.circleci/test-example-repo.sh
+
+    test_wordpress:
+        <<: *defaults
+        steps:
+            - checkout
+            # - restore_cache:
+            #     key: dependency-cache-{{ checksum "composer.lock" }}
+            - run:
+                name: dependencies
+                command: |
+                  apt-get update
+                  apt-get install -y ruby
+                  gem install circle-cli
+                  composer global require -n "hirak/prestissimo:^0.3"
+                  git clone https://github.com/pantheon-systems/terminus.git ~/terminus
+                  cd ~/terminus && composer install
+                  ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
+                  cd ~/terminus_build_tools_plugin
+                  mkdir -p $HOME/.terminus/plugins
+                  ln -s $(pwd) $HOME/.terminus/plugins
+                  terminus list -n build
+            # - save_cache:
+            #     key: dependency-cache-{{ checksum "composer.lock" }}
+            #     paths:
+            #       - ~/.composer/cache
+            - run:
+                name: git config
+                command: |
+                  git config --global user.email "$GIT_EMAIL"
+                  git config --global user.name "Circle CI"
+            - run:
+                name: Terminus and Circle Login
+                command: |
+                  circle token "$CIRCLE_TOKEN"
+                  terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+                  touch $HOME/.ssh/config
+                  echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - run:
+                name: Test WordPress
+                command: echo "No WordPress test yet"
+
+    # @todo: anything to do once everything is complete?
+    completion:
+        <<: *defaults
+        steps:
+            - run: echo "All tests passed."
+
+workflows:
+  version: 2
+  build_test:
+    jobs:
+      - build
+      - test_drupal_8:
+          requires:
+            - build
+      - test_wordpress:
+          requires:
+            - build
+      - completion:
+          requires:
+            - test_drupal_8
+            - test_wordpress
