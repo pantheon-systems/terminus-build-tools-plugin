@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+circle token "$CIRCLE_TOKEN"
 set -ex
 
 
