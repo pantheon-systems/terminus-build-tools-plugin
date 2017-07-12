@@ -41,8 +41,9 @@ jobs:
                   git config --global user.email "$GIT_EMAIL"
                   git config --global user.name "Circle CI"
             - run:
-                name: Terminus Login
+                name: Terminus and Circle Login
                 command: |
+                  circle token "$CIRCLE_TOKEN"
                   terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
                   touch $HOME/.ssh/config
                   echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
