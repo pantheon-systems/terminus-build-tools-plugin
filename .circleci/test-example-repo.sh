@@ -1,8 +1,6 @@
 #!/bin/bash
 
-circle token "$CIRCLE_TOKEN"
 set -ex
-
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
@@ -20,7 +18,6 @@ terminus site:info "$TERMINUS_SITE"
 # Confirm that the Github project was created
 git clone "https://github.com/${TARGET_REPO}.git" "$TARGET_REPO_WORKING_COPY"
 # Confirm that Circle was configured for testing, and that the first test passed.
-# This process is slow and fragile, so we will not bother to re-run on the master branch.
 
-cd "$TARGET_REPO_WORKING_COPY"
-circle watch
+set +ex
+cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
