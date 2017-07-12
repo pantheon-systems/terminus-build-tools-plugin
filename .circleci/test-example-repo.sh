@@ -6,8 +6,8 @@ set -ex
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
-BRANCH: $(echo $CIRCLE_BRANCH | grep -v '^\(master\|[0-9]\+.x\)$')
-PR_BRANCH: ${BRANCH:+dev-$BRANCH}
+BRANCH=$(echo $CIRCLE_BRANCH | grep -v '^\(master\|[0-9]\+.x\)$')
+PR_BRANCH=${BRANCH:+dev-$BRANCH}
 SOURCE_COMPOSER_PROJECT=pantheon-systems/example-drops-8-composer:dev-test-2.x
 TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
 TARGET_REPO_WORKING_COPY=$HOME/$TERMINUS_SITE
