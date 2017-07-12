@@ -593,7 +593,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->rsync($site_env_id, ':code/config', $repositoryDir);
 
         $this->passthru("git -C $repositoryDir add config");
-        $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        exec("git -C $repositoryDir status --porcelain", $outputLines, $status);
+        if (!empty($outputLines)) {
+            $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        }
     }
 
     /**
