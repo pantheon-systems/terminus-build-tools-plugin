@@ -287,9 +287,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function autodetectUpstream($siteDir)
     {
+        $upstream = $this->autodetectUpstreamAtDir("$siteDir/web");
+        if ($upstream) {
+            return $upstream;
+        }
+        $upstream = $this->autodetectUpstreamAtDir($siteDir);
+        if ($upstream) {
+            return $upstream;
+        }
+        // Can't tell? Assume Drupal 8.
         return 'Empty Upstream';
-        // or 'Drupal 7' or 'WordPress'
-        // return 'Drupal 8';
+    }
+
+    protected function autodetectUpstreamAtDir($siteDir)
+    {
+        $upstream_map = [
+          'core/misc/drupal.js' => 'empty', // Drupal 8
+          'misc/drupal.js' => 'empty-7', // Drupal 7
+          'wp-config.php' => 'empty-wordpress', // WordPress
+        ];
+
+        foreach ($upstream_map as $file => $upstream) {
+            if (file_exists("$siteDir/$file")) {
+                return $upstream;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -569,7 +593,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->rsync($site_env_id, ':code/config', $repositoryDir);
 
         $this->passthru("git -C $repositoryDir add config");
-        $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        exec("git -C $repositoryDir status --porcelain", $outputLines, $status);
+        if (!empty($outputLines)) {
+            $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        }
     }
 
     /**

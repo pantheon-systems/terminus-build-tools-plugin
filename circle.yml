@@ -49,6 +49,9 @@ dependencies:
     - terminus list -n build
   post:
     - terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
+    # Clean up old ssh keys
+    - for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,3d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
+
 test:
   override:
     # Clone from the `test` branch of pantheon-systems/example-drops-8-composer.
