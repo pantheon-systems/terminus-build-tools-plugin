@@ -16,7 +16,7 @@ jobs:
         <<: *defaults
         steps:
             - run: echo "Nothing in the build step for now."
-    
+
     test_drupal_8:
         <<: *defaults
         steps:
@@ -56,7 +56,7 @@ jobs:
             - run:
                 name: Test D8
                 command: |
-                  ./.circleci/test-example-repo.sh
+                  ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
 
     test_wordpress:
         <<: *defaults
@@ -96,8 +96,8 @@ jobs:
                   echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test WordPress
-                command: echo "No WordPress test yet"
-
+                command: |
+                  ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-wordpress-build-plugin"
     # @todo: anything to do once everything is complete?
     completion:
         <<: *defaults
