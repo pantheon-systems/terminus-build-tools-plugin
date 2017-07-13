@@ -23,3 +23,4 @@ touch $HOME/.ssh/config
 echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 git config --global user.email "$GIT_EMAIL"
 git config --global user.name "Circle CI"
+git config --global core.fileMode false
