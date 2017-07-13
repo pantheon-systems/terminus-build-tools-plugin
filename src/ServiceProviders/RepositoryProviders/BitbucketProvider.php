@@ -112,8 +112,6 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
         $result = $this->bitbucketAPI('repositories/'.$target_project, 'PUT');
 
-        die("THRU"); // continue implementation here ...
-
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
         // remote when pushing.
@@ -122,8 +120,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
             $this->execGit($local_site_path, 'init');
         }
         // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@github.com:{$target_project}.git'");
-
+        $this->execGit($local_site_path, "remote add origin 'git@bitbucket.org:{$target_project}.git'");
         return $target_project;
     }
 
@@ -132,8 +129,8 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
      */
     public function pushRepository($dir, $target_project)
     {
-        $github_token = $this->token();
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
+        $bitbucket_token = $this->token();
+        $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
         $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
     }
 
