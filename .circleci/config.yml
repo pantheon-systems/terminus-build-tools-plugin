@@ -44,7 +44,9 @@ jobs:
     completion:
         <<: *defaults
         steps:
-            - run: echo "All tests passed."
+            - run: |
+            echo "All tests passed."
+            for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
 
 workflows:
   version: 2
