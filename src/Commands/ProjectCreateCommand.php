@@ -358,15 +358,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
             // TODO: rollback Pantheon site create
 
-            ->progressMessage('Set up CI services')
-
-            // Set up CircleCI to test our project.
-            ->taskCISetup()
-                ->provider($this->ci_provider)
-                ->environment($ci_env)
-                ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
-                ->dir($siteDir)
-
             // Create new repository and make the initial commit
             ->progressMessage('Make initial commit')
             ->addCode(
@@ -390,6 +381,15 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
                 })
+
+            ->progressMessage('Set up CI services')
+
+            // Set up CircleCI to test our project.
+            ->taskCISetup()
+                ->provider($this->ci_provider)
+                ->environment($ci_env)
+                ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
+                ->dir($siteDir)
 
             // Push code to newly-created project.
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
