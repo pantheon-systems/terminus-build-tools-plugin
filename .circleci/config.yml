@@ -21,84 +21,26 @@ jobs:
         <<: *defaults
         steps:
             - checkout
-            # - restore_cache:
-            #     key: dependency-cache-{{ checksum "composer.lock" }}
             - run:
                 name: dependencies
-                command: |
-                  apt-get update
-                  apt-get install -y ruby
-                  gem install circle-cli
-                  composer global require -n "hirak/prestissimo:^0.3"
-                  git clone https://github.com/pantheon-systems/terminus.git ~/terminus
-                  cd ~/terminus && composer install
-                  ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
-                  cd ~/terminus_build_tools_plugin
-                  mkdir -p $HOME/.terminus/plugins
-                  ln -s $(pwd) $HOME/.terminus/plugins
-                  terminus list -n build
-            # - save_cache:
-            #     key: dependency-cache-{{ checksum "composer.lock" }}
-            #     paths:
-            #       - ~/.composer/cache
-            - run:
-                name: git config
-                command: |
-                  git config --global user.email "$GIT_EMAIL"
-                  git config --global user.name "Circle CI"
-            - run:
-                name: Terminus and Circle Login
-                command: |
-                  circle token "$CIRCLE_TOKEN"
-                  terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
-                  touch $HOME/.ssh/config
-                  echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+                command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8
-                command: |
-                  ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
 
     test_wordpress:
         <<: *defaults
         steps:
             - checkout
-            # - restore_cache:
-            #     key: dependency-cache-{{ checksum "composer.lock" }}
             - run:
                 name: dependencies
-                command: |
-                  apt-get update
-                  apt-get install -y ruby
-                  gem install circle-cli
-                  composer global require -n "hirak/prestissimo:^0.3"
-                  git clone https://github.com/pantheon-systems/terminus.git ~/terminus
-                  cd ~/terminus && composer install
-                  ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
-                  cd ~/terminus_build_tools_plugin
-                  mkdir -p $HOME/.terminus/plugins
-                  ln -s $(pwd) $HOME/.terminus/plugins
-                  terminus list -n build
-            # - save_cache:
-            #     key: dependency-cache-{{ checksum "composer.lock" }}
-            #     paths:
-            #       - ~/.composer/cache
-            - run:
-                name: git config
-                command: |
-                  git config --global user.email "$GIT_EMAIL"
-                  git config --global user.name "Circle CI"
-            - run:
-                name: Terminus and Circle Login
-                command: |
-                  circle token "$CIRCLE_TOKEN"
-                  terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
-                  touch $HOME/.ssh/config
-                  echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+                command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress
-                command: |
-                  ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-master"
+                # @todo, change to pantheon-systems
+                command: ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-master"
     # @todo: anything to do once everything is complete?
+    # There is probably a way to check the results on the other jobs.
     completion:
         <<: *defaults
         steps:
