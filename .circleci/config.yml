@@ -6,6 +6,7 @@ defaults: &defaults
   environment:
     BASH_ENV: ~/.bashrc
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+    # @todo, consider changing now that WordPress is tested here too.
     TERMINUS_ORG: CI for Drupal 8 + Composer
     GITHUB_USERNAME: pantheon-ci-bot
 
