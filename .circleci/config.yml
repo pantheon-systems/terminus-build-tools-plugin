@@ -39,6 +39,7 @@ jobs:
                 name: Test WordPress
                 # @todo, change to pantheon-systems
                 command: ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-master"
+
     # @todo: anything to do once everything is complete?
     # There is probably a way to check the results on the other jobs.
     completion:
