@@ -97,7 +97,7 @@ jobs:
             - run:
                 name: Test WordPress
                 command: |
-                  ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-wordpress-build-plugin"
+                  ./.circleci/test-example-repo.sh "stevector/example-wordpress-composer:dev-master"
     # @todo: anything to do once everything is complete?
     completion:
         <<: *defaults
