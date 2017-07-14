@@ -1,0 +1,69 @@
+# https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
+defaults: &defaults
+  docker:
+    - image: drupaldocker/php:7.1-cli
+  working_directory: ~/terminus_build_tools_plugin
+  environment:
+    BASH_ENV: ~/.bashrc
+    TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+    # @todo, consider changing now that WordPress is tested here too.
+    TERMINUS_ORG: CI for Drupal 8 + Composer
+    GITHUB_USERNAME: pantheon-ci-bot
+
+version: 2
+jobs:
+    # @todo: common initialization, maybe
+    build:
+        <<: *defaults
+        steps:
+            - run: echo "Nothing in the build step for now."
+
+    test_drupal_8:
+        <<: *defaults
+        steps:
+            - checkout
+            - run:
+                name: dependencies
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test D8
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
+
+    test_wordpress:
+        <<: *defaults
+        steps:
+            - checkout
+            - run:
+                name: dependencies
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test WordPress
+                # @todo, change to pantheon-systems
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+
+    # @todo: anything to do once everything is complete?
+    # There is probably a way to check the results on the other jobs.
+    completion:
+        <<: *defaults
+        steps:
+            - run:
+                name: cleanup
+                command: |
+                    echo "All tests passed."
+                    for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
+
+workflows:
+  version: 2
+  build_test:
+    jobs:
+      - build
+      - test_drupal_8:
+          requires:
+            - build
+      - test_wordpress:
+          requires:
+            - build
+      - completion:
+          requires:
+            - test_drupal_8
+            - test_wordpress
