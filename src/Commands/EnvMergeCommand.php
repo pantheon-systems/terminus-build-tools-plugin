@@ -65,6 +65,7 @@ class EnvMergeCommand extends BuildToolsBase
         $tmpMergeBranch = 'temp-local-copy-of-pantheon-master';
 
         // Replace the entire contents of the master branch with the branch we just tested.
+        // @todo, is a merge even necessary when the master branch will be force pushed over?
         $this->passthru('git fetch pantheon');
         $this->passthru('git checkout pantheon/' . $env_label);
         $this->passthru("git checkout -B $tmpMergeBranch");
