@@ -415,6 +415,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     {
         // Add the canonical repository files to the new GitHub project
         // respecting .gitignore.
+        $this->passthru("git -C $repositoryDir config core.fileMode false");
         $this->passthru("git -C $repositoryDir add .");
         $this->passthru("git -C $repositoryDir commit -m 'Initial commit'");
         return $this->getHeadCommit($repositoryDir);
