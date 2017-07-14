@@ -27,7 +27,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-git-ignore-file-perms"
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
 
     test_wordpress:
         <<: *defaults
