@@ -384,6 +384,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
                 'account-pass' => $circle_env['ADMIN_PASSWORD'],
                 'site-mail' => $circle_env['ADMIN_EMAIL'],
                 'site-name' => $circle_env['TEST_SITE_NAME'],
+                'site-url' => "https://dev-{$site_name}.pantheonsite.io"
             ];
             $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 
