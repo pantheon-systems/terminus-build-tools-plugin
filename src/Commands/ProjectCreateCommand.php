@@ -419,6 +419,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
+                        'site-url' => "https://dev-{$site_name}.pantheonsite.io"
                     ];
                     $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 

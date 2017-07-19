@@ -147,8 +147,6 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $guzzleParams['json'] = $data;
         }
 
-        $this->logger->notice('Calling GitHub API via guzzle: {method} {uri} {data}', ['method' => $method, 'uri' => $uri, 'data' => var_export($guzzleParams, true)]);
-
         $client = new \GuzzleHttp\Client();
         $res = $client->request($method, $url, $guzzleParams);
         $resultData = json_decode($res->getBody(), true);

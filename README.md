@@ -41,7 +41,7 @@ If you do not export these environment variables, you will be prompted to enter 
 
 ### New Project Quickstart
 
-EXPERIMENTAL: The build:project:create is in beta. Backwards compatibility not guarenteed.
+EXPERIMENTAL: The build:project:create is in beta. Backwards compatibility not guaranteed.
 
 To create a new project consisting of a GitHub project, a Pantheon site, and Circle CI tests, first set up credentials as shown in the previous section, and then run the `build:project:create` command as shown below:
 ```
