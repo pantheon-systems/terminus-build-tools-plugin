@@ -80,5 +80,6 @@ workflows:
             - build
       - completion:
           requires:
-            - test_drupal_8
+            - test_drupal_8_github
+            - test_drupal_8_bitbucket
             - test_wordpress
