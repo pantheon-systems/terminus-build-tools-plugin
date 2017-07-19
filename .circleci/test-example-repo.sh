@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -ex
+# This was `set -ex`, but removed echo to avoid leaking $BITBUCKET_PASS
+# TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
+set -e
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
