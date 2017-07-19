@@ -118,9 +118,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function pushRepository($dir, $target_project)
     {
-        $github_token = $this->token();
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
-        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
     }
 
     protected function gitHubAPI($uri, $data = [])
@@ -177,7 +175,8 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
         $redactedCommand = $this->interpolate("git $cmd", $this->redactedReplacements($replacements, $redacted));
-        $command = $this->interpolate("git -C {dir} $cmd", ['dir' => $dir] + $replacements);
+        $redactions = $this->redactions($redacted);
+        $command = $this->interpolate("git -C {dir} $cmd{redactions}", ['dir' => $dir, 'redactions' => $redactions] + $replacements);
 
         $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
         passthru($command, $result);
@@ -197,6 +196,23 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             }
         }
         return $result;
+    }
+
+    private function redactions($redacted)
+    {
+        if (empty($redacted)) {
+            return '';
+        }
+
+        $redactions = array_map(
+            function ($item) {
+                $item = escapeshellarg($item);
+                return "-e 's#$item#[REDACTED]#'";
+            },
+            $redacted
+        );
+
+        return ' | sed ' . implode(' ', $redactions);
     }
 
     private function interpolate($str, array $context)
