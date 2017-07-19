@@ -15,7 +15,7 @@ GIT_PROVIDER="$2"
 
 if [ "$GIT_PROVIDER" == "github" ]; then
     TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
-    CLONE_URL=  "https://github.com/${TARGET_REPO}.git"
+    CLONE_URL="https://github.com/${TARGET_REPO}.git"
 else
     if [ "$GIT_PROVIDER" == "bitbucket" ]; then
         TARGET_REPO=$BITBUCKET_USERNAME/$TERMINUS_SITE
