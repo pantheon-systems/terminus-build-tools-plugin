@@ -26,7 +26,15 @@ fi
 SOURCE_COMPOSER_PROJECT="$1"
 TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
 TARGET_REPO_WORKING_COPY=$HOME/$TERMINUS_SITE
-BUILD_TOOLS_VERSION=${PR_BRANCH:-$CIRCLE_BRANCH}
+
+# If we are on the 1.x branch set the build tools version to 1.x
+if [[ $CIRCLE_BRANCH == "1.x" ]]
+then
+    BUILD_TOOLS_VERSION=${CIRCLE_BRANCH}
+# Otherwise use the current branch
+else
+    BUILD_TOOLS_VERSION="dev-$CIRCLE_BRANCH"
+fi
 
 
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
