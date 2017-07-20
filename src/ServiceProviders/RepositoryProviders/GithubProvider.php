@@ -174,8 +174,8 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     // replacements with redaction.
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
-        $redactedCommand = $this->interpolate("git $cmd", $this->redactedReplacements($replacements, $redacted));
         $redactions = $this->redactions($redacted);
+        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $this->redactedReplacements($replacements, $redacted));
         $command = $this->interpolate("git -C {dir} $cmd{redactions}", ['dir' => $dir, 'redactions' => $redactions] + $replacements);
 
         $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
