@@ -176,7 +176,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         $redactedReplacements = $this->redactedReplacements($replacements, $redacted);
         $redactions = $this->redactions($redactedReplacements, $replacements);
-        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $redactedReplacements);
+        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $redactedReplacements + $replacements);
         $command = $this->interpolate("git -C {dir} $cmd{redactions}", ['dir' => $dir, 'redactions' => $redactions] + $replacements);
 
         $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
@@ -188,7 +188,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     private function redactedReplacements($replacements, $redacted)
     {
-        $result = $replacements;
+        $result = [];
         foreach ($redacted as $key => $value) {
             if (is_numeric($key)) {
                 $result[$value] = '[REDACTED]';
