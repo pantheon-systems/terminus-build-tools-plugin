@@ -8,6 +8,7 @@ use Psr\Log\LoggerAwareTrait;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
+use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 
 /**
  * Holds state information destined to be registered with the CI service.
@@ -15,6 +16,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
+    use ExecWithRedactionTrait;
 
     const SERVICE_NAME = 'github';
     const GITHUB_TOKEN = 'GITHUB_TOKEN';
@@ -169,89 +171,8 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return $resultData;
     }
 
-
-    // TODO: Make a trait or something similar, maybe in Robo, for handling
-    // replacements with redaction.
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
-        $redactedReplacements = $this->redactedReplacements($replacements, $redacted);
-        $redactions = $this->redactions($redactedReplacements, $replacements);
-        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $redactedReplacements + $replacements);
-        $command = $this->interpolate("git -C {dir} $cmd{redactions}", ['dir' => $dir, 'redactions' => $redactions] + $replacements);
-
-        $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
-        passthru($command, $result);
-        if ($result != 0) {
-            throw new \Exception("Command `$redactedCommand` failed with exit code $result");
-        }
-    }
-
-    private function redactedReplacements($replacements, $redacted)
-    {
-        $result = [];
-        foreach ($redacted as $key => $value) {
-            if (is_numeric($key)) {
-                $result[$value] = '[REDACTED]';
-            } else {
-                $result[$key] = $value;
-            }
-        }
-        return $result;
-    }
-
-    private function redactions($redactedReplacements, $replacements)
-    {
-        if (empty($redactedReplacements)) {
-            return '';
-        }
-
-        // Make a simple array (with numeric keys) whose values
-        // are the values of the items in $replacements whose keys
-        // appear in $redactedReplacements.
-        $values = array_map(
-            function ($item) use ($replacements) {
-                return $replacements[$item];
-            },
-            array_keys($redactedReplacements)
-        );
-
-        // If any redacted value contains a # or a ', then simply turn off output
-        if ($this->unsafe($values)) {
-            return ' >/dev/null 2>&1';
-        }
-
-        // Create 'sed' expressions to replace the redactions.
-        $redactions = array_map(
-            function ($value) {
-                return "-e 's#$value#[REDACTED]#'";
-            },
-            $values
-        );
-
-        return ' 2>&1 | sed ' . implode(' ', $redactions);
-    }
-
-    private function unsafe($values)
-    {
-        foreach ($values as $value) {
-            if ((strpos($value, "'") !== false) || (strpos($value, "#") !== false)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function interpolate($str, array $context)
-    {
-        // build a replacement array with braces around the context keys
-        $replace = array();
-        foreach ($context as $key => $val) {
-            if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
-                $replace[sprintf('{%s}', $key)] = $val;
-            }
-        }
-
-        // interpolate replacement values into the message and return
-        return strtr($str, $replace);
+        return $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
     }
 }
