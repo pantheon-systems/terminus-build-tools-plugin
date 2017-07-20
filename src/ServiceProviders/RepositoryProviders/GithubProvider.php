@@ -212,7 +212,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $redacted
         );
 
-        return ' 2>/dev/null | sed ' . implode(' ', $redactions);
+        return ' 2>&1 | sed ' . implode(' ', $redactions);
     }
 
     private function interpolate($str, array $context)
