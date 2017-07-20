@@ -174,8 +174,9 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     // replacements with redaction.
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
-        $redactions = $this->redactions($redacted);
-        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $this->redactedReplacements($replacements, $redacted));
+        $redactedReplacements = $this->redactedReplacements($replacements, $redacted);
+        $redactions = $this->redactions($redactedReplacements, $replacements);
+        $redactedCommand = $this->interpolate("git $cmd{redactions}", ['redactions' => $redactions] + $redactedReplacements);
         $command = $this->interpolate("git -C {dir} $cmd{redactions}", ['dir' => $dir, 'redactions' => $redactions] + $replacements);
 
         $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
@@ -198,21 +199,46 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return $result;
     }
 
-    private function redactions($redacted)
+    private function redactions($redactedReplacements, $replacements)
     {
-        if (empty($redacted)) {
+        if (empty($redactedReplacements)) {
             return '';
         }
 
-        $redactions = array_map(
-            function ($item) {
-                $item = escapeshellarg($item);
-                return "-e 's#$item#[REDACTED]#'";
+        // Make a simple array (with numeric keys) whose values
+        // are the values of the items in $replacements whose keys
+        // appear in $redactedReplacements.
+        $values = array_map(
+            function ($item) use ($replacements) {
+                return $replacements[$item];
             },
-            $redacted
+            array_keys($redactedReplacements)
+        );
+
+        // If any redacted value contains a # or a ', then simply turn off output
+        if ($this->unsafe($values)) {
+            return ' >/dev/null 2>&1';
+        }
+
+        // Create 'sed' expressions to replace the redactions.
+        $redactions = array_map(
+            function ($value) {
+                return "-e 's#$value#[REDACTED]#'";
+            },
+            $values
         );
 
         return ' 2>&1 | sed ' . implode(' ', $redactions);
+    }
+
+    private function unsafe($values)
+    {
+        foreach ($values as $value) {
+            if ((strpos($value, "'") !== false) || (strpos($value, "#") !== false)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function interpolate($str, array $context)
