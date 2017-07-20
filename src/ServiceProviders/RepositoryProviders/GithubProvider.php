@@ -8,6 +8,7 @@ use Psr\Log\LoggerAwareTrait;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
+use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 
 /**
  * Holds state information destined to be registered with the CI service.
@@ -15,6 +16,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
+    use ExecWithRedactionTrait;
 
     const SERVICE_NAME = 'github';
     const GITHUB_TOKEN = 'GITHUB_TOKEN';
@@ -118,9 +120,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function pushRepository($dir, $target_project)
     {
-        $github_token = $this->token();
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
-        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
     }
 
     protected function gitHubAPI($uri, $data = [])
@@ -171,45 +171,8 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return $resultData;
     }
 
-
-    // TODO: Make a trait or something similar, maybe in Robo, for handling
-    // replacements with redaction.
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
     {
-        $redactedCommand = $this->interpolate("git $cmd", $this->redactedReplacements($replacements, $redacted));
-        $command = $this->interpolate("git -C {dir} $cmd", ['dir' => $dir] + $replacements);
-
-        $this->logger->notice('Executing {command}', ['command' => $redactedCommand]);
-        passthru($command, $result);
-        if ($result != 0) {
-            throw new \Exception("Command `$redactedCommand` failed with exit code $result");
-        }
-    }
-
-    private function redactedReplacements($replacements, $redacted)
-    {
-        $result = $replacements;
-        foreach ($redacted as $key => $value) {
-            if (is_numeric($key)) {
-                $result[$value] = '[REDACTED]';
-            } else {
-                $result[$key] = $value;
-            }
-        }
-        return $result;
-    }
-
-    private function interpolate($str, array $context)
-    {
-        // build a replacement array with braces around the context keys
-        $replace = array();
-        foreach ($context as $key => $val) {
-            if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
-                $replace[sprintf('{%s}', $key)] = $val;
-            }
-        }
-
-        // interpolate replacement values into the message and return
-        return strtr($str, $replace);
+        return $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
     }
 }
