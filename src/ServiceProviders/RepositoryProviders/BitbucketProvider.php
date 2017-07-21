@@ -10,18 +10,25 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 
+use GuzzleHttp\Client;
+
 /**
- * Holds state information destined to be registered with the CI service.
+ * Encapsulates access to Bitbucket through git and the Bitbucket API.
  */
-class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class BitbucketProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
     use ExecWithRedactionTrait;
 
-    const SERVICE_NAME = 'github';
-    const GITHUB_TOKEN = 'GITHUB_TOKEN';
+    const SERVICE_NAME = 'bitbucket';
+    const BITBUCKET_USER = 'BITBUCKET_USER';
+    const BITBUCKET_PASS = 'BITBUCKET_PASS';
+    const BITBUCKET_AUTH = 'BITBUCKET_AUTH';
 
+    private $bitbucketClient;
     protected $repositoryEnvironment;
+    protected $bitBucketUser;
+    protected $bitBucketPassword;
 
     public function __construct()
     {
@@ -51,7 +58,27 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function setToken($token)
     {
         $repositoryEnvironment = $this->getEnvironment();
-        $repositoryEnvironment->setToken(self::GITHUB_TOKEN, $token);
+        $repositoryEnvironment->setToken(self::BITBUCKET_AUTH, $token);
+    }
+
+    public function getBitBucketUser()
+    {
+        return $this->bitBucketUser;
+    }
+
+    public function getBitBucketPassword()
+    {
+        return $this->bitBucketPassword;
+    }
+
+    public function setBitBucketUser($u)
+    {
+        $this->bitBucketUser = $u;
+    }
+
+    public function setBitBucketPassword($pw)
+    {
+        $this->bitBucketPassword = $pw;
     }
 
     /**
@@ -59,17 +86,24 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function credentialRequests()
     {
-        // Tell the credential manager that we require one credential: the
-        // GITHUB_TOKEN that will be used to authenticate with the CircleCI server.
-        $githubTokenRequest = new CredentialRequest(
-            self::GITHUB_TOKEN,
-            "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.",
-            "Enter GitHub personal access token: ",
-            '#^[0-9a-fA-F]{40}$#',
-            'GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
+        // Tell the credential manager that we require two credentials
+        $bitbucketUserRequest = new CredentialRequest(
+            self::BITBUCKET_USER,
+            "",
+            "Enter your Bitbucket username",
+            '#^.+$#',
+            ""
         );
 
-        return [ $githubTokenRequest ];
+        $bitbucketPassRequest = new CredentialRequest(
+            self::BITBUCKET_PASS,
+            "",
+            "Enter your Bitbucket account password or an app password",
+            '#^.+$#',
+            ""
+        );
+
+        return [ $bitbucketUserRequest, $bitbucketPassRequest ];
     }
 
     /**
@@ -78,29 +112,30 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function setCredentials(CredentialProviderInterface $credentials_provider)
     {
         // Since the `credentialRequests()` method declared that we need a
-        // GITHUB_TOKEN credential, it will be available for us to copy from
-        // the credentials provider when this method is called.
-        $this->setToken($credentials_provider->fetch(self::GITHUB_TOKEN));
+        // BITBUCKET_USER and BITBUCKET_PASS credentials, it will be available
+        // for us to copy from the credentials provider when this method is called.
+        $this->setBitBucketUser($credentials_provider->fetch(self::BITBUCKET_USER));
+        $this->setBitBucketPassword($credentials_provider->fetch(self::BITBUCKET_PASS));
+        $this->setToken(
+            $this->getBitBucketUser()
+            .':'.
+            $this->getBitBucketPassword()
+        );
     }
 
     public function createRepository($local_site_path, $target, $github_org = '')
     {
-        // We need a different URL here if $github_org is an org; if no
-        // org is provided, then we use a simpler URL to create a repository
-        // owned by the currently-authenitcated user.
-        $createRepoUrl = "orgs/$github_org/repos";
+        // Username for Bitbucket API is either provider $github_org
+        // or username
         $target_org = $github_org;
         if (empty($github_org)) {
-            $createRepoUrl = 'user/repos';
-            $userData = $this->gitHubAPI('user');
-            $target_org = $userData['login'];
+            $target_org = $this->getBitBucketUser();
         }
         $target_project = "$target_org/$target";
 
-        // Create a GitHub repository
+        // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $postData = ['name' => $target];
-        $result = $this->gitHubAPI($createRepoUrl, $postData);
+        $result = $this->bitbucketAPI('repositories/'.$target_project, 'PUT');
 
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
@@ -110,8 +145,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $this->execGit($local_site_path, 'init');
         }
         // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@github.com:{$target_project}.git'");
-
+        $this->execGit($local_site_path, "remote add origin 'git@bitbucket.org:{$target_project}.git'");
         return $target_project;
     }
 
@@ -120,35 +154,31 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function pushRepository($dir, $target_project)
     {
-        $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
+        $bitbucket_token = $this->token();
+        $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
+        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
     }
 
-    protected function gitHubAPI($uri, $data = [])
+    private function bitbucketAPIClient() {
+        if (!isset($this->bitbucketClient))
+            $this->bitbucketClient = new Client([
+                'base_uri' => 'https://api.bitbucket.org/2.0/',
+                'auth' => [ $this->getBitBucketUser(), $this->getBitBucketPassword() ],
+                'headers' => [
+                    'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+                ]
+            ]);
+        return $this->bitbucketClient;
+    }
+
+    protected function bitbucketAPI($uri, $method = 'GET', $data = [])
     {
-        $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
-
-        $url = "https://api.github.com/$uri";
-
-        $headers = [
-            'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
-        ];
-
-        if ($this->hasToken()) {
-            $headers['Authorization'] = "token " . $this->token();;
-        }
-
-        $method = 'GET';
-        $guzzleParams = [
-            'headers' => $headers,
-        ];
+        $guzzleParams = [];
         if (!empty($data)) {
-            $method = 'POST';
             $guzzleParams['json'] = $data;
         }
 
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request($method, $url, $guzzleParams);
+        $res = $this->bitbucketAPIClient()->request($method, $uri, $guzzleParams);
         $resultData = json_decode($res->getBody(), true);
         $httpCode = $res->getStatusCode();
 

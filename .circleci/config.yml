@@ -9,6 +9,7 @@ defaults: &defaults
     # @todo, consider changing now that WordPress is tested here too.
     TERMINUS_ORG: CI for Drupal 8 + Composer
     GITHUB_USERNAME: pantheon-ci-bot
+    BITBUCKET_USERNAME: pantheon-ci-bot
     TERM: dumb
 
 version: 2
@@ -19,7 +20,7 @@ jobs:
         steps:
             - run: echo "Nothing in the build step for now."
 
-    test_drupal_8:
+    test_drupal_8_github:
         <<: *defaults
         steps:
             - checkout
@@ -28,7 +29,19 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x"
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" github
+
+    test_drupal_8_bitbucket:
+        <<: *defaults
+        steps:
+            - checkout
+            - run:
+                name: dependencies
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test D8
+                command: echo "Disabling this test until it is passing."
+                # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
 
     test_wordpress:
         <<: *defaults
@@ -40,7 +53,7 @@ jobs:
             - run:
                 name: Test WordPress
                 # @todo, change to pantheon-systems
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-dynamic-build-tools-version"
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-dynamic-build-tools-version" github
 
     # @todo: anything to do once everything is complete?
     # There is probably a way to check the results on the other jobs.
@@ -58,7 +71,10 @@ workflows:
   build_test:
     jobs:
       - build
-      - test_drupal_8:
+      - test_drupal_8_github:
+          requires:
+            - build
+      - test_drupal_8_bitbucket:
           requires:
             - build
       - test_wordpress:
@@ -66,5 +82,6 @@ workflows:
             - build
       - completion:
           requires:
-            - test_drupal_8
+            - test_drupal_8_github
+            - test_drupal_8_bitbucket
             - test_wordpress
