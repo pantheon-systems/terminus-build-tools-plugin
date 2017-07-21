@@ -265,9 +265,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $aliases = [
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
-
-            // The wordpress template has not been created yet
-            // 'example-wordpress-composer' => ['wp', 'wordpress'],
+            'example-wordpress-composer' => ['wp', 'wordpress'],
         ];
 
         $map = [strtolower($source) => $source];
