@@ -28,8 +28,19 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" github
+                name: Test D8 with GitHub
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
+
+    test_drupal_7_github:
+        <<: *defaults
+        steps:
+            - checkout
+            - run:
+                name: dependencies
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test D7 with GitHub
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
 
     test_drupal_8_bitbucket:
         <<: *defaults
@@ -39,7 +50,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8
+                name: Test D8 with BitBucket (unfinished)
                 command: echo "Disabling this test until it is passing."
                 # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
 
@@ -51,7 +62,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress
+                name: Test WordPress with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
 
     # @todo: anything to do once everything is complete?
@@ -73,6 +84,9 @@ workflows:
       - test_drupal_8_github:
           requires:
             - build
+      - test_drupal_7_github:
+          requires:
+            - build
       - test_drupal_8_bitbucket:
           requires:
             - build
@@ -82,5 +96,6 @@ workflows:
       - completion:
           requires:
             - test_drupal_8_github
+            - test_drupal_7_github
             - test_drupal_8_bitbucket
             - test_wordpress

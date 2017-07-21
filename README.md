@@ -64,6 +64,7 @@ In the example above, the parameter `d8` is shorthand for the project `pantheon-
 | ------------ | --------- | ----------------------------------------- |
 | Drupal 8     | d8        | [pantheon-systems/example-drops-8-composer](https://github.com/pantheon-systems/example-drops-8-composer) |
 | Drupal 7     | d7        | [pantheon-systems/example-drops-7-composer](https://github.com/pantheon-systems/example-drops-7-composer) |
+| WordPress    | wp        | [pantheon-systems/example-wordpress-composer](https://github.com/pantheon-systems/example-wordpress-composer) |
 
 More starter sites will be available in the future. You may easily create your own by following the example of the existing starter site, and publishing your customized version on Packagist. At the moment, there is no way to extend the list of shorthand site names, though.
 

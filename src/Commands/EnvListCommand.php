@@ -34,7 +34,7 @@ class EnvListCommand extends BuildToolsBase
      * Displays a list of the site's ci build environments, sorted with oldest first.
      *
      * @command build:env:list
-     * @alias build-env:list
+     * @aliases build-env:list
      * @authorize
      *
      * @field-labels

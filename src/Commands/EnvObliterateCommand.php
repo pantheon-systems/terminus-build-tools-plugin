@@ -34,7 +34,7 @@ class EnvObliterateCommand extends BuildToolsBase
      * Destroy a Pantheon site that was created by the build:project:create command.
      *
      * @command build:env:obliterate
-     * @alias build-env:obliterate
+     * @aliases build-env:obliterate
      */
     public function obliterate($site_name)
     {

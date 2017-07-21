@@ -35,7 +35,7 @@ class WorkflowWaitCommand extends BuildToolsBase
      * that it starts through the API.
      *
      * @command build:workflow:wait
-     * @alias workflow:wait
+     * @aliases workflow:wait
      * @param $site_env_id The pantheon site to wait for.
      * @param $description The workflow description to wait for. Optional; default is code sync.
      * @option start Ignore any workflows started prior to the start time (epoch)

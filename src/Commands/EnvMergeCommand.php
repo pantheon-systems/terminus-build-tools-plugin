@@ -32,7 +32,7 @@ class EnvMergeCommand extends BuildToolsBase
 
     /**
      * @command build:env:merge
-     * @alias build-env:merge
+     * @aliases build-env:merge
      * @param string $site_env_id The site and env to merge and delete
      * @option label What to name the environment in commit comments
      * @option delete Delete the multidev environment after merging.
