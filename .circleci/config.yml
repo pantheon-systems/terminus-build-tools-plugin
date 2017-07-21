@@ -10,6 +10,7 @@ defaults: &defaults
     TERMINUS_ORG: CI for Drupal 8 + Composer
     GITHUB_USERNAME: pantheon-ci-bot
     BITBUCKET_USERNAME: pantheon-ci-bot
+    TERM: dumb
 
 version: 2
 jobs:
@@ -51,7 +52,6 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress
-                # @todo, change to pantheon-systems
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
 
     # @todo: anything to do once everything is complete?
