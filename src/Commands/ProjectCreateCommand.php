@@ -213,7 +213,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      * @authorize
      *
      * @command build:project:create
-     * @alias build-env:create-project
+     * @aliases build-env:create-project
      * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem. Paths must either start with ./ or be an absolute path.
      * @param string $target Simple name of project to create.
      * @option org Organization for the new project (defaults to authenticated user)

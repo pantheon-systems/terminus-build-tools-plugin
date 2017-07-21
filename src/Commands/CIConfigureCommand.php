@@ -37,7 +37,7 @@ class CIConfigureCommand extends BuildToolsBase
      * @authorize
      *
      * @command build:ci:configure
-     * @alias build-env:ci:configure
+     * @aliases build-env:ci:configure
      * @param $site_name The pantheon site to test.
      * @param $target_project The GitHub org/project to build the Pantheon site from.
      */

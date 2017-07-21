@@ -34,7 +34,7 @@ class EnvInstallCommand extends BuildToolsBase
      * Install the apporpriate CMS on the newly-created Pantheon site.
      *
      * @command build:env:install
-     * @alias build-env:site-install
+     * @aliases build-env:site-install
      */
     public function installSite(
         $site_env_id,

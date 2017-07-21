@@ -33,7 +33,7 @@ class EnvPushCommand extends BuildToolsBase
      * Push code to a specific Pantheon site and environment that already exists.
      *
      * @command build:env:push
-     * @alias build-env:push-code
+     * @aliases build-env:push-code
      *
      * @param string $site_env_id Site and environment to push to. May be any dev or multidev environment.
      * @param string $repositoryDir Code to push. Defaults to cwd.
