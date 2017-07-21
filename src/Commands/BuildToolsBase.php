@@ -268,12 +268,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'example-wordpress-composer' => ['wp', 'wordpress'],
         ];
 
+        // Convert the defaults into a more straightforward mapping:
+        //   shortcut: project
         $map = [strtolower($source) => $source];
         foreach ($aliases as $full => $shortcuts) {
             foreach ($shortcuts as $alias) {
                 $map[$alias] = $full;
             }
         }
+
+        // Add in the user shortcuts.
+        $user_shortcuts = $this->getConfig()->get('command.build.project.create.shortcuts', []);
+        $map = array_merge($map, $user_shortcuts);
 
         return $map[strtolower($source)];
     }
