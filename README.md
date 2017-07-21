@@ -18,7 +18,7 @@ The multidev environment created to test the pull request persists until the pul
 
 See below for the list of supported commands. This plugin is only available for Terminus 1.x.
 
-## Configuration
+## Setup
 
 In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up. Most of the work can be done for you automatically using the New Project Quickstart below, or you may set everything up manually.
 
@@ -60,13 +60,15 @@ Note that it is important to specify the name of your agency organization via th
 
 In the example above, the parameter `d8` is shorthand for the project `pantheon-systems/example-drops-8-composer`, the canonical Composer-managed Drupal 8 site for Pantheon. You may replace this parameter with the GitHub organization and project name for any other canonical starter site that you would like to use.
 
-| Starter Site | Shorthand | Packagist Project Name                    |
+| Starter Site | Shortcut  | Packagist Project Name                    |
 | ------------ | --------- | ----------------------------------------- |
 | Drupal 8     | d8        | [pantheon-systems/example-drops-8-composer](https://github.com/pantheon-systems/example-drops-8-composer) |
 | Drupal 7     | d7        | [pantheon-systems/example-drops-7-composer](https://github.com/pantheon-systems/example-drops-7-composer) |
 | WordPress    | wp        | [pantheon-systems/example-wordpress-composer](https://github.com/pantheon-systems/example-wordpress-composer) |
 
-More starter sites will be available in the future. You may easily create your own by following the example of the existing starter site, and publishing your customized version on Packagist. At the moment, there is no way to extend the list of shorthand site names, though.
+**Note:** At the moment, the Drupal 7 and WordPress starter sites have only alpha releases. To use one of these starter sites, you must also add `--stability=alpha` to the command line options.
+
+More starter sites will be available in the future. You may easily create your own by following the example of the existing starter site, and publishing your customized version on Packagist. See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts.
 
 Additional options are available to further customize the build:project:create command:
 
@@ -83,6 +85,36 @@ Additional options are available to further customize the build:project:create c
 | --git            | The git repository provider to use. Not yet implemented. Will default to "github" |
 
 See `terminus help build:project:create` for more information.
+
+### Configuration
+
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`.
+
+#### Default Values for Options
+
+Terminus configuration is based on the [Robo PHP configuration system](http://robo.li/getting-started/#configuration). Default option values for Terminus commands can be defined in the same way as other Robo applications. For example, the options for the command `build:project:create` are stored in the section `command:` > `build:` > `project:` > `create:` > `options:`. The example below provides default values for the `--admin-password` and `--team` options. 
+```
+command:
+  build:
+    project:
+      create:
+        options:
+          admin-password: secret-secret
+          team: My Pantheon Org
+```
+#### Starter Site Shortcuts
+
+If you often create sites based on certain common starter sites, you may also use your Terminus configuration file to define custom starter site shortcuts. The example below defines shortcuts for the Lightning and Contenta distributions:
+```
+command:
+  build:
+    project:
+      create:
+        shortcuts:
+          contenta: pantheon-systems/example-drops-8-composer:dev-contenta
+          lightning: pantheon-systems/example-drops-8-composer:dev-lightning
+``` 
+Note that the project name follows the standard defined by Composer: `org-name` / `project-name` : dev- `branch-name`.
 
 ### Build Customizations
 
