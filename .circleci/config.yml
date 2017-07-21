@@ -28,7 +28,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8
+                name: Test D8 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
 
     test_drupal_7_github:
@@ -39,7 +39,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8
+                name: Test D7 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
 
     test_drupal_8_bitbucket:
@@ -50,7 +50,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8
+                name: Test D8 with BitBucket (unfinished)
                 command: echo "Disabling this test until it is passing."
                 # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
 
@@ -62,7 +62,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress
+                name: Test WordPress with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
 
     # @todo: anything to do once everything is complete?
