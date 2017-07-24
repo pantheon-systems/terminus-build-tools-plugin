@@ -1392,18 +1392,16 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $dev_env = $site->getEnvironments()->get('dev');
         $this->connectionSet($dev_env, 'git');
 
-        // Branch name to use for temporary work when merging
-        $tmpMergeBranch = 'temp-local-copy-of-pantheon-master';
-
-        // Merge our PR branch with pantheon/master
+        // Checkout Pantheon's master branch. Use excessively long branch name
+        // because "master" as a branch name is likely ambiguous as it can exist
+        // on both Pantheon and the source repo
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout pantheon/' . $env_id);
-        $this->passthru("git checkout -B $tmpMergeBranch");
-        $this->passthru("git merge -q -m 'Merge build assets from test $env_id.' --strategy=ours pantheon/master");
+        $this->passthru('git checkout pantheon/master');
+        // Replace the entire contents of the master branch with the branch we just tested.
+        $this->passthru("git reset --hard $env_id");
 
         // Push our changes back to the dev environment, replacing whatever was there before.
-        $this->passthru("git push --force -q pantheon $tmpMergeBranch:master");
-        passthru("git branch -D $tmpMergeBranch");
+        $this->passthru("git push --force -q pantheon master");
 
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
