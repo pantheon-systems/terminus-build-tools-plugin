@@ -1397,9 +1397,9 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
 
         // Merge our PR branch with pantheon/master
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout pantheon/' . $env_label);
+        $this->passthru('git checkout pantheon/' . $env_id);
         $this->passthru("git checkout -B $tmpMergeBranch");
-        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' --strategy=ours pantheon/master");
+        $this->passthru("git merge -q -m 'Merge build assets from test $env_id.' --strategy=ours pantheon/master");
 
         // Push our changes back to the dev environment, replacing whatever was there before.
         $this->passthru("git push --force -q pantheon $tmpMergeBranch:master");
