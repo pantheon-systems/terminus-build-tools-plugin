@@ -61,19 +61,14 @@ class EnvMergeCommand extends BuildToolsBase
         $dev_env = $site->getEnvironments()->get('dev');
         $this->connectionSet($dev_env, 'git');
 
-        // Branch name to use for temporary work when merging
-        $tmpMergeBranch = 'temp-local-copy-of-pantheon-master';
-
-        // Replace the entire contents of the master branch with the branch we just tested.
-        // @todo, is a merge even necessary when the master branch will be force pushed over?
+        // Checkout Pantheon's master branch.
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout pantheon/' . $env_label);
-        $this->passthru("git checkout -B $tmpMergeBranch");
-        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' --strategy=ours pantheon/master");
+        $this->passthru('git checkout pantheon/master');
+        // Replace the entire contents of the master branch with the branch we just tested.
+        $this->passthru("git reset --hard $env_id");
 
         // Push our changes back to the dev environment, replacing whatever was there before.
-        $this->passthru("git push --force -q pantheon $tmpMergeBranch:master");
-        passthru("git branch -D $tmpMergeBranch");
+        $this->passthru("git push --force -q pantheon master");
 
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
