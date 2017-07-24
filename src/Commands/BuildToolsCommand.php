@@ -1395,14 +1395,11 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         // Branch name to use for temporary work when merging
         $tmpMergeBranch = 'temp-local-copy-of-pantheon-master';
 
-        // Checkout Pantheon's master branch. Use excessively long branch name
-        // because "master" as a branch name is likely ambiguous as it can exist
-        // on both Pantheon and the source repo
+        // Merge our PR branch with pantheon/master
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout pantheon/master');
+        $this->passthru('git checkout pantheon/' . $env_label);
         $this->passthru("git checkout -B $tmpMergeBranch");
-        // Replace the entire contents of the master branch with the branch we just tested.
-        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' -X theirs $env_id");
+        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' --strategy=ours pantheon/master");
 
         // Push our changes back to the dev environment, replacing whatever was there before.
         $this->passthru("git push --force -q pantheon $tmpMergeBranch:master");
