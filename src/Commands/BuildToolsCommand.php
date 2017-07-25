@@ -1532,13 +1532,34 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
-        $branchList = $this->branchesForOpenPullRequests($project, $auth);
-        return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
+        // Get back a pr-number => branch-name list
+
+        $closedBranchList = $this->branchesForPullRequests($project, $auth, 'closed');
+
+        // Find any that match "pr-NNN", for some NNN in pr-number.
+        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
+        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
+        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
+
+        // If there are no closed pull requests, then there is no need
+        // to look for open pull requests
+        if (empty($result)) {
+            return $result;
+        }
+
+        $openBranchList = $this->branchesForPullRequests($project, $auth, 'open');
+
+        // Remove any that match "pr-NNN" and have an open pull request
+        $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
+        // Remove any that match "pr-BRANCH", and have an open pull request
+        $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
+
+        return $result;
     }
 
-    function branchesForOpenPullRequests($project, $auth = '')
+    function branchesForPullRequests($project, $auth = '', $state = 'closed')
     {
-        $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
+        $data = $this->curlGitHub("repos/$project/pulls?state=$state", [], $auth);
 
         $branchList = array_map(
             function ($item) {
@@ -1798,25 +1819,45 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         return array_filter(
             $oldestEnvironments,
             function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $item;
-                // If the name is less than the maximum length, then require
-                // an exact match; otherwise, do a 'starts with' test.
-                if (strlen($item) < 11) {
-                    $match .= '$';
-                }
-                // Strip the multidev delete pattern from the beginning of
-                // the match. The multidev env name was composed by prepending
-                // the delete pattern to the branch name, so this recovers
-                // the branch name.
-                $match = preg_replace("%$multidev_delete_pattern%", '', $match);
-                // Constrain match to only match from the beginning
-                $match = "^$match";
-
+                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
                 // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
+                $matches = preg_grep("%$match%i", $branchList);
                 return empty($matches);
             }
         );
+    }
+
+    protected function findBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
+    {
+        // Filter environments that have matching remote branches in origin
+        return array_filter(
+            $oldestEnvironments,
+            function ($item) use ($branchList, $multidev_delete_pattern) {
+                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
+                // Find items in $branchList that match $match.
+                $matches = preg_grep("%$match%i", $branchList);
+                return !empty($matches);
+            }
+        );
+    }
+
+    protected function getMatchRegex($item, $multidev_delete_pattern)
+    {
+        $match = $item;
+        // If the name is less than the maximum length, then require
+        // an exact match; otherwise, do a 'starts with' test.
+        if (strlen($item) < 11) {
+            $match .= '$';
+        }
+        // Strip the multidev delete pattern from the beginning of
+        // the match. The multidev env name was composed by prepending
+        // the delete pattern to the branch name, so this recovers
+        // the branch name.
+        $match = preg_replace("%$multidev_delete_pattern%", '', $match);
+        // Constrain match to only match from the beginning
+        $match = "^$match";
+
+        return $match;
     }
 
     protected function deleteEnv($env, $deleteBranch = false)
