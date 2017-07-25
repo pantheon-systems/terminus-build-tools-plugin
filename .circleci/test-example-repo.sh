@@ -29,13 +29,14 @@ SOURCE_COMPOSER_PROJECT="$1"
 TARGET_REPO_WORKING_COPY=$HOME/$TERMINUS_SITE
 GIT_PROVIDER="$2"
 
+
 # If we are on the 1.x branch set the build tools version to 1.x
 if [[ $CIRCLE_BRANCH == "1.x" ]]
 then
-    BUILD_TOOLS_VERSION=${CIRCLE_BRANCH}
+    BUILD_TOOLS_VERSION="${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
 # Otherwise use the current branch
 else
-    BUILD_TOOLS_VERSION="dev-$CIRCLE_BRANCH"
+    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
 fi
 
 if [ "$GIT_PROVIDER" == "github" ]; then

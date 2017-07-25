@@ -785,20 +785,31 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
+        // Get back a pr-number => branch-name list
         $branchList = $this->branchesForOpenPullRequests($project, $auth);
-        return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
+        // Remove any that match "pr-NNN", for some NNN in pr-number.
+        $result = $this->filterBranches($oldestEnvironments, array_keys($branchList), $multidev_delete_pattern);
+        // Remove any that match "pr-BRANCH", for some BRANCH in branch-name.
+        $result = $this->filterBranches($result, array_values($branchList), $multidev_delete_pattern);
+
+        return $result;
     }
 
+    /**
+     * Return an array of PR-Number => branch-name for all open PRs.
+     */
     function branchesForOpenPullRequests($project, $auth = '')
     {
         $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
 
-        $branchList = array_map(
+        $branchList = array_column(array_map(
             function ($item) {
-                return $item['head']['ref'];
+                $pr_number = $item['number'];
+                $branch_name = $item['head']['ref'];
+                return [$pr_number, $branch_name];
             },
             $data
-        );
+        ), 1, 0);
 
         return $branchList;
     }
@@ -908,8 +919,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $method = 'POST';
             $guzzleParams['json'] = $data;
         }
-
-        $this->log()->notice('Calling GitHub API via guzzle: {method} {uri} {data}', ['method' => $method, 'uri' => $uri, 'data' => var_export($guzzleParams, true)]);
 
         $client = new \GuzzleHttp\Client();
         $res = $client->request($method, $url, $guzzleParams);
