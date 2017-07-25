@@ -32,7 +32,7 @@ class EnvMergeCommand extends BuildToolsBase
 
     /**
      * @command build:env:merge
-     * @alias build-env:merge
+     * @aliases build-env:merge
      * @param string $site_env_id The site and env to merge and delete
      * @option label What to name the environment in commit comments
      * @option delete Delete the multidev environment after merging.
@@ -61,12 +61,17 @@ class EnvMergeCommand extends BuildToolsBase
         $dev_env = $site->getEnvironments()->get('dev');
         $this->connectionSet($dev_env, 'git');
 
+        // Branch name to use for temporary work when merging
+        $tmpWorkBranch = 'temp-work-' . $env_id;
+
         // Replace the entire contents of the master branch with the branch we just tested.
-        $this->passthru('git checkout master');
-        $this->passthru("git merge -q -m 'Merge build assets from test $env_label.' -X theirs $env_id");
+        $this->passthru('git fetch pantheon');
+        $this->passthru('git checkout pantheon/' . $env_id);
+        $this->passthru("git checkout -B $tmpWorkBranch");
 
         // Push our changes back to the dev environment, replacing whatever was there before.
-        $this->passthru('git push --force -q pantheon master');
+        $this->passthru("git push --force -q pantheon $tmpWorkBranch:master");
+        passthru("git branch -D $tmpWorkBranch");
 
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');

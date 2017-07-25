@@ -35,7 +35,7 @@ class EnvCreateCommand extends BuildToolsBase
      * site from the build assets at the current working directory.
      *
      * @command build:env:create
-     * @alias build-env:create
+     * @aliases build-env:create
      * @param string $site_env_id The site and env of the SOURCE
      * @param string $multidev The name of the env to CREATE
      * @option label What to name the environment in commit comments

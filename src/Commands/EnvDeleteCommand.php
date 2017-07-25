@@ -34,7 +34,7 @@ class EnvDeleteCommand extends BuildToolsBase
      * CI builds, i.e., all multidevs whose name begins with "ci-".
      *
      * @command build:env:delete:ci
-     * @alias build-env:delete:ci
+     * @aliases build-env:delete:ci
      *
      * @param string $site_id Site name
      * @option keep Number of environments to keep
@@ -68,7 +68,7 @@ class EnvDeleteCommand extends BuildToolsBase
      * request branches, i.e., all multidevs whose name begins with "pr-".
      *
      * @command build:env:delete:pr
-     * @alias build-env:delete:pr
+     * @aliases build-env:delete:pr
      *
      * @param string $site_id Site name
      * @option dry-run Only print what would be deleted; do not delete anything.
@@ -99,7 +99,7 @@ class EnvDeleteCommand extends BuildToolsBase
      * any environment that still has a remote branch on GitHub may be preserved.
      *
      * @command build:env:delete
-     * @alias build-env:delete
+     * @aliases build-env:delete
      *
      * @param string $site_id Site name
      * @param string $multidev_delete_pattern Pattern used for build environments

@@ -188,9 +188,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     /**
      * Create a new project from the requested source GitHub project.
      * Does the following operations:
-     *  - Creates a GitHub repository forked from the source project.
+     *  - Creates a git repository forked from the source project.
      *  - Creates a Pantheon site to run the tests on.
-     *  - Sets up Circle CI to test the repository.
+     *  - Sets up CI to test the repository.
      * In order to use this command, it is also necessary to provide
      * a set of secrets that are used to create the necessary projects,
      * and that are subsequentially cached in Circle CI for use during
@@ -198,15 +198,22 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      * environment variables; this keeps them out of the command history
      * and other places they may be inadvertantly observed.
      *
-     *   export GITHUB_TOKEN github_personal_access_token
-     *   export CIRCLE_TOKEN circle_personal_api_token
+     * GitHub configuration:
+     *   export GITHUB_TOKEN=github_personal_access_token
+     *
+     * BitBucket configuration:
+     *   export BITBUCKET_USER=bitbucket_username
+     *   export BITBUCKET_PASS=bitbucket_account_or_app_password
+     *
+     * CircleCI configuration:
+     *   export CIRCLE_TOKEN=circle_personal_api_token
      *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
      *
      * @command build:project:create
-     * @alias build-env:create-project
+     * @aliases build-env:create-project
      * @param string $source Packagist org/name of source template project to fork or path to an existing project on the local filesystem. Paths must either start with ./ or be an absolute path.
      * @param string $target Simple name of project to create.
      * @option org Organization for the new project (defaults to authenticated user)
@@ -294,8 +301,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
         $builder
 
-            // Create a GitHub repository
-            ->progressMessage('Create GitHub project {target}', ['target' => $target_label])
+            // Create a repository
+            ->progressMessage('Create Git repository {target}', ['target' => $target_label])
             /*
             ->taskRepositoryCreate()
                 ->provider($this->git_provider)
@@ -351,6 +358,30 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
             // TODO: rollback Pantheon site create
 
+            // Create new repository and make the initial commit
+            ->progressMessage('Make initial commit')
+            ->addCode(
+                function ($state) use ($siteDir) {
+                    $headCommit = $this->initialCommit($siteDir);
+                })
+
+            // It is not necessary to push to GitHub so soon, but it's helpful
+            // for debugging et. al. to have the initial repo contents available.
+
+            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
+            /*
+            ->taskRepositoryPush()
+                ->provider($this->git_provider)
+                ->target($this->target_project)
+                ->dir($siteDir)
+            */
+            ->addCode(
+                function ($state) use ($ci_env, $siteDir) {
+                    $repositoryAttributes = $ci_env->getState('repository');
+
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+                })
+
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
@@ -359,15 +390,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 ->environment($ci_env)
                 ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
                 ->dir($siteDir)
-
-            // Create new repository and make the initial commit
-            ->progressMessage('Make initial commit')
-            ->addCode(
-                function ($state) use ($siteDir) {
-                    $headCommit = $this->initialCommit($siteDir);
-                })
-
-            // n.b. Existing algorithm also pushes to GitHub here, but this is not necessary
 
             // Push code to newly-created project.
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
@@ -397,6 +419,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
+                        'site-url' => "https://dev-{$site_name}.pantheonsite.io"
                     ];
                     $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
 
@@ -406,7 +429,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 })
 
             // Push the local working repository to the server
-            ->progressMessage('Push code and configuration to {target}', ['target' => $target_label])
+            ->progressMessage('Push updated configuration to {target}', ['target' => $target_label])
             /*
             ->taskRepositoryPush()
                 ->provider($this->git_provider)
@@ -416,7 +439,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->addCode(
                 function ($state) use ($ci_env, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
-
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
 
                     //$github_token = $repositoryAttributes->token();

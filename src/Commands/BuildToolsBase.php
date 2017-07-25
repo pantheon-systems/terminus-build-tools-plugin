@@ -265,17 +265,21 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $aliases = [
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
-
-            // The wordpress template has not been created yet
-            // 'example-wordpress-composer' => ['wp', 'wordpress'],
+            'example-wordpress-composer' => ['wp', 'wordpress'],
         ];
 
+        // Convert the defaults into a more straightforward mapping:
+        //   shortcut: project
         $map = [strtolower($source) => $source];
         foreach ($aliases as $full => $shortcuts) {
             foreach ($shortcuts as $alias) {
                 $map[$alias] = $full;
             }
         }
+
+        // Add in the user shortcuts.
+        $user_shortcuts = $this->getConfig()->get('command.build.project.create.shortcuts', []);
+        $map = array_merge($map, $user_shortcuts);
 
         return $map[strtolower($source)];
     }
@@ -287,9 +291,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function autodetectUpstream($siteDir)
     {
+        $upstream = $this->autodetectUpstreamAtDir("$siteDir/web");
+        if ($upstream) {
+            return $upstream;
+        }
+        $upstream = $this->autodetectUpstreamAtDir($siteDir);
+        if ($upstream) {
+            return $upstream;
+        }
+        // Can't tell? Assume Drupal 8.
         return 'Empty Upstream';
-        // or 'Drupal 7' or 'WordPress'
-        // return 'Drupal 8';
+    }
+
+    protected function autodetectUpstreamAtDir($siteDir)
+    {
+        $upstream_map = [
+          'core/misc/drupal.js' => 'empty', // Drupal 8
+          'misc/drupal.js' => 'empty-7', // Drupal 7
+          'wp-config.php' => 'empty-wordpress', // WordPress
+        ];
+
+        foreach ($upstream_map as $file => $upstream) {
+            if (file_exists("$siteDir/$file")) {
+                return $upstream;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -569,7 +597,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->rsync($site_env_id, ':code/config', $repositoryDir);
 
         $this->passthru("git -C $repositoryDir add config");
-        $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        exec("git -C $repositoryDir status --porcelain", $outputLines, $status);
+        if (!empty($outputLines)) {
+            $this->passthru("git -C $repositoryDir commit -m 'Export configuration'");
+        }
     }
 
     /**
@@ -754,20 +785,31 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
+        // Get back a pr-number => branch-name list
         $branchList = $this->branchesForOpenPullRequests($project, $auth);
-        return $this->filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern);
+        // Remove any that match "pr-NNN", for some NNN in pr-number.
+        $result = $this->filterBranches($oldestEnvironments, array_keys($branchList), $multidev_delete_pattern);
+        // Remove any that match "pr-BRANCH", for some BRANCH in branch-name.
+        $result = $this->filterBranches($result, array_values($branchList), $multidev_delete_pattern);
+
+        return $result;
     }
 
+    /**
+     * Return an array of PR-Number => branch-name for all open PRs.
+     */
     function branchesForOpenPullRequests($project, $auth = '')
     {
         $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
 
-        $branchList = array_map(
+        $branchList = array_column(array_map(
             function ($item) {
-                return $item['head']['ref'];
+                $pr_number = $item['number'];
+                $branch_name = $item['head']['ref'];
+                return [$pr_number, $branch_name];
             },
             $data
-        );
+        ), 1, 0);
 
         return $branchList;
     }
@@ -877,8 +919,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $method = 'POST';
             $guzzleParams['json'] = $data;
         }
-
-        $this->log()->notice('Calling GitHub API via guzzle: {method} {uri} {data}', ['method' => $method, 'uri' => $uri, 'data' => var_export($guzzleParams, true)]);
 
         $client = new \GuzzleHttp\Client();
         $res = $client->request($method, $url, $guzzleParams);
