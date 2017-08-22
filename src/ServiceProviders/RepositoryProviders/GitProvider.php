@@ -24,11 +24,13 @@ interface GitProvider extends ProviderInterface
     /**
      * Create a repository
      *
-     * @param $dir Local working copy of repository to create
-     * @param $target Project name of the repository to create
-     * @param $github_org Which org to create the project in; leave off to create a user repository.
+     * @param string $dir Local working copy of repository to create
+     * @param string $target Project name of the repository to create
+     * @param string $org Which org to create the project in; leave off to create a user repository.
+     *
+     * @return string Project created (usually org/target)
      */
-    public function createRepository($dir, $target, $github_org = '');
+    public function createRepository($dir, $target, $org = '');
 
     /**
      * Push repository back to repository service. Note that, in essence,
@@ -36,8 +38,8 @@ interface GitProvider extends ProviderInterface
      * credentials for the push operation, and does not require a remote
      * be set for the target.
      *
-     * @param $dir Local working copy of repository to push
-     * @param $target_project Project to push to; usually org/projectname
+     * @param string $dir Local working copy of repository to push
+     * @param string $target_project Project to push to; usually org/projectname
      */
     public function pushRepository($dir, $target_project);
 
@@ -47,4 +49,13 @@ interface GitProvider extends ProviderInterface
      * @param string $project The project to delete (org/projectname)
      */
     public function deleteRepository($project);
+
+    /**
+     * Project URL to visit provided project in a web browser.
+     *
+     * @param string $target_project Project to generate browser URL for.
+     *
+     * @return string URL to target project.
+     */
+    public function projectURL($target_project);
 }
