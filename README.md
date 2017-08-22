@@ -112,7 +112,6 @@ command:
       create:
         shortcuts:
           contenta: pantheon-systems/example-drops-8-composer:dev-contenta
-          lightning: pantheon-systems/example-drops-8-composer:dev-lightning
 ``` 
 Note that the project name follows the standard defined by Composer: `org-name` / `project-name` : dev- `branch-name`.
 
