@@ -2,15 +2,24 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderInterface;
+
 /**
  * Holds state information destined to be registered with the git repository service.
  */
-interface GitProvider
+interface GitProvider extends ProviderInterface
 {
     // TODO: Perhaps there should be a base interface shared by GitProvider
     // and CIProvider. getEnvironment would then move there. The CIProvider
     // environment would just be empty at the moment, though.
     public function getEnvironment();
+
+    /**
+     * Return the name of the authenticated user.
+     *
+     * @return string
+     */
+    public function authenticatedUser();
 
     /**
      * Create a repository
@@ -31,4 +40,11 @@ interface GitProvider
      * @param $target_project Project to push to; usually org/projectname
      */
     public function pushRepository($dir, $target_project);
+
+    /**
+     * Delete a repository from the repository service.
+     *
+     * @param string $project The project to delete (org/projectname)
+     */
+    public function deleteRepository($project);
 }

@@ -25,6 +25,11 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
     }
 
+    public function infer($url)
+    {
+        return strpos($url, 'circleci.com') !== false;
+    }
+
     /**
      * Return 'true' if our token has been set yet.
      */

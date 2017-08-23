@@ -34,6 +34,11 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     {
     }
 
+    public function infer($url)
+    {
+        return strpos($url, 'bitbucket.org') !== false;
+    }
+
     public function getEnvironment()
     {
         if (!$this->repositoryEnvironment) {
@@ -123,6 +128,17 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         );
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function authenticatedUser()
+    {
+        return $this->getBitBucketUser();
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function createRepository($local_site_path, $target, $github_org = '')
     {
         // Username for Bitbucket API is either provider $github_org
@@ -150,7 +166,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     }
 
     /**
-     * Push the repository at the provided working directory back to GitHub.
+     * @inheritdoc
      */
     public function pushRepository($dir, $target_project)
     {
