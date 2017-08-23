@@ -26,6 +26,9 @@ use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteEnvironment;
+use Pantheon\Terminus\DataStore\FileStore;
+use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -44,12 +47,60 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected $tmpDirs = [];
 
+    protected $provider_manager;
+    protected $ci_provider;
+    protected $git_provider;
+
     /**
-     * Object constructor
+     * Constructor
+     *
+     * @param ProviderManager $provider_manager Provider manager may be injected for testing (not used). It is
+     * not passed in by Terminus.
      */
-    public function __construct()
+    public function __construct($provider_manager = null)
     {
-        parent::__construct();
+        $this->provider_manager = $provider_manager;
+    }
+
+    public function providerManager()
+    {
+        if (!$this->provider_manager) {
+            // TODO: how can we do DI from within a Terminus Plugin? Huh?
+            // Delayed initialization is one option.
+            $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
+            $credentialManager = new CredentialManager($credential_store);
+            $credentialManager->setUserId($this->loggedInUserEmail());
+            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager->setLogger($this->logger);
+        }
+        return $this->provider_manager;
+    }
+
+    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    {
+        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
+        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+    }
+
+    protected function getUrlFromBuildMetadata($site_name_and_env)
+    {
+        // Get the build metadata from the Pantheon site. Fail if there is
+        // no build metadata on the master branch of the Pantheon site.
+        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env) + ['url' => ''];
+        if (empty($buildMetadata['url'])) {
+            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name]);
+        }
+        return $buildMetadata['url'];
+    }
+
+    protected function inferGitProviderFromUrl($url)
+    {
+        $provider = $this->providerManager()->inferProvider($url, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+        if (!$provider) {
+             throw new TerminusException('Could not figure out which git repository service to use with {url}.', ['url' => $url]);
+        }
+        $this->git_provider = $provider;
+        return $provider;
     }
 
     /**
@@ -65,7 +116,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Get the email address of the logged-in user
+     * Get the email address of the user that is logged-in to Pantheon
      */
     protected function loggedInUserEmail()
     {
@@ -85,7 +136,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Recover the session's machine token.
+     * Recover the Pantheon session's machine token.
      */
     protected function recoverSessionMachineToken()
     {
@@ -113,7 +164,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Return the list of available organizations
+     * Return the list of available Pantheon organizations
      */
     protected function availableOrgs()
     {
@@ -780,7 +831,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     {
         return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
     }
-
 
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
