@@ -334,8 +334,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // Create new repository and make the initial commit
             ->progressMessage('Make initial commit')
             ->addCode(
-                function ($state) use ($siteDir) {
-                    $headCommit = $this->initialCommit($siteDir);
+                function ($state) use ($siteDir, $source) {
+                    $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
             // It is not necessary to push to GitHub so soon, but it's helpful
@@ -436,6 +436,18 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         // If we return the builder, Robo will run it. This also allows
         // command hooks to alter the task collection prior to execution.
         return $builder;
+    }
+
+    /**
+     * Make the initial commit to our new project.
+     */
+    protected function initialCommit($repositoryDir, $source)
+    {
+        // Add the canonical repository files to the new GitHub project
+        // respecting .gitignore.
+        $this->passthru("git -C $repositoryDir add .");
+        $this->passthru("git -C $repositoryDir commit -m 'Create new Pantheon site from $source'");
+        return $this->getHeadCommit($repositoryDir);
     }
 
     /**
