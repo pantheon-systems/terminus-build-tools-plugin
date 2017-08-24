@@ -22,9 +22,9 @@ class ProviderManager implements LoggerAwareInterface
     {
         // TODO: create some way to register providers. Plugin plugins?
         return [
-            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider',
-            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GithubProvider',
-            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BitbucketProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
         ];
     }
 

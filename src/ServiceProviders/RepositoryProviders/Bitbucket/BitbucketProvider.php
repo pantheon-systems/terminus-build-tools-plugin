@@ -1,6 +1,6 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\Bitbucket\RepositoryProviders;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -9,6 +9,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 use GuzzleHttp\Client;
 
@@ -175,7 +176,32 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
     }
 
-    private function bitbucketAPIClient() {
+    /**
+     * @inheritdoc
+     */
+    public function listRepositories()
+    {
+
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listUserRepositories($user)
+    {
+
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listOrgRepositories($org)
+    {
+
+    }
+
+    private function bitbucketAPIClient()
+    {
         if (!isset($this->bitbucketClient))
             $this->bitbucketClient = new Client([
                 'base_uri' => 'https://api.bitbucket.org/2.0/',

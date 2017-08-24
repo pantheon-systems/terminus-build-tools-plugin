@@ -1,6 +1,9 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI;
+
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Psr\Log\LoggerAwareInterface;

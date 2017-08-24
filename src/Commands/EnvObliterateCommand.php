@@ -29,7 +29,6 @@ use Composer\Semver\Comparator;
  */
 class EnvObliterateCommand extends BuildToolsBase
 {
-
     /**
      * Destroy a Pantheon site that was created by the build:project:create command.
      *

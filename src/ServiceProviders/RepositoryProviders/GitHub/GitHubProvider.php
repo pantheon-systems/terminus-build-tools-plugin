@@ -1,19 +1,24 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
+
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubRepositoryInfo;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubUserInfo;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 /**
  * Holds state information destined to be registered with the CI service.
  */
-class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
     use ExecWithRedactionTrait;
@@ -148,6 +153,43 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function pushRepository($dir, $target_project)
     {
         $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listRepositories()
+    {
+        return $this->createRepositoryInfo($this->gitHubAPI('user/repos'));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listUserRepositories($user)
+    {
+        return $this->createRepositoryInfo($this->gitHubAPI("users/$user/repos"));
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function listOrgRepositories($org)
+    {
+        return $this->createRepositoryInfo($this->gitHubAPI("orgs/$org/repos"));
+    }
+
+    /**
+     * Convert a nested array into a list of GitHubRepositoryInfo object.s
+     */
+    protected function createRepositoryInfo($repoList)
+    {
+        $result = [];
+        foreach ($repoList as $repo) {
+            $repoInfo = new GitHubRepositoryInfo($repo);
+            $result[$repoInfo->project()] = $repoInfo;
+        }
+        return $result;
     }
 
     /**
