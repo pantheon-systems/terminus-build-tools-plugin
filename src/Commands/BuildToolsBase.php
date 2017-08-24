@@ -464,18 +464,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Make the initial commit to our new GitHub project.
-     */
-    protected function initialCommit($repositoryDir)
-    {
-        // Add the canonical repository files to the new GitHub project
-        // respecting .gitignore.
-        $this->passthru("git -C $repositoryDir add .");
-        $this->passthru("git -C $repositoryDir commit -m 'Initial commit'");
-        return $this->getHeadCommit($repositoryDir);
-    }
-
-    /**
      * Return the sha of the HEAD commit.
      */
     protected function getHeadCommit($repositoryDir)
