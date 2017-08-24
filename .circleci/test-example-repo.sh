@@ -60,5 +60,11 @@ terminus site:info "$TERMINUS_SITE"
 git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
 # Confirm that Circle was configured for testing, and that the first test passed.
 
-set +ex
-cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
+(
+    set +ex
+    cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
+)
+
+
+# Delete our test site, etc.
+./.circleci/cleanup-fixtures.sh
