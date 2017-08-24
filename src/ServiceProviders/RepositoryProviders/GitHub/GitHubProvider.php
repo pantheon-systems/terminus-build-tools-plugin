@@ -156,30 +156,6 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     }
 
     /**
-     * @inheritdoc
-     */
-    public function listRepositories()
-    {
-        return $this->createRepositoryInfo($this->gitHubAPI('user/repos'));
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function listUserRepositories($user)
-    {
-        return $this->createRepositoryInfo($this->gitHubAPI("users/$user/repos"));
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function listOrgRepositories($org)
-    {
-        return $this->createRepositoryInfo($this->gitHubAPI("orgs/$org/repos"));
-    }
-
-    /**
      * Convert a nested array into a list of GitHubRepositoryInfo object.s
      */
     protected function createRepositoryInfo($repoList)

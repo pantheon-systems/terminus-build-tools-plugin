@@ -30,6 +30,10 @@ jobs:
             - run:
                 name: Test D8 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
+            - run:
+                name: D8 with GitHub Build Failed
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh
 
     test_drupal_7_github:
         <<: *defaults
@@ -41,6 +45,10 @@ jobs:
             - run:
                 name: Test D7 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
+            - run:
+                name: D7 with GitHub Build Failed
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh
 
     test_drupal_8_bitbucket:
         <<: *defaults
@@ -53,6 +61,10 @@ jobs:
                 name: Test D8 with BitBucket (unfinished)
                 command: echo "Disabling this test until it is passing."
                 # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
+            - run:
+                name: D8 with Bitbucket Build Failed
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh
 
     test_wordpress:
         <<: *defaults
@@ -64,6 +76,10 @@ jobs:
             - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
+            - run:
+                name: WordPress with GitHub Build Failed
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh
 
     # @todo: anything to do once everything is complete?
     # There is probably a way to check the results on the other jobs.
@@ -71,7 +87,7 @@ jobs:
         <<: *defaults
         steps:
             - run:
-                name: cleanup
+                name: Clean up old keys
                 command: |
                     echo "All tests passed."
                     for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done

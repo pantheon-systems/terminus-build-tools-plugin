@@ -47,23 +47,4 @@ interface GitProvider extends ProviderInterface
      * @param string $project The project to delete (org/projectname)
      */
     public function deleteRepository($project);
-
-    /**
-     * List all repositories visible to the authenticated user
-     */
-    public function listRepositories();
-
-    /**
-     * List all repositories in the given users namespace
-     *
-     * @param string $user
-     */
-    public function listUserRepositories($user);
-
-    /**
-     * List all repositories in the given organization
-     *
-     * @param string $org
-     */
-    public function listOrgRepositories($org);
 }
