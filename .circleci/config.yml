@@ -63,7 +63,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-ci-fix" github
 
     # @todo: anything to do once everything is complete?
     # There is probably a way to check the results on the other jobs.
