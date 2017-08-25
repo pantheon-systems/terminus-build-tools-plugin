@@ -4,6 +4,8 @@
 # TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
 set -e
 
+SCRIPT_DIR="`dirname -- "$0"`"
+
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
 # If we are on the master branch
@@ -53,21 +55,21 @@ else
     fi
 fi
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=$GIT_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 # Confirm that the Github project was created
 git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 # Confirm that Circle was configured for testing, and that the first test passed.
 
@@ -76,9 +78,9 @@ ratelimit_check
     cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
 )
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 # Delete our test site, etc.
 ./.circleci/cleanup-fixtures.sh
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
