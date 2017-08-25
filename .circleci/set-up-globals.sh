@@ -2,7 +2,8 @@
 
 set -ex
 
-SCRIPT_DIR="`dirname -- "$0"`"
+SELF_DIRNAME="`dirname -- "$0"`"
+SCRIPT_DIR="`cd -P -- "$SELF_DIRNAME" && pwd -P`"
 
 $SCRIPT_DIR/ratelimit_check
 

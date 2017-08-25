@@ -4,7 +4,8 @@
 # TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
 set -e
 
-SCRIPT_DIR="`dirname -- "$0"`"
+SELF_DIRNAME="`dirname -- "$0"`"
+SCRIPT_DIR="`cd -P -- "$SELF_DIRNAME" && pwd -P`"
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
