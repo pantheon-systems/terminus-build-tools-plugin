@@ -18,10 +18,8 @@ jobs:
     build:
         <<: *defaults
         steps:
-            - checkout
-            - run:
-                name: Rate limit check
-                command: ./.circleci/ratelimit_check
+            - run: echo "Nothing in the build step for now."
+
 
     test_drupal_8_github:
         <<: *defaults

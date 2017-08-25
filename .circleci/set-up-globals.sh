@@ -2,32 +2,34 @@
 
 set -ex
 
-ratelimit_check
+SCRIPT_DIR="`dirname -- "$0"`"
+
+$SCRIPT_DIR/ratelimit_check
 
 # The section would be transferable to a DOCKERFILE
 apt-get update
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 apt-get install -y ruby
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 gem install circle-cli
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 composer global require -n "hirak/prestissimo:^0.3"
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 git clone https://github.com/pantheon-systems/terminus.git ~/terminus
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 cd ~/terminus && composer install
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
 
@@ -37,12 +39,12 @@ mkdir -p $HOME/.terminus/plugins
 ln -s $(pwd) $HOME/.terminus/plugins
 terminus list -n build
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
 
-ratelimit_check
+$SCRIPT_DIR/ratelimit_check
 
 touch $HOME/.ssh/config
 echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
