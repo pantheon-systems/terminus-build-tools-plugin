@@ -18,7 +18,9 @@ jobs:
     build:
         <<: *defaults
         steps:
-            - run: ./.circleci/ratelimit_check
+            - run:
+                name: Rate limit check
+                command: ./.circleci/ratelimit_check
 
     test_drupal_8_github:
         <<: *defaults
