@@ -20,6 +20,7 @@ jobs:
         steps:
             - run: echo "Nothing in the build step for now."
 
+
     test_drupal_8_github:
         <<: *defaults
         steps:
@@ -97,18 +98,18 @@ workflows:
   build_test:
     jobs:
       - build
-      - test_drupal_8_github:
-          requires:
-            - build
-      - test_drupal_7_github:
-          requires:
-            - build
       - test_drupal_8_bitbucket:
           requires:
             - build
       - test_wordpress:
           requires:
-            - build
+            - test_drupal_8_bitbucket
+      - test_drupal_8_github:
+          requires:
+            - test_wordpress
+      - test_drupal_7_github:
+          requires:
+            - test_drupal_8_github
       - completion:
           requires:
             - test_drupal_8_github

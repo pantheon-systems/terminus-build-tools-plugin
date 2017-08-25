@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "--------------------------------------------------------------"
+curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/rate_limit 2>/dev/null | grep 'remaining' | head -n 1
+echo "--------------------------------------------------------------"
