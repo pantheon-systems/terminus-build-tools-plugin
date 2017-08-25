@@ -53,11 +53,22 @@ else
     fi
 fi
 
+ratelimit_check
+
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=$GIT_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
+
+ratelimit_check
+
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
+
+ratelimit_check
+
 # Confirm that the Github project was created
 git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
+
+ratelimit_check
+
 # Confirm that Circle was configured for testing, and that the first test passed.
 
 (
@@ -65,6 +76,9 @@ git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
     cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
 )
 
+ratelimit_check
 
 # Delete our test site, etc.
 ./.circleci/cleanup-fixtures.sh
+
+ratelimit_check
