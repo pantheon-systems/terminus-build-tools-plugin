@@ -21,7 +21,7 @@ jobs:
             - checkout
             - run:
                 name: Rate limit check
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/ratelimit_check
 
     test_drupal_8_github:
         <<: *defaults
