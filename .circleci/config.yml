@@ -20,7 +20,8 @@ jobs:
         steps:
             - run:
                 name: Rate limit check
-                command: ./.circleci/ratelimit_check
+                command: curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/rate_limit 2>/dev/null | grep 'remaining' | head -n 1
+
 
     test_drupal_8_github:
         <<: *defaults
