@@ -2,15 +2,6 @@
 
 set -ex
 
-# The section would be transferable to a DOCKERFILE
-apt-get update
-apt-get install -y ruby
-gem install circle-cli
-composer global require -n "hirak/prestissimo:^0.3"
-git clone https://github.com/pantheon-systems/terminus.git ~/terminus
-cd ~/terminus && composer install
-ln -s ~/terminus/bin/terminus /usr/local/bin/terminus
-
 # Commands below this line would not be transferable to a docker container
 cd ~/terminus_build_tools_plugin
 mkdir -p $HOME/.terminus/plugins
