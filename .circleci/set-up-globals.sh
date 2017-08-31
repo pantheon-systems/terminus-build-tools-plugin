@@ -2,7 +2,6 @@
 
 set -ex
 
-# Commands below this line would not be transferable to a docker container
 cd ~/terminus_build_tools_plugin
 mkdir -p $HOME/.terminus/plugins
 ln -s $(pwd) $HOME/.terminus/plugins
