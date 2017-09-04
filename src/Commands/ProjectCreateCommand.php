@@ -28,10 +28,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
-use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
-use Pantheon\Terminus\DataStore\FileStore;
 
 /**
  * Project Create Command
@@ -43,29 +40,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 {
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
-
-    protected $provider_manager;
-    protected $ci_provider;
-    protected $git_provider;
-
-    public function __construct($provider_manager = null)
-    {
-        $this->provider_manager = $provider_manager;
-    }
-
-    public function providerManager()
-    {
-        if (!$this->provider_manager) {
-            // TODO: how can we do DI from within a Terminus Plugin? Huh?
-            // Delayed initialization is one option.
-            $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
-            $credentialManager = new CredentialManager($credential_store);
-            $credentialManager->setUserId($this->loggedInUserEmail());
-            $this->provider_manager = new ProviderManager($credentialManager);
-            $this->provider_manager->setLogger($this->logger);
-        }
-        return $this->provider_manager;
-    }
 
     /**
      * Validate requested site name before prompting for additional information.
@@ -82,8 +56,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $target = $input->getArgument('target');
 
         // Create the providers via the provider manager
-        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
-        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+        $this->createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias);
 
         // If only one parameter was provided, then it is the TARGET
         if (empty($target)) {
@@ -361,8 +334,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // Create new repository and make the initial commit
             ->progressMessage('Make initial commit')
             ->addCode(
-                function ($state) use ($siteDir) {
-                    $headCommit = $this->initialCommit($siteDir);
+                function ($state) use ($siteDir, $source) {
+                    $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
             // It is not necessary to push to GitHub so soon, but it's helpful
@@ -463,6 +436,18 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         // If we return the builder, Robo will run it. This also allows
         // command hooks to alter the task collection prior to execution.
         return $builder;
+    }
+
+    /**
+     * Make the initial commit to our new project.
+     */
+    protected function initialCommit($repositoryDir, $source)
+    {
+        // Add the canonical repository files to the new GitHub project
+        // respecting .gitignore.
+        $this->passthru("git -C $repositoryDir add .");
+        $this->passthru("git -C $repositoryDir commit -m 'Create new Pantheon site from $source'");
+        return $this->getHeadCommit($repositoryDir);
     }
 
     /**

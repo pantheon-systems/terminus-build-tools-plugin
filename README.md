@@ -112,7 +112,6 @@ command:
       create:
         shortcuts:
           contenta: pantheon-systems/example-drops-8-composer:dev-contenta
-          lightning: pantheon-systems/example-drops-8-composer:dev-lightning
 ``` 
 Note that the project name follows the standard defined by Composer: `org-name` / `project-name` : dev- `branch-name`.
 
@@ -209,3 +208,4 @@ composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-t
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
+

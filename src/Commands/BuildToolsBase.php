@@ -26,6 +26,9 @@ use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteEnvironment;
+use Pantheon\Terminus\DataStore\FileStore;
+use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -44,12 +47,60 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected $tmpDirs = [];
 
+    protected $provider_manager;
+    protected $ci_provider;
+    protected $git_provider;
+
     /**
-     * Object constructor
+     * Constructor
+     *
+     * @param ProviderManager $provider_manager Provider manager may be injected for testing (not used). It is
+     * not passed in by Terminus.
      */
-    public function __construct()
+    public function __construct($provider_manager = null)
     {
-        parent::__construct();
+        $this->provider_manager = $provider_manager;
+    }
+
+    public function providerManager()
+    {
+        if (!$this->provider_manager) {
+            // TODO: how can we do DI from within a Terminus Plugin? Huh?
+            // Delayed initialization is one option.
+            $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
+            $credentialManager = new CredentialManager($credential_store);
+            $credentialManager->setUserId($this->loggedInUserEmail());
+            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager->setLogger($this->logger);
+        }
+        return $this->provider_manager;
+    }
+
+    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    {
+        $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
+        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+    }
+
+    protected function getUrlFromBuildMetadata($site_name_and_env)
+    {
+        // Get the build metadata from the Pantheon site. Fail if there is
+        // no build metadata on the master branch of the Pantheon site.
+        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env) + ['url' => ''];
+        if (empty($buildMetadata['url'])) {
+            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name]);
+        }
+        return $buildMetadata['url'];
+    }
+
+    protected function inferGitProviderFromUrl($url)
+    {
+        $provider = $this->providerManager()->inferProvider($url, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+        if (!$provider) {
+             throw new TerminusException('Could not figure out which git repository service to use with {url}.', ['url' => $url]);
+        }
+        $this->git_provider = $provider;
+        return $provider;
     }
 
     /**
@@ -65,7 +116,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Get the email address of the logged-in user
+     * Get the email address of the user that is logged-in to Pantheon
      */
     protected function loggedInUserEmail()
     {
@@ -85,7 +136,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Recover the session's machine token.
+     * Recover the Pantheon session's machine token.
      */
     protected function recoverSessionMachineToken()
     {
@@ -113,7 +164,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Return the list of available organizations
+     * Return the list of available Pantheon organizations
      */
     protected function availableOrgs()
     {
@@ -410,18 +461,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function sourceProjectFromSource($source)
     {
         return preg_replace('/:.*/', '', $source);
-    }
-
-    /**
-     * Make the initial commit to our new GitHub project.
-     */
-    protected function initialCommit($repositoryDir)
-    {
-        // Add the canonical repository files to the new GitHub project
-        // respecting .gitignore.
-        $this->passthru("git -C $repositoryDir add .");
-        $this->passthru("git -C $repositoryDir commit -m 'Initial commit'");
-        return $this->getHeadCommit($repositoryDir);
     }
 
     /**
@@ -781,16 +820,30 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
-
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
         // Get back a pr-number => branch-name list
-        $branchList = $this->branchesForOpenPullRequests($project, $auth);
-        // Remove any that match "pr-NNN", for some NNN in pr-number.
-        $result = $this->filterBranches($oldestEnvironments, array_keys($branchList), $multidev_delete_pattern);
-        // Remove any that match "pr-BRANCH", for some BRANCH in branch-name.
-        $result = $this->filterBranches($result, array_values($branchList), $multidev_delete_pattern);
+
+        $closedBranchList = $this->branchesForPullRequests($project, $auth, 'closed');
+
+        // Find any that match "pr-NNN", for some NNN in pr-number.
+        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
+        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
+        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
+
+        // If there are no closed pull requests, then there is no need
+        // to look for open pull requests
+        if (empty($result)) {
+            return $result;
+        }
+
+        $openBranchList = $this->branchesForPullRequests($project, $auth, 'open');
+
+        // Remove any that match "pr-NNN" and have an open pull request
+        $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
+        // Remove any that match "pr-BRANCH", and have an open pull request
+        $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
 
         return $result;
     }
@@ -798,9 +851,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Return an array of PR-Number => branch-name for all open PRs.
      */
-    function branchesForOpenPullRequests($project, $auth = '')
+    function branchesForPullRequests($project, $auth = '', $state = 'closed')
     {
-        $data = $this->curlGitHub("repos/$project/pulls?state=open", [], $auth);
+        $data = $this->curlGitHub("repos/$project/pulls?state=$state", [], $auth);
 
         $branchList = array_column(array_map(
             function ($item) {
@@ -997,25 +1050,45 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return array_filter(
             $oldestEnvironments,
             function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $item;
-                // If the name is less than the maximum length, then require
-                // an exact match; otherwise, do a 'starts with' test.
-                if (strlen($item) < 11) {
-                    $match .= '$';
-                }
-                // Strip the multidev delete pattern from the beginning of
-                // the match. The multidev env name was composed by prepending
-                // the delete pattern to the branch name, so this recovers
-                // the branch name.
-                $match = preg_replace("%$multidev_delete_pattern%", '', $match);
-                // Constrain match to only match from the beginning
-                $match = "^$match";
-
+                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
                 // Find items in $branchList that match $match.
                 $matches = preg_grep ("%$match%i", $branchList);
                 return empty($matches);
             }
         );
+    }
+
+    protected function findBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
+    {
+        // Filter environments that have matching remote branches in origin
+        return array_filter(
+            $oldestEnvironments,
+            function ($item) use ($branchList, $multidev_delete_pattern) {
+                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
+                // Find items in $branchList that match $match.
+                $matches = preg_grep ("%$match%i", $branchList);
+                return !empty($matches);
+            }
+        );
+    }
+
+    protected function getMatchRegex($item, $multidev_delete_pattern)
+    {
+        $match = $item;
+        // If the name is less than the maximum length, then require
+        // an exact match; otherwise, do a 'starts with' test.
+        if (strlen($item) < 11) {
+            $match .= '$';
+        }
+        // Strip the multidev delete pattern from the beginning of
+        // the match. The multidev env name was composed by prepending
+        // the delete pattern to the branch name, so this recovers
+        // the branch name.
+        $match = preg_replace("%$multidev_delete_pattern%", '', $match);
+        // Constrain match to only match from the beginning
+        $match = "^$match";
+
+        return $match;
     }
 
     protected function deleteEnv($env, $deleteBranch = false)

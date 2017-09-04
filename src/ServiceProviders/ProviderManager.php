@@ -18,15 +18,35 @@ class ProviderManager implements LoggerAwareInterface
         $this->credential_manager = $credential_manager;
     }
 
-    // TODO: filter available providers by expected interface?
-    protected function lookupProvider($alias)
+    protected function availableProviders()
     {
         // TODO: create some way to register providers. Plugin plugins?
-        $available_providers = [
-            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider',
-            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GithubProvider',
-            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BitbucketProvider',
+        return [
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
         ];
+    }
+
+    public function inferProvider($url, $expectedInterface)
+    {
+        $available_providers = $this->availableProviders();
+
+        foreach ($available_providers as $provider) {
+            $providerClass = new \ReflectionClass($provider);
+            if ($providerClass->implementsInterface($expectedInterface)) {
+                $providerInstance = new $provider();
+                if ($providerInstance->infer($url)) {
+                    $this->initializeProvider($providerInstance);
+                    return $providerInstance;
+                }
+            }
+        }
+    }
+
+    protected function lookupProvider($alias)
+    {
+        $available_providers = $this->availableProviders();
 
         // Only compare the alphanumeric parts of the provided alias.
         // i.e. --ci=circle-ci is the same as --ci=circleci
@@ -54,6 +74,11 @@ class ProviderManager implements LoggerAwareInterface
         if (!$provider instanceof $expectedInterface) {
             throw new \Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
         }
+        return $this->initializeProvider($provider);
+    }
+
+    protected function initializeProvider($provider)
+    {
         if ($provider instanceof LoggerAwareInterface) {
             $provider->setLogger($this->logger);
         }
@@ -75,8 +100,9 @@ class ProviderManager implements LoggerAwareInterface
     {
         foreach ($this->providers as $provider) {
             if ($provider instanceof CredentialClientInterface) {
-                // TODO: verify that the credential manager has obtained
-                // everything requested by the provider.
+                // Allow the provider to fetch whichever credentials
+                // are needed from the credential manager. If it cannot
+                // get everything it needs, it should throw.
                 $provider->setCredentials($this->credential_manager);
             }
         }

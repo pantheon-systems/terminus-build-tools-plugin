@@ -2,10 +2,12 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderInterface;
+
 /**
  * Holds state information destined to be registered with the CI service.
  */
-interface CIProvider
+interface CIProvider extends ProviderInterface
 {
     /**
      * Return the URL to the main page on this CI provider for the specified project.

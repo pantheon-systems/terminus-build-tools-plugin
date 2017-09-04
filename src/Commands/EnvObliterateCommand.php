@@ -29,7 +29,6 @@ use Composer\Semver\Comparator;
  */
 class EnvObliterateCommand extends BuildToolsBase
 {
-
     /**
      * Destroy a Pantheon site that was created by the build:project:create command.
      *
@@ -40,38 +39,32 @@ class EnvObliterateCommand extends BuildToolsBase
     {
         $site = $this->getSite($site_name);
 
-        // Get the build metadata from the Pantheon site. Fail if there is
-        // no build metadata on the master branch of the Pantheon site.
-        $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
-        if (empty($buildMetadata['url'])) {
-            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be deleted via build-env:obliterate.', ['site' => $site_name]);
-        }
-        $github_url = $buildMetadata['url'];
+        // Fetch the build metadata from the specified site name and
+        // look up the URL to the repository stored therein.
+        $url = $this->getUrlFromBuildMetadata("{$site_name}.dev");
 
-        // Look up the GitHub authentication token
-        $github_token = $this->getRequiredGithubToken();
+        // Create a git repository service provider appropriate to the URL
+        $gitProvider = $this->inferGitProviderFromUrl($url);
+
+        // Ensure that all of our providers are given the credentials they need.
+        // Providers are not usable until this is done.
+        $this->providerManager()->validateCredentials();
 
         // Do nothing without confirmation
-        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {github_url} and CircleCI configuration?', ['site' => $site->getName(), 'github_url' => $github_url])) {
+        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {url} and CircleCI configuration?', ['site' => $site->getName(), 'url' => $url])) {
             return;
         }
 
-        $this->log()->notice('About to delete {site} and its corresponding GitHub repository {github_url} and CircleCI configuration.', ['site' => $site->getName(), 'github_url' => $github_url]);
+        $this->log()->notice('About to delete {site} and its corresponding remote repository {url} and CI configuration.', ['site' => $site->getName(), 'url' => $url]);
 
-        // We don't need to do anything with CircleCI; the project is
-        // automatically removed when the GitHub project is deleted.
+        // CircleCI configuration is automatically deleted when the GitHub
+        // repository is deleted. Do we need to clean up for other CI providers?
 
         // Use the GitHub API to delete the GitHub project.
-        $project = $this->projectFromRemoteUrl($github_url);
-        $ch = $this->createGitHubDeleteChannel("repos/$project", $github_token);
-        $data = $this->execCurlRequest($ch, 'GitHub');
+        $project = $this->projectFromRemoteUrl($url);
 
-        // GitHub oddity: if DELETE fails, the message is set,
-        // but 'errors' is not set. Force an error in this case.
-        if (isset($data['message'])) {
-            throw new TerminusException('GitHub error: {message}.', ['message' => $data['message']]);
-        }
-
+        // Delete the remote git repository.
+        $gitProvider->deleteRepository($project);
         $this->log()->notice('Deleted {project} from GitHub', ['project' => $project,]);
 
         // Use the Terminus API to delete the Pantheon site.

@@ -1,19 +1,24 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
+
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubRepositoryInfo;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubUserInfo;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 /**
  * Holds state information destined to be registered with the CI service.
  */
-class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
     use LoggerAwareTrait;
     use ExecWithRedactionTrait;
@@ -27,6 +32,11 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
     }
 
+    public function infer($url)
+    {
+        return strpos($url, 'github.com') !== false;
+    }
+
     public function getEnvironment()
     {
         if (!$this->repositoryEnvironment) {
@@ -34,6 +44,11 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             ->setServiceName(self::SERVICE_NAME);
         }
         return $this->repositoryEnvironment;
+    }
+
+    public function tokenKey()
+    {
+        return self::GITHUB_TOKEN;
     }
 
     public function hasToken()
@@ -51,7 +66,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function setToken($token)
     {
         $repositoryEnvironment = $this->getEnvironment();
-        $repositoryEnvironment->setToken(self::GITHUB_TOKEN, $token);
+        $repositoryEnvironment->setToken($this->tokenKey(), $token);
     }
 
     /**
@@ -62,7 +77,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         // Tell the credential manager that we require one credential: the
         // GITHUB_TOKEN that will be used to authenticate with the CircleCI server.
         $githubTokenRequest = new CredentialRequest(
-            self::GITHUB_TOKEN,
+            $this->tokenKey(),
             "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.",
             "Enter GitHub personal access token: ",
             '#^[0-9a-fA-F]{40}$#',
@@ -80,9 +95,26 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         // Since the `credentialRequests()` method declared that we need a
         // GITHUB_TOKEN credential, it will be available for us to copy from
         // the credentials provider when this method is called.
-        $this->setToken($credentials_provider->fetch(self::GITHUB_TOKEN));
+        $tokenKey = $this->tokenKey();
+        $token = $credentials_provider->fetch($tokenKey);
+        if (!$token) {
+            throw new \Exception('Could not determine authentication token for GitHub serivces. Please set ' . $tokenKey);
+        }
+        $this->setToken($token);
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function authenticatedUser()
+    {
+        $userData = $this->gitHubAPI('user');
+        return $userData['login'];
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function createRepository($local_site_path, $target, $github_org = '')
     {
         // We need a different URL here if $github_org is an org; if no
@@ -93,7 +125,7 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         if (empty($github_org)) {
             $createRepoUrl = 'user/repos';
             $userData = $this->gitHubAPI('user');
-            $target_org = $userData['login'];
+            $target_org = $this->authenticatedUser();
         }
         $target_project = "$target_org/$target";
 
@@ -123,10 +155,30 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
     }
 
-    protected function gitHubAPI($uri, $data = [])
+    /**
+     * Convert a nested array into a list of GitHubRepositoryInfo object.s
+     */
+    protected function createRepositoryInfo($repoList)
     {
-        $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
+        $result = [];
+        foreach ($repoList as $repo) {
+            $repoInfo = new GitHubRepositoryInfo($repo);
+            $result[$repoInfo->project()] = $repoInfo;
+        }
+        return $result;
+    }
 
+    /**
+     * @inheritdoc
+     */
+    public function deleteRepository($project)
+    {
+        $deleteRepoUrl = "repos/$project";
+        $this->gitHubAPI($deleteRepoUrl, [], 'DELETE');
+    }
+
+    protected function gitHubAPI($uri, $data = [], $method = 'GET')
+    {
         $url = "https://api.github.com/$uri";
 
         $headers = [
@@ -138,14 +190,15 @@ class GithubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $headers['Authorization'] = "token " . $this->token();;
         }
 
-        $method = 'GET';
         $guzzleParams = [
             'headers' => $headers,
         ];
-        if (!empty($data)) {
+        if (!empty($data) && ($method == 'GET')) {
             $method = 'POST';
             $guzzleParams['json'] = $data;
         }
+
+        $this->logger->notice('Call GitHub API: {method} {uri}', ['method' => $method, 'uri' => $uri]);
 
         $client = new \GuzzleHttp\Client();
         $res = $client->request($method, $url, $guzzleParams);

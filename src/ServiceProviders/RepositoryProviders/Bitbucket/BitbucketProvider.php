@@ -1,6 +1,6 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\Bitbucket\RepositoryProviders;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -9,6 +9,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 use GuzzleHttp\Client;
 
@@ -32,6 +33,11 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
 
     public function __construct()
     {
+    }
+
+    public function infer($url)
+    {
+        return strpos($url, 'bitbucket.org') !== false;
     }
 
     public function getEnvironment()
@@ -123,6 +129,17 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         );
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function authenticatedUser()
+    {
+        return $this->getBitBucketUser();
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function createRepository($local_site_path, $target, $github_org = '')
     {
         // Username for Bitbucket API is either provider $github_org
@@ -150,7 +167,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     }
 
     /**
-     * Push the repository at the provided working directory back to GitHub.
+     * @inheritdoc
      */
     public function pushRepository($dir, $target_project)
     {
@@ -159,7 +176,8 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
     }
 
-    private function bitbucketAPIClient() {
+    private function bitbucketAPIClient()
+    {
         if (!isset($this->bitbucketClient))
             $this->bitbucketClient = new Client([
                 'base_uri' => 'https://api.bitbucket.org/2.0/',
