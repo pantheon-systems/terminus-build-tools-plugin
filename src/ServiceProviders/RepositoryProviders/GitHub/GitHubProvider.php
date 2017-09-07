@@ -10,9 +10,6 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubRepositoryInfo;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubUserInfo;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 /**
