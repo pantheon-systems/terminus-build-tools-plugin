@@ -177,6 +177,14 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function deleteRepository($project)
+    {
+        // TODO:
+    }
+
     private function bitbucketAPIClient()
     {
         if (!isset($this->bitbucketClient))
