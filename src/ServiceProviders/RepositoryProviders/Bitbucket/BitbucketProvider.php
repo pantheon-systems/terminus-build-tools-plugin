@@ -7,6 +7,7 @@ use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
@@ -174,6 +175,14 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $bitbucket_token = $this->token();
         $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
         $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function deleteRepository($project)
+    {
+        // TODO:
     }
 
     private function bitbucketAPIClient()
