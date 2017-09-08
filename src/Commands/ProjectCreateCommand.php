@@ -41,6 +41,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
 
+    const PASSWORD_ERROR_MESSAGE="Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.";
+
     /**
      * Validate requested site name before prompting for additional information.
      *
@@ -119,7 +121,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             $adminPassword = getenv('ADMIN_PASSWORD');
         }
         if (empty($adminPassword)) {
-            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function ($value) { return $value; });
+            $adminPassword = $this->askAdminPassword();
         }
         $input->setOption('admin-password', $adminPassword);
 
@@ -141,6 +143,22 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     }
 
     /**
+     * Ask the user for a password. Keep asking until they enter something
+     * valid or empty.
+     */
+    protected function askAdminPassword()
+    {
+        while(true) {
+            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function ($value) { return $value; });
+
+            if (empty($adminPassword) || $this->validAdminPassword($adminPassword)) {
+                return $adminPassword;
+            }
+            $this->log()->warning(self::PASSWORD_ERROR_MESSAGE);
+        }
+    }
+
+    /**
      * Ensure that the user has not supplied any parameters with invalid values.
      *
      * @hook validate build:project:create
@@ -150,12 +168,20 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $input = $commandData->input();
         $adminPassword = $input->getOption('admin-password');
 
-        if (strpbrk($adminPassword, '!;$`') !== false) {
-            throw new TerminusException("Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.");
+        if (!$this->validAdminPassword($adminPassword)) {
+            throw new TerminusException(self::PASSWORD_ERROR_MESSAGE);
         }
 
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
+    }
+
+    /**
+     * Return whether or not the provided admin password is usable on Pantheon.
+     */
+    protected function validAdminPassword($adminPassword)
+    {
+       return strpbrk($adminPassword, '!;$`') === false;
     }
 
     /**
