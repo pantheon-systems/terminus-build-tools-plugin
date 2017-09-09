@@ -439,9 +439,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 function ($state) use ($ci_env, $siteDir) {
                     $repositoryAttributes = $ci_env->getState('repository');
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
-
-                    //$github_token = $repositoryAttributes->token();
-                    //$this->pushToGitHub($github_token, $repositoryAttributes->projectId(), $siteDir);
                 })
 
             // Create public and private key pair and add them to any provider
@@ -455,9 +452,15 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // Tell the CI server to start testing our project
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
-                ->environment($ci_env);
+                ->environment($ci_env)
 
-//         $this->log()->notice('Your new site repository is {github}', ['github' => "https://github.com/{$this->target_project}"]);
+            // Give a final status message with the project URL
+            ->addCode(
+                function ($state) use ($ci_env) {
+                    $repositoryAttributes = $ci_env->getState('repository');
+                    $target_project = $repositoryAttributes->projectId();
+                    $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
+                });
 
         // If we return the builder, Robo will run it. This also allows
         // command hooks to alter the task collection prior to execution.

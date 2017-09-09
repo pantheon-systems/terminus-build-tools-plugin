@@ -23,6 +23,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     use ExecWithRedactionTrait;
 
     const SERVICE_NAME = 'bitbucket';
+    const BITBUCKET_URL = 'https://bitbucket.org';
     const BITBUCKET_USER = 'BITBUCKET_USER';
     const BITBUCKET_PASS = 'BITBUCKET_PASS';
     const BITBUCKET_AUTH = 'BITBUCKET_AUTH';
@@ -183,6 +184,14 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     public function deleteRepository($project)
     {
         // TODO:
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function projectURL($target_project)
+    {
+        return self::BITBUCKET_URL . '/' . $target_project;
     }
 
     private function bitbucketAPIClient()
