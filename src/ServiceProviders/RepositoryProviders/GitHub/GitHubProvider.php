@@ -10,9 +10,6 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubRepositoryInfo;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\ObjectModel\GitHubUserInfo;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 
 /**
@@ -24,6 +21,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     use ExecWithRedactionTrait;
 
     const SERVICE_NAME = 'github';
+    const GITHUB_URL = 'https://github.com';
     const GITHUB_TOKEN = 'GITHUB_TOKEN';
 
     protected $repositoryEnvironment;
@@ -148,7 +146,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     }
 
     /**
-     * Push the repository at the provided working directory back to GitHub.
+     * @inheritdoc
      */
     public function pushRepository($dir, $target_project)
     {
@@ -175,6 +173,14 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         $deleteRepoUrl = "repos/$project";
         $this->gitHubAPI($deleteRepoUrl, [], 'DELETE');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function projectURL($target_project)
+    {
+        return self::GITHUB_URL . '/' . $target_project;
     }
 
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
