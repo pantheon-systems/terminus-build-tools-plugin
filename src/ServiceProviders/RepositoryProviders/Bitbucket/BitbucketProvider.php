@@ -1,6 +1,6 @@
 <?php
 
-namespace Pantheon\TerminusBuildTools\ServiceProviders\Bitbucket\RepositoryProviders;
+namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -192,6 +192,14 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     public function projectURL($target_project)
     {
         return self::BITBUCKET_URL . '/' . $target_project;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function gitCommitURL($target_project)
+    {
+        return str_replace('https://', 'git@', $this->projectURL($target_project));
     }
 
     private function bitbucketAPIClient()
