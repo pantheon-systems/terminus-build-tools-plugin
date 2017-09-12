@@ -32,27 +32,21 @@ class CIConfigureCommand extends BuildToolsBase
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
 
     /**
-     * Configure CI Tests for a Pantheon site created from the specified
-     * GitHub repository
+     * Configure CI Tests for a Pantheon site created via build:project:create.
      *
      * @authorize
      *
      * @command build:ci:configure
      * @aliases build-env:ci:configure
      * @param $site_name The pantheon site to test.
-     * @param $target_project The GitHub org/project to build the Pantheon site from.
      */
     public function configureCI(InputInterface $input, OutputInterface $output,
         $site_name,
-        $target_project,
         $options = [
-            'test-site-name' => '',
             'email' => '',
             'admin-password' => '',
             'admin-email' => '',
-            'env' => [],
-            'ci' => 'circle',
-            'git' => 'github'
+            'ci' => 'circle'
         ])
     {
         $site = $this->getSite($site_name);
@@ -61,12 +55,17 @@ class CIConfigureCommand extends BuildToolsBase
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
         $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
-        $this->createProviders($input->getOption('git'), $input->getOption('ci'));
         
-        $desired_url = $this->git_provider->gitCommitURL($target_project);
-        if (!empty($buildMetadata['url']) && ($desired_url != $buildMetadata['url'])) {
-            throw new TerminusException('The site {site} is already configured to test {url}; you cannot use this site to test {desired}.', ['site' => $site_name, 'url' => $buildMetadata['url'], 'desired' => $desired_url]);
+        if (empty($buildMetadata['url'])) {
+            throw new TerminusException('The site {site} does not have the required build metadata. This command can only be used for sites that have been correctly initialized with build:project:create.', ['site' => $site_name]);
         }
+
+        // Create a git repository service provider appropriate to the URL
+        $gitProvider = $this->inferGitProviderFromUrl($buildMetadata['url']);
+        $target_project = $this->projectFromRemoteUrl($buildMetadata['url']);
+
+        // Initialize providers
+        $this->createProviders(get_class($gitProvider), $input->getOption('ci'));
 
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
