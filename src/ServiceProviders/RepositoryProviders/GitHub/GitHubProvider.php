@@ -182,14 +182,6 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         return self::GITHUB_URL . '/' . $target_project;
     }
-
-    /**
-     * @inheritdoc
-     */
-    public function gitCommitURL($target_project)
-    {
-        return str_replace('https://', 'git@', $this->projectURL($target_project));
-    }
  
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
     {

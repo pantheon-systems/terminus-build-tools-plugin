@@ -194,14 +194,6 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         return self::BITBUCKET_URL . '/' . $target_project;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function gitCommitURL($target_project)
-    {
-        return str_replace('https://', 'git@', $this->projectURL($target_project));
-    }
-
     private function bitbucketAPIClient()
     {
         if (!isset($this->bitbucketClient))

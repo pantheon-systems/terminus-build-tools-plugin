@@ -59,12 +59,4 @@ interface GitProvider extends ProviderInterface
      */
     public function projectURL($target_project);
 
-    /**
-     * Git Commit URL to add as a Git remote.
-     *
-     * @param string $target_project Project to generate Git URL for.
-     *
-     * @return string URL to target project.
-     */
-     public function gitCommitURL($target_project);
 }

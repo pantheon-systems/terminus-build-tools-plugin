@@ -65,7 +65,7 @@ class CIConfigureCommand extends BuildToolsBase
         $target_project = $this->projectFromRemoteUrl($buildMetadata['url']);
 
         // Initialize providers
-        $this->createProviders(get_class($gitProvider), $input->getOption('ci'));
+        $this->createProviders(null, $input->getOption('ci'));
 
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
