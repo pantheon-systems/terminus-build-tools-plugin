@@ -61,7 +61,7 @@ class CIConfigureCommand extends BuildToolsBase
         }
 
         // Create a git repository service provider appropriate to the URL
-        $gitProvider = $this->inferGitProviderFromUrl($buildMetadata['url']);
+        $this->inferGitProviderFromUrl($buildMetadata['url']);
         $target_project = $this->projectFromRemoteUrl($buildMetadata['url']);
 
         // Initialize providers
