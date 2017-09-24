@@ -70,7 +70,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
             $credentialManager = new CredentialManager($credential_store);
             $credentialManager->setUserId($this->loggedInUserEmail());
-            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager = new ProviderManager($credentialManager, $this->getConfig());
             $this->provider_manager->setLogger($this->logger);
         }
         return $this->provider_manager;
