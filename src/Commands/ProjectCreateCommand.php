@@ -207,6 +207,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      * CircleCI configuration:
      *   export CIRCLE_TOKEN=circle_personal_api_token
      *
+     * GitLab/GitLabCI configuration:
+     *   export GITLAB_TOKEN=gitlab_personal_access_token
+     *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
