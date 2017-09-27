@@ -40,8 +40,7 @@ class CIConfigureCommand extends BuildToolsBase
      * @aliases build-env:ci:configure
      * @param $site_name The pantheon site to test.
      */
-    public function configureCI(InputInterface $input, OutputInterface $output,
-        $site_name,
+    public function configureCI($site_name,
         $options = [
             'email' => '',
             'admin-password' => '',
@@ -65,7 +64,7 @@ class CIConfigureCommand extends BuildToolsBase
         $target_project = $this->projectFromRemoteUrl($buildMetadata['url']);
 
         // Initialize providers
-        $this->createProviders(null, $input->getOption('ci'));
+        $this->createCIProvider($options['ci']);
 
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
