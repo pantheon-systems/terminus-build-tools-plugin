@@ -182,7 +182,17 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         return self::GITHUB_URL . '/' . $target_project;
     }
- 
+
+    /**
+     * @inheritdoc
+     */
+    public function commentOnCommit($target_project, $commit_hash, $message)
+    {
+        $url = "repos/$target_project/commits/$commit_hash/comments";
+        $data = [ 'body' => $message ];
+        $this->gitHubAPI($url, $data);
+    }
+
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
     {
         $url = "https://api.github.com/$uri";

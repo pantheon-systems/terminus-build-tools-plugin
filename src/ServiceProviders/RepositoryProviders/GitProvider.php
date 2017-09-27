@@ -59,4 +59,13 @@ interface GitProvider extends ProviderInterface
      */
     public function projectURL($target_project);
 
+    /**
+     * Add a comment to a commit.
+     *
+     * @param string $target_project Project to comment on.
+     * @param string $commit_hash SHA hash of the commit to comment on.
+     * @param string $message The content of the comment.
+     */
+    public function commentOnCommit($target_project, $commit_hash, $message);
+
 }

@@ -194,6 +194,19 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         return self::BITBUCKET_URL . '/' . $target_project;
     }
 
+    /**
+     * @inheritdoc
+     */
+    public function commentOnCommit($target_project, $commit_hash, $message)
+    {
+        // We're using the 1.0 API here because this is not yet supported in 2.0
+        $url = "/1.0/repositories/$target_project/changesets/$commit_hash/comments";
+        $data = [ 'content' => $message ];
+        $this->bitbucketAPIClient()->post($url, [
+           'form_params' => $data
+        ]);
+    }
+
     private function bitbucketAPIClient()
     {
         if (!isset($this->bitbucketClient))
