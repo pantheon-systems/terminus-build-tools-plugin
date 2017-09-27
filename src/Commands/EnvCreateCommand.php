@@ -41,6 +41,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option label What to name the environment in commit comments
      * @option clone-content Run terminus env:clone-content if the environment is re-used
      * @option db-only Only clone the database when runing env:clone-content
+     * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
      */
     public function createBuildEnv(
         $site_env_id,
@@ -48,6 +49,7 @@ class EnvCreateCommand extends BuildToolsBase
         $options = [
             'label' => '',
             'clone-content' => false,
+            'notify' => '',
             'db-only' => false
         ])
     {
