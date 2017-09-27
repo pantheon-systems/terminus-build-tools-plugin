@@ -207,6 +207,40 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         ]);
     }
 
+    /**
+     * @inheritdoc
+     */
+    function branchesForPullRequests($target_project, $state)
+    {
+        if (!in_array($state, ['open', 'closed', 'all']))
+            throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
+        
+        switch ($state) {
+            case 'open':
+                $parameters = "?state=OPEN";
+                break;
+            case 'closed':
+                $parameters = "?state=MERGED&state=DECLINED&state=SUPERSEDED";
+                break;
+            case 'all':
+                $parameters = "?state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED";
+                break;
+        }
+
+        $data = $this->bitbucketAPI("repositories/$target_project/pullrequests".$parameters);
+
+        $branchList = array_column(array_map(
+            function ($item) {
+                $pr_number = $item['id'];
+                $branch_name = $item['source']['branch']['name'];
+                return [$pr_number, $branch_name];
+            },
+            $data['values']
+        ), 1, 0);
+
+        return $branchList;
+    }
+
     private function bitbucketAPIClient()
     {
         if (!isset($this->bitbucketClient))
@@ -227,6 +261,8 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
             $guzzleParams['json'] = $data;
         }
 
+        $this->logger->notice('Call Bitbucket API: {method} {uri}', ['method' => $method, 'uri' => $uri]);
+        
         $res = $this->bitbucketAPIClient()->request($method, $uri, $guzzleParams);
         $resultData = json_decode($res->getBody(), true);
         $httpCode = $res->getStatusCode();

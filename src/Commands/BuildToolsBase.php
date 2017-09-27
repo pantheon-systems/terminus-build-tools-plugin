@@ -820,12 +820,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
-    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern, $auth = '')
+    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
         // Get back a pr-number => branch-name list
 
-        $closedBranchList = $this->branchesForPullRequests($project, $auth, 'closed');
+        $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
 
         // Find any that match "pr-NNN", for some NNN in pr-number.
         $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
@@ -838,7 +838,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return $result;
         }
 
-        $openBranchList = $this->branchesForPullRequests($project, $auth, 'open');
+        $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
 
         // Remove any that match "pr-NNN" and have an open pull request
         $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
@@ -846,25 +846,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
 
         return $result;
-    }
-
-    /**
-     * Return an array of PR-Number => branch-name for all open PRs.
-     */
-    function branchesForPullRequests($project, $auth = '', $state = 'closed')
-    {
-        $data = $this->curlGitHub("repos/$project/pulls?state=$state", [], $auth);
-
-        $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['number'];
-                $branch_name = $item['head']['ref'];
-                return [$pr_number, $branch_name];
-            },
-            $data
-        ), 1, 0);
-
-        return $branchList;
     }
 
     protected function createAuthorizationHeaderCurlChannel($url, $auth = '')
@@ -1014,7 +995,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     // file from the repository root of each multidev environment, which would
     // give us the correct branch name for every environment. We could do
     // this without too much trouble via rsync; this might be a little slow, though.
-    protected function preserveEnvsWithGitHubBranches($oldestEnvironments, $multidev_delete_pattern)
+    protected function preserveEnvsWithBranches($oldestEnvironments, $multidev_delete_pattern)
     {
         $remoteBranch = 'origin';
 
