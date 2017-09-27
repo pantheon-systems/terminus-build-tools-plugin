@@ -2,7 +2,7 @@
 /**
  * Terminus Plugin that contain a collection of commands useful during
  * the build step on a [Pantheon](https://www.pantheon.io) site that uses
- * a GitHub PR workflow.
+ * a Git PR workflow.
  *
  * See README.md for usage information.
  */
@@ -421,37 +421,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $local_site_path;
     }
 
-    protected function createGitHub($target, $local_site_path, $github_org, $github_token)
-    {
-        // We need a different URL here if $github_org is an org; if no
-        // org is provided, then we use a simpler URL to create a repository
-        // owned by the currently-authenitcated user.
-        $createRepoUrl = "orgs/$github_org/repos";
-        $target_org = $github_org;
-        if (empty($github_org)) {
-            $createRepoUrl = 'user/repos';
-            $userData = $this->curlGitHub('user', [], $github_token);
-            $target_org = $userData['login'];
-        }
-        $target_project = "$target_org/$target";
-
-        // Create a GitHub repository
-        $this->log()->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $postData = ['name' => $target];
-        $result = $this->curlGitHub($createRepoUrl, $postData, $github_token);
-
-        // Create a git repository. Add an origin just to have the data there
-        // when collecting the build metadata later. We use the 'pantheon'
-        // remote when pushing.
-        // TODO: Do we need to remove $local_site_path/.git? (-n in create-project should obviate this need) We preserve this here because it may be user-provided via --preserve-local-repository
-        if (!is_dir("$local_site_path/.git")) {
-            $this->passthru("git -C $local_site_path init");
-        }
-        $this->passthru("git -C $local_site_path remote add origin 'git@github.com:{$target_project}.git'");
-
-        return $target_project;
-    }
-
     /**
      * Given a source, such as:
      *    pantheon-systems/example-drops-8-composer:dev-lightning-fist-2
@@ -477,15 +446,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function resetToCommit($repositoryDir, $resetToCommit = 'HEAD^')
     {
         $this->passthru("git -C $repositoryDir reset --hard $resetToCommit");
-    }
-
-    /**
-     * Make the initial commit to our new GitHub project.
-     */
-    protected function pushToGitHub($github_token, $target_project, $repositoryDir)
-    {
-        $remote_url = "https://$github_token:x-oauth-basic@github.com/${target_project}.git";
-        $this->passthruRedacted("git -C $repositoryDir push --progress $remote_url master", $github_token);
     }
 
     // TODO: if we could look up the commandfile for
@@ -626,7 +586,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Export configuration", $options);
 
         // Commit the changes. Quicksilver is not set up to push these back
-        // to GitHub from the dev branch, but we don't want to leave these changes
+        // to the Git provider from the dev branch, but we don't want to leave these changes
         // uncommitted.
         $env->commitChanges('Install site and export configuration.');
 
@@ -846,136 +806,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
 
         return $result;
-    }
-
-    protected function createAuthorizationHeaderCurlChannel($url, $auth = '')
-    {
-        $headers = [
-            'Content-Type: application/json',
-            'User-Agent: pantheon/terminus-build-tools-plugin'
-        ];
-
-        if (!empty($auth)) {
-            $headers[] = "Authorization: token $auth";
-        }
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        return $ch;
-    }
-
-    protected function setCurlChannelPostData($ch, $postData, $force = false)
-    {
-        if (!empty($postData) || $force) {
-            $payload = json_encode($postData);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        }
-    }
-
-    public function execCurlRequest($ch, $service = 'API request')
-    {
-        $result = curl_exec($ch);
-        if(curl_errno($ch))
-        {
-            throw new TerminusException(curl_error($ch));
-        }
-        $data = json_decode($result, true);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $errors = [];
-        if (isset($data['errors'])) {
-            foreach ($data['errors'] as $error) {
-                $errors[] = $error['message'];
-            }
-        }
-        if ($httpCode && ($httpCode >= 300)) {
-            $errors[] = "Http status code: $httpCode";
-        }
-
-        $message = isset($data['message']) ? "{$data['message']}." : '';
-
-        if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
-        }
-
-        return $data;
-    }
-
-    protected function createGitHubCurlChannel($uri, $auth = '')
-    {
-        $url = "https://api.github.com/$uri";
-        return $this->createAuthorizationHeaderCurlChannel($url, $auth);
-    }
-
-    protected function createGitHubPostChannel($uri, $postData = [], $auth = '')
-    {
-        $ch = $this->createGitHubCurlChannel($uri, $auth);
-        $this->setCurlChannelPostData($ch, $postData);
-
-        return $ch;
-    }
-
-    protected function createGitHubDeleteChannel($uri, $auth = '')
-    {
-        $ch = $this->createGitHubCurlChannel($uri, $auth);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-
-        return $ch;
-    }
-
-    // This function is using guzzle rather than curl now, so the name is not super-accurate. :)
-    protected function curlGitHub($uri, $data = [], $auth = '')
-    {
-        $this->logger->notice('Call GitHub API: {uri}', ['uri' => $uri]);
-
-        $url = "https://api.github.com/$uri";
-
-        $headers = [
-            'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
-        ];
-
-        if (!empty($auth)) {
-            $headers['Authorization'] = "token $auth";
-        }
-
-        $method = 'GET';
-        $guzzleParams = [
-            'headers' => $headers,
-        ];
-        if (!empty($data)) {
-            $method = 'POST';
-            $guzzleParams['json'] = $data;
-        }
-
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request($method, $url, $guzzleParams);
-        $resultData = json_decode($res->getBody(), true);
-        $httpCode = $res->getStatusCode();
-
-        $errors = [];
-        if (isset($resultData['errors'])) {
-            foreach ($resultData['errors'] as $error) {
-                $errors[] = $error['message'];
-            }
-        }
-        if ($httpCode && ($httpCode >= 300)) {
-            $errors[] = "Http status code: $httpCode";
-        }
-
-        $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
-
-        if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
-        }
-
-        return $resultData;
     }
 
     // TODO: At the moment, this takes multidev environment names,
