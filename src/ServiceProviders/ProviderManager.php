@@ -40,7 +40,7 @@ class ProviderManager implements LoggerAwareInterface
         foreach ($available_providers as $provider) {
             $providerClass = new \ReflectionClass($provider);
             if ($providerClass->implementsInterface($expectedInterface)) {
-                $providerInstance = new $provider();
+                $providerInstance = new $provider($this->config);
                 if ($providerInstance->infer($url)) {
                     $this->initializeProvider($providerInstance);
                     return $providerInstance;
