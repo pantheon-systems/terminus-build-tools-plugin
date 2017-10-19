@@ -67,4 +67,5 @@ interface GitProvider extends ProviderInterface
      * @param string $message The content of the comment.
      */
     public function commentOnCommit($target_project, $commit_hash, $message);
+
 }

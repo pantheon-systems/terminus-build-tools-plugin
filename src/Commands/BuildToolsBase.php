@@ -76,10 +76,24 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $this->provider_manager;
     }
 
-    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    protected function createGitProvider($git_provider_class_or_alias)
+    {
+        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+    }
+
+    protected function createCIProvider($ci_provider_class_or_alias)
     {
         $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
-        $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
+    }
+
+    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    {
+        if (isset($ci_provider_class_or_alias)) {
+            $this->createCIProvider($ci_provider_class_or_alias);
+        }
+        if (isset($git_provider_class_or_alias)) {
+            $this->createGitProvider($git_provider_class_or_alias);
+        }
     }
 
     protected function getUrlFromBuildMetadata($site_name_and_env)
