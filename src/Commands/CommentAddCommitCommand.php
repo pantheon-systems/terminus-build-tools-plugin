@@ -12,7 +12,7 @@ namespace Pantheon\TerminusBuildTools\Commands;
 /**
  * Commit Comment Command
  */
-class CommitCommentCommand extends BuildToolsBase
+class CommentAddCommitCommand extends BuildToolsBase
 {
 
     /**
@@ -20,9 +20,9 @@ class CommitCommentCommand extends BuildToolsBase
      *
      * @authorize
      *
-     * @command build:commit:comment
+     * @command build:comment:add:commit
      */
-    public function commitComment(
+    public function commentAddCommit(
         $options = [
             'message' => '',
             'site_url' => ''
