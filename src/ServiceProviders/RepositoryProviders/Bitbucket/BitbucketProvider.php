@@ -212,22 +212,16 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
      */
     function branchesForPullRequests($target_project, $state)
     {
-        if (!in_array($state, ['open', 'closed', 'all']))
+        $stateParameters = [
+            'open' => ['OPEN'],
+            'closed' => ['MERGED', 'DECLINED', 'SUPERSEDED'],
+            'all' => ['MERGED', 'DECLINED', 'SUPERSEDED', 'OPEN']
+        ];
+        if (!isset($stateParameters[$state]))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
         
-        switch ($state) {
-            case 'open':
-                $parameters = "?state=OPEN";
-                break;
-            case 'closed':
-                $parameters = "?state=MERGED&state=DECLINED&state=SUPERSEDED";
-                break;
-            case 'all':
-                $parameters = "?state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED";
-                break;
-        }
-
-        $data = $this->bitbucketAPI("repositories/$target_project/pullrequests".$parameters);
+        $data = $this->bitbucketAPI("repositories/$target_project/pullrequests?state="
+            .implode('&state=', $stateParameters[$state]));
 
         $branchList = array_column(array_map(
             function ($item) {
