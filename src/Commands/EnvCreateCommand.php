@@ -41,7 +41,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option label What to name the environment in commit comments
      * @option clone-content Run terminus env:clone-content if the environment is re-used
      * @option db-only Only clone the database when runing env:clone-content
-     * @option notify Command to exec to notify when a build environment is created
+     * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
      */
     public function createBuildEnv(
         $site_env_id,
@@ -49,8 +49,8 @@ class EnvCreateCommand extends BuildToolsBase
         $options = [
             'label' => '',
             'clone-content' => false,
-            'db-only' => false,
             'notify' => '',
+            'db-only' => false
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -59,6 +59,8 @@ class EnvCreateCommand extends BuildToolsBase
         if (!empty($options['label'])) {
             $env_label = $options['label'];
         }
+
+        $doNotify = false;
 
         // Fetch the site id also
         $siteInfo = $site->serialize();
@@ -80,6 +82,7 @@ class EnvCreateCommand extends BuildToolsBase
             // To allow pantheon.yml to be processed, we will
             // create the multidev environment, and then push the code.
             $this->create($site_env_id, $multidev);
+            $doNotify = true;
         }
 
         $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
@@ -90,6 +93,7 @@ class EnvCreateCommand extends BuildToolsBase
             // then there is never a race condition -- the new env is
             // created with the correct files from the specified branch.
             $this->create($site_env_id, $multidev);
+            $doNotify = true;
         }
 
         // Clear the environments, so that they will be re-fetched.
@@ -122,8 +126,10 @@ class EnvCreateCommand extends BuildToolsBase
         // Set the target environment to sftp mode
         $this->connectionSet($target, 'sftp');
 
-        // If '--notify' was passed, then exec the notify command
-        if (!empty($options['notify'])) {
+        // TODO: Push to repo provider
+
+        // Run notification command
+        if ($doNotify == true) {
             $site_name = $site->getName();
             $project = $this->projectFromRemoteUrl($metadata['url']);
             $metadata += [
@@ -136,8 +142,8 @@ class EnvCreateCommand extends BuildToolsBase
                 'site-url' => "https://{$multidev}-{$site_name}.pantheonsite.io/",
             ];
 
-            $command = $this->interpolate($options['notify'], $metadata);
-
+            $command = $this->interpolate('terminus build:comment:add:commit --message [[label]] --site_url "[[site-url]]"', $metadata);
+            
             // Run notification command. Ignore errors.
             passthru($command);
         }

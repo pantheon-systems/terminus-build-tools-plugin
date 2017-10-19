@@ -25,7 +25,7 @@ class Setup extends Base
         $siteAttributes = $this->ci_env->getState('site');
         $site_name = $siteAttributes->siteName();
 
-        $readme = file_get_contents("{$this->dir}/README.md");
+        $readme = isset($this->dir) ? file_get_contents("{$this->dir}/README.md") : '';
 
         $circleBadge = $this->provider->badge($this->ci_env);
 
@@ -46,7 +46,9 @@ class Setup extends Base
             $ci_page = $this->provider->projectUrl($this->ci_env);
             $readme .= "\n\n## IMPORTANT NOTE\n\nAt the time of creation, the Pantheon site being used for testing did not have multidev capability. The test suites were therefore configured to run all tests against the dev environment. If the test site is later given multidev capabilities, you must [visit the environment variable configuration page]($ci_page) and delete the environment variable `TERMINUS_ENV`. If you do this, then the test suite will create a new multidev environment for every pull request that is tested.";
         }
-        file_put_contents("{$this->dir}/README.md", $readme);
+        if (isset($this->dir)) {
+            file_put_contents("{$this->dir}/README.md", $readme);
+        }
 
         $this->provider->configureServer($this->ci_env);
 
