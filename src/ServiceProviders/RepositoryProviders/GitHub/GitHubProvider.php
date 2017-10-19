@@ -4,7 +4,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHu
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-
+use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
@@ -192,6 +192,27 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $data = [ 'body' => $message ];
         $this->gitHubAPI($url, $data);
     }
+
+    /**
+     * @inheritdoc
+     */
+     function branchesForPullRequests($target_project, $state)
+     {
+        if (!in_array($state, ['open', 'closed', 'all']))
+            throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
+
+        $data = $this->gitHubAPI("repos/$target_project/pulls?state=$state");
+        $branchList = array_column(array_map(
+            function ($item) {
+                $pr_number = $item['number'];
+                $branch_name = $item['head']['ref'];
+                return [$pr_number, $branch_name];
+            },
+            $data
+        ), 1, 0);
+ 
+        return $branchList;
+     }
 
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
     {
