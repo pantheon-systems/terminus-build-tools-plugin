@@ -144,7 +144,7 @@ class EnvCreateCommand extends BuildToolsBase
                 'message' => "Created multidev environment [{$multidev}]({$dashboard_url}) for {$site_name}."
             ];
 
-            $command = $this->interpolate('terminus build:comment:add:commit --sha [[sha]] --message [[label]] --site_url "[[site-url]]"', $metadata);
+            $command = $this->interpolate('terminus build:comment:add:commit --sha [[sha]] --message [[message]] --site_url [[site-url]]', $metadata);
 
             // Run notification command. Ignore errors.
             passthru($command);
