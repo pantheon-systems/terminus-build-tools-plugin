@@ -48,6 +48,12 @@ class Setup extends Base
         }
         if (isset($this->dir)) {
             file_put_contents("{$this->dir}/README.md", $readme);
+
+            passthru("git -C {$this->dir} add README.md");
+            exec("git -C {$this->dir} status --porcelain", $outputLines, $status);
+            if (!empty($outputLines)) {
+                passthru("git -C {$this->dir} commit -m 'Update CI badge in README'");
+            }
         }
 
         $this->provider->configureServer($this->ci_env);

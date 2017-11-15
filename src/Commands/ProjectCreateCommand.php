@@ -236,6 +236,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'stability' => '',
             'env' => [],
             'preserve-local-repository' => false,
+            'keep' => false,
             'ci' => 'circle',
             'git' => 'github',
         ])
@@ -384,6 +385,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
+            // Note taht this also modifies the README and commits it to the repository.
             ->taskCISetup()
                 ->provider($this->ci_provider)
                 ->environment($ci_env)
@@ -391,6 +393,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 ->dir($siteDir)
 
             // Push code to newly-created project.
+            // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($site_name, $siteDir) {
@@ -404,7 +407,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $this->resetToCommit($siteDir, $initial_commit);
                 })
 
-            // Install our site and export configuration
+            // Install our site and export configuration.
+            // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($ci_env, $site_name, $siteDir) {
@@ -452,15 +456,29 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // Tell the CI server to start testing our project
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
-                ->environment($ci_env)
+                ->environment($ci_env);
 
-            // Give a final status message with the project URL
-            ->addCode(
-                function ($state) use ($ci_env) {
-                    $repositoryAttributes = $ci_env->getState('repository');
-                    $target_project = $repositoryAttributes->projectId();
-                    $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
-                });
+
+        // If the user specified --keep, then clone a local copy of the project
+        if ($options['keep']) {
+            $builder
+                ->addCode(
+                    function ($state) use ($siteDir) {
+                        $keepDir = basename($siteDir);
+                        $fs = new Filesystem();
+                        $fs->mirror($siteDir, $keepDir);
+                        $this->log()->notice('Keeping a local copy of new project at {dir}', ['dir' => $keepDir]);
+                    }
+                );
+        }
+
+        // Give a final status message with the project URL
+        $builder->addCode(
+            function ($state) use ($ci_env) {
+                $repositoryAttributes = $ci_env->getState('repository');
+                $target_project = $repositoryAttributes->projectId();
+                $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
+            });
 
         // If we return the builder, Robo will run it. This also allows
         // command hooks to alter the task collection prior to execution.
