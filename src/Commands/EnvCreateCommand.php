@@ -132,18 +132,20 @@ class EnvCreateCommand extends BuildToolsBase
         if ($doNotify == true) {
             $site_name = $site->getName();
             $project = $this->projectFromRemoteUrl($metadata['url']);
+            $dashboard_url = "https://dashboard.pantheon.io/sites/{$site_id}#{$multidev}";
             $metadata += [
                 'project' => $project,
                 'site-id' => $site_id,
                 'site' => $site_name,
                 'env' => $multidev,
                 'label' => $env_label,
-                'dashboard-url' => "https://dashboard.pantheon.io/sites/{$site_id}#{$multidev}",
+                'dashboard-url' => $dashboard_url,
                 'site-url' => "https://{$multidev}-{$site_name}.pantheonsite.io/",
+                'message' => "Created multidev environment [{$multidev}]({$dashboard_url}) for {$site_name}."
             ];
 
-            $command = $this->interpolate('terminus build:comment:add:commit --message [[label]] --site_url "[[site-url]]"', $metadata);
-            
+            $command = $this->interpolate('terminus build:comment:add:commit --message [[message]] --site_url [[site-url]]', $metadata);
+
             // Run notification command. Ignore errors.
             passthru($command);
         }
