@@ -20,7 +20,7 @@ See below for the list of supported commands. This plugin is only available for 
 
 ## Setup
 
-In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up. Most of the work can be done for you automatically using the New Project Quickstart below, or you may set everything up manually.
+In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up. Most of the work can be done for you automatically using the New Project Quickstart below, or you may set everything up manually. You may need to install this Terminus plugin first by going to the [Installation Section](#installation) of this document.
 
 ### Credentials
 
@@ -47,6 +47,7 @@ To create a new project consisting of a GitHub project, a Pantheon site, and Cir
 ```
 terminus build:project:create --team="Agency Org Name" d8 example-site
 ```
+Note: After running this command and you are getting an error "There are no commands defined in the "build:project" namespace." You may need to install this Terminus plugin first. See the [Installation Section](#installation) of this document.
 
 This single command will:
 
