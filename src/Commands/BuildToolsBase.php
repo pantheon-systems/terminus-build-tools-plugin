@@ -806,10 +806,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
         $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
 
-        // If there are no closed pull requests, then there is no need
-        // to look for open pull requests
+        // If there are no open pull requests, then no envs need to be 
+        // preserved.
         if (empty($result)) {
-            return $result;
+            return $oldestEnvironments;
         }
 
         $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');

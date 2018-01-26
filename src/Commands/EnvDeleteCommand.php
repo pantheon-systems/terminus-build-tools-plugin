@@ -167,6 +167,10 @@ class EnvDeleteCommand extends BuildToolsBase
         elseif (!empty($options['preserve-if-branch'])) {
             $environmentsWithoutPRs = $this->preserveEnvsWithBranches($oldestEnvironments, $multidev_delete_pattern);
         }
+        else {
+          $environmentsWithoutPRs = $oldestEnvironments;
+        }
+
         $environmentsToKeep = array_diff($oldestEnvironments, $environmentsWithoutPRs);
         $oldestEnvironments = $environmentsWithoutPRs;
 
