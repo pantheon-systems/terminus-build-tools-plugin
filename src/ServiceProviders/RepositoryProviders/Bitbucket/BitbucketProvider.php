@@ -125,9 +125,9 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->setBitBucketUser($credentials_provider->fetch(self::BITBUCKET_USER));
         $this->setBitBucketPassword($credentials_provider->fetch(self::BITBUCKET_PASS));
         $this->setToken(
-            $this->getBitBucketUser()
+            urlencode($this->getBitBucketUser())
             .':'.
-            $this->getBitBucketPassword()
+            urlencode($this->getBitBucketPassword())
         );
     }
 
