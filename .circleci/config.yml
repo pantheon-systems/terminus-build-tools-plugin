@@ -58,9 +58,8 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with BitBucket (unfinished)
-                command: echo "Disabling this test until it is passing."
-                # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
+                name: Test D8 with BitBucket
+                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" bitbucket
             - run:
                 name: D8 with Bitbucket Build Failed
                 when: on_fail
