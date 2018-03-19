@@ -168,6 +168,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $serviceMap = [
             'github' => 'gh',
+            'bitbucket' => 'bb',
         ];
 
         if (isset($serviceMap[$serviceName])) {
