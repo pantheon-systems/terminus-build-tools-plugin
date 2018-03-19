@@ -144,6 +144,9 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
      */
     public function createRepository($local_site_path, $target, $org = '')
     {
+        // repository id must be lower case.
+        $target = strtolower($target);
+
         // Username for Bitbucket API is either provider $org
         // or username
         if (empty($org)) {
