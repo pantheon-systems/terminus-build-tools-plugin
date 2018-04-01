@@ -36,7 +36,13 @@ then
     BUILD_TOOLS_VERSION="${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
 # Otherwise use the current branch
 else
-    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
+    # If on root repo use the current branch
+    if [[ $CIRCLE_PROJECT_USERNAME == "pantheon-systems" ]]; then
+        BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
+    # Otherwise use the dev tip from the pantheon-systems repo
+    else
+        BUILD_TOOLS_VERSION="dev-master"
+    fi
 fi
 
 if [ "$GIT_PROVIDER" == "github" ]; then
