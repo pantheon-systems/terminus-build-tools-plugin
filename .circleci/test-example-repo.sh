@@ -40,11 +40,11 @@ else
 fi
 
 if [ "$GIT_PROVIDER" == "github" ]; then
-    TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
+    TARGET_REPO=$GITHUB_USER/$TERMINUS_SITE
     CLONE_URL="https://github.com/${TARGET_REPO}.git"
 else
     if [ "$GIT_PROVIDER" == "bitbucket" ]; then
-        TARGET_REPO=$BITBUCKET_USERNAME/$TERMINUS_SITE
+        TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
         # Bitbucket repo is private, thus HTTP basic auth is integrated into clone URL
         CLONE_URL="https://$BITBUCKET_USER:$BITBUCKET_PASS@bitbucket.org/${TARGET_REPO}.git"
     else
