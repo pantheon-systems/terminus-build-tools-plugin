@@ -36,15 +36,21 @@ then
     BUILD_TOOLS_VERSION="${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
 # Otherwise use the current branch
 else
-    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
+    # If on root repo use the current branch
+    if [[ $CIRCLE_PROJECT_USERNAME == "pantheon-systems" ]]; then
+        BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
+    # Otherwise use the dev tip from the pantheon-systems repo
+    else
+        BUILD_TOOLS_VERSION="dev-master"
+    fi
 fi
 
 if [ "$GIT_PROVIDER" == "github" ]; then
-    TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
+    TARGET_REPO=$GITHUB_USER/$TERMINUS_SITE
     CLONE_URL="https://github.com/${TARGET_REPO}.git"
 else
     if [ "$GIT_PROVIDER" == "bitbucket" ]; then
-        TARGET_REPO=$BITBUCKET_USERNAME/$TERMINUS_SITE
+        TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
         # Bitbucket repo is private, thus HTTP basic auth is integrated into clone URL
         CLONE_URL="https://$BITBUCKET_USER:$BITBUCKET_PASS@bitbucket.org/${TARGET_REPO}.git"
     else
