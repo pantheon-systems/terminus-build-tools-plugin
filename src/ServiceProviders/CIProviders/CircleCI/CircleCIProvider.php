@@ -152,10 +152,16 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 
+        $headers = [
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+        ];
+
         $client = new \GuzzleHttp\Client();
         $res = $client->request('POST', $url, [
+            'headers' => $headers,
             'auth' => [$this->circle_token, ''],
-            'form_params' => $data,
+            'json' => $data,
         ]);
         return $res->getStatusCode();
     }
