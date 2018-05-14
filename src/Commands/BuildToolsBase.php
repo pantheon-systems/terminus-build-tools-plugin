@@ -794,30 +794,26 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
+    /**
+     * Given an array of environments, return an array of those environments
+     * without any open pull requests
+     *
+     * @param string $remoteUrl
+     * @param array $oldestEnvironments
+     * @param string $multidev_delete_pattern
+     *
+     * @return array environmentsWithoutPRs
+     */
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
         // Get back a pr-number => branch-name list
-
-        $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
-
-        // Find any that match "pr-NNN", for some NNN in pr-number.
-        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
-        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
-        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
-
-        // If there are no closed pull requests, then there is no need
-        // to look for open pull requests
-        if (empty($result)) {
-            return $result;
-        }
-
         $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
 
         // Remove any that match "pr-NNN" and have an open pull request
-        $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
+        $result = $this->filterBranches($oldestEnvironments, array_keys($openBranchList), $multidev_delete_pattern);
         // Remove any that match "pr-BRANCH", and have an open pull request
-        $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
+        $result = $this->filterBranches($oldestEnvironments, array_values($openBranchList), $multidev_delete_pattern);
 
         return $result;
     }
