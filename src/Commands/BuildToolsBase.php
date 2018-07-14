@@ -806,8 +806,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function apiUriFromRemoteUrl($url)
     {
-        $org_user = orgUserFromRemoteUrl($url);
-        $repository = repositoryFromRemoteUrl($url);
+        $org_user = $this->orgUserFromRemoteUrl($url);
+        $repository = $this->repositoryFromRemoteUrl($url);
 
         return "$org_user/$repository";
     }
