@@ -217,7 +217,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
     {
-        $url = "$GITHUB_API_URL/$uri";
+        $url = self::GITHUB_API_URL . '/' . $uri;
 
         $headers = [
             'Content-Type' => 'application/json',
