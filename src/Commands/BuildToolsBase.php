@@ -815,9 +815,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
+        $api_uri = $this->apiUriFromRemoteUrl($remoteUrl);
         // Get back a pr-number => branch-name list
 
-        $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
+        $closedBranchList = $this->git_provider->branchesForPullRequests($api_uri, 'closed');
 
         // Find any that match "pr-NNN", for some NNN in pr-number.
         $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
@@ -830,7 +831,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return $result;
         }
 
-        $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
+        $openBranchList = $this->git_provider->branchesForPullRequests($api_uri, 'open');
 
         // Remove any that match "pr-NNN" and have an open pull request
         $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
