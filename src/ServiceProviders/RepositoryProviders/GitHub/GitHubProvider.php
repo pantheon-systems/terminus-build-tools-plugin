@@ -22,6 +22,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     const SERVICE_NAME = 'github';
     const GITHUB_URL = 'https://github.com';
+    const GITHUB_API_URL = 'https://api.github.com';
     const GITHUB_TOKEN = 'GITHUB_TOKEN';
 
     protected $repositoryEnvironment;
@@ -210,13 +211,13 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             },
             $data
         ), 1, 0);
- 
+
         return $branchList;
      }
 
     protected function gitHubAPI($uri, $data = [], $method = 'GET')
     {
-        $url = "https://api.github.com/$uri";
+        $url = "$GITHUB_API_URL/$uri";
 
         $headers = [
             'Content-Type' => 'application/json',
