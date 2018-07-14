@@ -814,7 +814,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
-        $project = $this->projectFromRemoteUrl($remoteUrl);
         $api_uri = $this->apiUriFromRemoteUrl($remoteUrl);
         // Get back a pr-number => branch-name list
 
