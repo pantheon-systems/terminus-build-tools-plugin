@@ -142,15 +142,17 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $github_org = '')
+    public function createRepository($local_site_path, $target, $org = '')
     {
-        // Username for Bitbucket API is either provider $github_org
+        // repository id must be lower case.
+        $target = strtolower($target);
+
+        // Username for Bitbucket API is either provider $org
         // or username
-        $target_org = $github_org;
-        if (empty($github_org)) {
-            $target_org = $this->getBitBucketUser();
+        if (empty($org)) {
+            $org = $this->getBitBucketUser();
         }
-        $target_project = "$target_org/$target";
+        $target_project = "$org/$target";
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
@@ -240,7 +242,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         if (!isset($this->bitbucketClient))
             $this->bitbucketClient = new Client([
                 'base_uri' => 'https://api.bitbucket.org/2.0/',
-                'auth' => [ $this->getBitBucketUser(), $this->getBitBucketPassword() ],
+                'auth' => $this->hasToken() ? $this->token() : [$this->getBitBucketUser(), $this->getBitBucketPassword()],
                 'headers' => [
                     'User-Agent' => 'pantheon/terminus-build-tools-plugin'
                 ]

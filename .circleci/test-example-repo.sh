@@ -51,8 +51,7 @@ if [ "$GIT_PROVIDER" == "github" ]; then
 else
     if [ "$GIT_PROVIDER" == "bitbucket" ]; then
         TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
-        # Bitbucket repo is private, thus HTTP basic auth is integrated into clone URL
-        CLONE_URL="https://$BITBUCKET_USER:$BITBUCKET_PASS@bitbucket.org/${TARGET_REPO}.git"
+        CLONE_URL="https://bitbucket.org/${TARGET_REPO}.git"
     else
         echo "Unsupported GIT_PROVIDER. Valid values are: github, bitbucket"
         exit 1
