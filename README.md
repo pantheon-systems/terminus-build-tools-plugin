@@ -27,6 +27,7 @@ In order to use this plugin, you will need to set up a GitHub repository and a C
 In order to use the build:project:create command, the first thing that you need to do is set up credentials to access GitHub and Circle CI. Instructions on creating these credentials can be found on the pages listed below:
 
 - GitHub: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
+- Bitbucket: https://confluence.atlassian.com/bitbucket/app-passwords-828781300.html
 - Circle CI: https://circleci.com/account/api
 
 The GitHub token needs the "repo" and "delete repo" scopes.
@@ -36,6 +37,8 @@ These credentials may be exported as environment variables. For example:
 #!/bin/bash
 export GITHUB_TOKEN=[REDACTED]
 export CIRCLE_TOKEN=[REDACTED]
+export BITBUCKET_USER=[REDACTED]
+export BITBUCKET_PASS=[REDACTED]
 ```
 If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command. Credentials that you enter will be cached in the ~/.terminus/cache folder; `terminus self:cc` will erase cached credentials.
 
