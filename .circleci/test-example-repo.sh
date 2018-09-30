@@ -51,7 +51,7 @@ if [ "$GIT_PROVIDER" == "github" ]; then
 else
     if [ "$GIT_PROVIDER" == "bitbucket" ]; then
         TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
-        CLONE_URL="https://bitbucket.org/${TARGET_REPO}.git"
+        CLONE_URL="https://$BITBUCKET_USER@bitbucket.org/${TARGET_REPO}.git"
     else
         echo "Unsupported GIT_PROVIDER. Valid values are: github, bitbucket"
         exit 1
@@ -62,7 +62,9 @@ terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --g
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 # Confirm that the Github project was created
+echo $CLONE_URL
 git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
+git clone https://philltran@bitbucket.org/philltran/build-tools-139.git
 # Confirm that Circle was configured for testing, and that the first test passed.
 
 (
