@@ -4,6 +4,28 @@ defaults: &defaults
     - image: quay.io/philltran/docker-build-tools-ci
   working_directory: ~/terminus_build_tools_plugin
   environment:
+
+    #=========================================================================
+    # In addition to the environment variables defined in this file, also
+    # add the following variables in the Circle CI UI.
+    #
+    # See: https://circleci.com/docs/2.0/env-vars/
+    #
+    # TERMINUS_SITE:  Name of the Pantheon site to run tests on, e.g. my_site
+    # TERMINUS_TOKEN: The Pantheon machine token
+    # TERMINUS_ORG:   Name of Pantheon Agency / Team
+    # CIRCLE_TOKEN:   Circle CI Token
+    # GITHUB_TOKEN:   The GitHub personal access token
+    # GITHUB_USER:    The GitHub username
+    # GIT_EMAIL:      The email address to use when making commits
+    # BITBUCKET_USER: The Bitbucket Username
+    # BITBUCKET_PASS: The Bitbucket app specific password
+    #
+    # TEST_SITE_NAME: The name of the test site to provide when installing.
+    # ADMIN_PASSWORD: The admin password to use when installing.
+    # ADMIN_EMAIL:    The email address to give the admin when installing.
+    #=========================================================================
+
     BASH_ENV: ~/.bashrc
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
     TERM: dumb
