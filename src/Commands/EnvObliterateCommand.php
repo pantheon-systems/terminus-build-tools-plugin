@@ -65,7 +65,7 @@ class EnvObliterateCommand extends BuildToolsBase
 
         // Delete the remote git repository.
         $gitProvider->deleteRepository($project);
-        $this->log()->notice('Deleted {project} from GitHub', ['project' => $project,]);
+        $this->log()->notice('Deleted {project} from ' . $GIT_PROVIDER, ['project' => $project,]);
 
         // Use the Terminus API to delete the Pantheon site.
         $site->delete();
