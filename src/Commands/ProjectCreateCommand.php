@@ -385,7 +385,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
-            // Note taht this also modifies the README and commits it to the repository.
+            // Note that this also modifies the README and commits it to the repository.
             ->taskCISetup()
                 ->provider($this->ci_provider)
                 ->environment($ci_env)
