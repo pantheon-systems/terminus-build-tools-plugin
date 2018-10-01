@@ -61,10 +61,8 @@ fi
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=$GIT_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
-# Confirm that the Github project was created
-echo $CLONE_URL
+# Confirm that the Github or Bitbucket project was created
 git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
-git clone https://philltran@bitbucket.org/philltran/build-tools-139.git
 # Confirm that Circle was configured for testing, and that the first test passed.
 
 (
