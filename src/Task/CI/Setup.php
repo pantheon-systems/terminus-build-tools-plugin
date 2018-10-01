@@ -29,7 +29,7 @@ class Setup extends Base
 
         $circleBadge = $this->provider->badge($this->ci_env);
 
-        // Replace the 'ci | none' badge with the Circle bagde. If
+        // Replace the 'ci | none' badge with the Circle badge. If
         // there is no badge placeholder, then put the Circle badge
         // near the front of the README, ideally after the '# Project Title'.
         if (preg_match('#!\[CI none\]\([^)]*\)#', $readme)) {
