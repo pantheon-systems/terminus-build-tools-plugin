@@ -88,6 +88,13 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             $site_name = $target;
         }
 
+        // We should always be authenticated by the time we get here, but
+        // we will test just to be sure.
+        $terminus_token = $this->recoverSessionMachineToken();
+        if (empty($terminus_token)) {
+        throw new TerminusException("Please generate a Pantheon machine token, as described in https://pantheon.io/docs/machine-tokens/. Then log in via: \n\nterminus auth:login --machine-token=my_machine_token_value");
+        }
+
         // Before we begin, check to see if the requested site name is
         // available on Pantheon, and fail if it is not.
         $site_name = strtr(strtolower($site_name), '_ ', '--');
