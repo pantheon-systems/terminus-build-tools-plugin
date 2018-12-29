@@ -708,7 +708,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $privateKey = "$tmpkeydir/$prefix";
         $publicKey = "$privateKey.pub";
 
-        $this->passthru("ssh-keygen -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
+        $this->passthru("ssh-keygen -m PEM -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
 
         return [$publicKey, $privateKey];
     }
