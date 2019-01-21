@@ -791,7 +791,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function projectFromRemoteUrl($url)
     {
-        return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
+        return preg_replace('#[^:/]*[:/]([^/:]*/.*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
