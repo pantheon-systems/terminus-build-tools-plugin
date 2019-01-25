@@ -201,7 +201,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
 
-        $data = $this->gitHubAPI("repos/$target_project/pulls?state=$state");
+        $data = $this->gitHubAPI("repos/$target_project/pulls?state=$state", [], 'GET', TRUE);
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['number'];
@@ -210,11 +210,11 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             },
             $data
         ), 1, 0);
- 
+
         return $branchList;
      }
 
-    protected function gitHubAPI($uri, $data = [], $method = 'GET')
+    protected function gitHubAPI($uri, $data = [], $method = 'GET', $follow_next_link = FALSE)
     {
         $url = "https://api.github.com/$uri";
 
@@ -255,10 +255,104 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
 
         if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
+            throw new TerminusException('error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
         }
 
+        // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
+        // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
+        $headers = $res->getHeaders();
+        // Check if the array is numeric. Otherwise we can't consider this a collection. Ideally GitHub would tell us
+        // that the response is a collection but we'll need to guess from the response format.
+        if ($follow_next_link && $this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
+            $pager_info = $this->getPagerInfo($headers['Link']);
+            if (!$this->isLastPage($uri, $pager_info)) {
+                $next_page_uri = $this->getNextPageUri($pager_info);
+                var_dump($next_page_uri);
+                // Request the next page and append the data.
+                $resultData = array_merge_recursive(
+                    $resultData,
+                    $this->gitHubAPI($next_page_uri, $data, $method, TRUE)
+                );
+            }
+        }
         return $resultData;
+    }
+
+    protected function isSequentialArray($input)
+    {
+        if (!is_array($input)) {
+            return FALSE;
+        }
+        if (empty($input)) {
+            return TRUE;
+        }
+        $keys = array_keys($input);
+        $keys_of_keys = array_keys($keys);
+        for ($i = 0; $i < count($keys); $i++) {
+            if ($keys[$i] !== $keys_of_keys[$i]) {
+                return FALSE;
+            }
+        }
+        return TRUE;
+    }
+
+    protected function isPagedResponse($headers)
+    {
+        if (empty($headers['Link'])) {
+            return FALSE;
+        }
+        $links = $headers['Link'];
+        // Find a link header that contains a "rel" type set to "next" or "last".
+        $pager_headers = array_filter($links, function ($link) {
+            return strpos($link, 'rel="next"') !== FALSE || strpos($link, 'rel="last"') !== FALSE;
+        });
+        return !empty($pager_headers);
+    }
+
+    protected function getPagerInfo($links)
+    {
+        // Find a link header that contains a "rel" type set to "next" or "last".
+        $pager_headers = array_filter($links, function ($link) {
+            return strpos($link, 'rel="next"') !== FALSE || strpos($link, 'rel="last"') !== FALSE;
+        });
+        // There is only one possible link header.
+        $pager_header = reset($pager_headers);
+        // $pager_header looks like '<https://…>; rel="next", <https://…>; rel="last"'
+        $pager_parts = array_map('trim', explode(',', $pager_header));
+        $parse_link_pager_part = function ($link_pager_part) {
+            // $link_pager_part is '<href>; key1="value1"; key2="value2"'
+            $sub_parts = array_map('trim', explode(';', $link_pager_part));
+
+            $href = array_shift($sub_parts);
+            $href = preg_replace('@^https:\/\/api.github.com\/@', '', trim($href, '<>'));
+            $parsed = ['href' => $href];
+            return array_reduce($sub_parts, function ($carry, $sub_part) {
+                list($key, $value) = explode('=', $sub_part);
+                if (empty($key) || empty($value)) {
+                    return $carry;
+                }
+                return array_merge($carry, [$key => trim($value, '"')]);
+            }, $parsed);
+        };
+        return array_map($parse_link_pager_part, $pager_parts);
+    }
+
+    protected function isLastPage($page_link, $pager_info)
+    {
+        $res = array_filter($pager_info, function ($item) {
+            return isset($item['rel']) && $item['rel'] === 'last';
+        });
+        $last_item = reset($res);
+        return isset($next_item['href']) ? $last_item['href'] === $page_link : FALSE;
+    }
+
+    protected function getNextPageUri($pager_info)
+    {
+        $res = array_filter($pager_info, function ($item) {
+            return isset($item['rel']) && $item['rel'] === 'next';
+        });
+        $next_item = reset($res);
+        return isset($next_item['href']) ? $next_item['href'] : NULL;
     }
 
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
