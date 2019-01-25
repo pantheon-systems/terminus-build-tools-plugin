@@ -267,7 +267,6 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $pager_info = $this->getPagerInfo($headers['Link']);
             if (!$this->isLastPage($uri, $pager_info)) {
                 $next_page_uri = $this->getNextPageUri($pager_info);
-                var_dump($next_page_uri);
                 // Request the next page and append the data.
                 $resultData = array_merge_recursive(
                     $resultData,
