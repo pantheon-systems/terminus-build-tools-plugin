@@ -24,11 +24,12 @@ In order to use this plugin, you will need to set up a GitHub repository and a C
 
 ### Credentials
 
-In order to use the build:project:create command, the first thing that you need to do is set up credentials to access GitHub and Circle CI. Instructions on creating these credentials can be found on the pages listed below:
+In order to use the build:project:create command, the first thing that you need to do is set up credentials to access your Git and CI Providers. Instructions on creating these credentials can be found on the pages listed below:
 
 - GitHub: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
 - Bitbucket: https://confluence.atlassian.com/bitbucket/app-passwords-828781300.html
 - Circle CI: https://circleci.com/account/api
+- GitLab: https://gitlab.com/profile/personal_access_tokens
 
 The GitHub token needs the "repo" and "delete repo" scopes.
 
@@ -39,6 +40,7 @@ export GITHUB_TOKEN=[REDACTED]
 export CIRCLE_TOKEN=[REDACTED]
 export BITBUCKET_USER=[REDACTED]
 export BITBUCKET_PASS=[REDACTED]
+export GITLAB_TOKEN=[REDACTED]
 ```
 If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command. Credentials that you enter will be cached in the ~/.terminus/cache folder; `terminus self:cc` will erase cached credentials.
 
@@ -148,7 +150,7 @@ To use this tool on a Pantheon site that does not have multidev environments sup
 
 ## Adding More Providers
 
-At the moment, the build:project:create command only supports GitHub and Circle CI. It is possible to add other providers.
+At the moment, the build:project:create command only supports GitHub, BitBucket, GitLab, and Circle CI. It is possible to add other providers.
 
 There is no plugin mechanism for providers; additional implementations must be added to the Terminus Build Tools plugin. Pull requests are welcome.
 
