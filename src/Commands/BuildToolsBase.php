@@ -797,7 +797,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return substr(str_replace('.git', '', $parsed_url['path']), 1);
         }
         else {
-            return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
+            return preg_replace('#[^:/]*[:/]([^/:]*/.*)\.git#', '\1', str_replace('https://', '', $url));
         }
     }
 
