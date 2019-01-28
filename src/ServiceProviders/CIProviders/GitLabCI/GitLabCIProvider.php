@@ -5,6 +5,8 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Psr\Log\LoggerAwareInterface;
@@ -25,9 +27,10 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
     // We make this modifiable as individuals can self-host GitLab.
     public $GITLAB_URL;
-    const GITLAB_TOKEN = 'GITLAB_TOKEN';
-    const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
-    const GITLAB_URL_DEFAULT = 'gitlab.com';
+    // Since GitLab and GitLabCI are so tightly coupled, use the Repository constants.
+    const GITLAB_TOKEN = GitLabProvider::GITLAB_TOKEN;
+    const GITLAB_CONFIG_PATH = GitLabProvider::GITLAB_CONFIG_PATH;
+    const GITLAB_URL_DEFAULT = GitLabProvider::GITLAB_URL_DEFAULT;
 
     protected $gitlab_token;
     protected $config;
@@ -161,7 +164,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $headers = [
             'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+            'User-Agent' => ProviderEnvironment::USER_AGENT,
         ];
 
         if ($this->hasToken()) {

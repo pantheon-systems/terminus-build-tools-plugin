@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -152,10 +153,16 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 
+        $headers = [
+            'Content-Type' => 'application/json',
+            'User-Agent' => ProviderEnvironment::USER_AGENT,
+        ];
+
         $client = new \GuzzleHttp\Client();
         $res = $client->request('POST', $url, [
+            'headers' => $headers,
             'auth' => [$this->circle_token, ''],
-            'form_params' => $data,
+            'json' => $data,
         ]);
         return $res->getStatusCode();
     }
@@ -168,6 +175,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $serviceMap = [
             'github' => 'gh',
+            'bitbucket' => 'bb',
         ];
 
         if (isset($serviceMap[$serviceName])) {

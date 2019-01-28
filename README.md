@@ -27,6 +27,7 @@ In order to use this plugin, you will need to set up a GitHub repository and a C
 In order to use the build:project:create command, the first thing that you need to do is set up credentials to access GitHub and Circle CI. Instructions on creating these credentials can be found on the pages listed below:
 
 - GitHub: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
+- Bitbucket: https://confluence.atlassian.com/bitbucket/app-passwords-828781300.html
 - Circle CI: https://circleci.com/account/api
 
 The GitHub token needs the "repo" and "delete repo" scopes.
@@ -36,6 +37,8 @@ These credentials may be exported as environment variables. For example:
 #!/bin/bash
 export GITHUB_TOKEN=[REDACTED]
 export CIRCLE_TOKEN=[REDACTED]
+export BITBUCKET_USER=[REDACTED]
+export BITBUCKET_PASS=[REDACTED]
 ```
 If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command. Credentials that you enter will be cached in the ~/.terminus/cache folder; `terminus self:cc` will erase cached credentials.
 
@@ -155,7 +158,7 @@ In the [ProviderManager](https://github.com/pantheon-systems/terminus-build-tool
 
 ### Impementing a New CI Provider
 
-Follow the example provided by the [CircleCIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CircleCIProvider.php) class. A number of interfaces should be implemented:
+Follow the example provided by the [CircleCIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CircleCI/CircleCIProvider.php) class. A number of interfaces should be implemented:
 
 - [CredentialClientInterface](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Credentials/CredentialClientInterface.php): declare the credentials (e.g. OAuth tokens) the CredentialManager shoud look up or prompt for on behalf of your CI Provider.
 - [CIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CIProvider.php): set environment variables and configure the CI service to begin running tests.

@@ -2,9 +2,10 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-
+use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
@@ -154,9 +155,9 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $this->execGit($local_site_path, 'init');
         }
         // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@" . $this->GITLAB_URL . ":{$target_project}.git'");
+        $this->execGit($local_site_path, "remote add origin " . $result['ssh_url_to_repo']);
 
-        return $target_project;
+        return $result['path_with_namespace'];
     }
 
     /**
@@ -172,7 +173,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function deleteRepository($project)
     {
-        $deleteRepoUrl = "api/v4/projects/$project";
+        $deleteRepoUrl = "api/v4/projects/" . urlencode($project);
         $this->gitLabAPI($deleteRepoUrl, [], 'DELETE');
     }
 
@@ -189,8 +190,22 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function commentOnCommit($target_project, $commit_hash, $message)
     {
-        $url = "api/v4/projects/" . urlencode($target_project) . "/repository/commits/$commit_hash/comments";
-        $data = ['note' => $message];
+        // We need to check and see if a MR exists for this commit.
+        $mrs = $this->gitLabAPI("api/v4/projects/" . urlencode($target_project) . "/merge_requests?state=opened");
+        $url = null;
+        $data = [];
+        foreach ($mrs as $mr) {
+            if ($mr['sha'] == $commit_hash) {
+                $url = "api/v4/projects/" . urlencode($target_project) . "/merge_requests/" . $mr['iid'] . "/notes";
+                $data = [ 'body' => $message ];
+                break;
+            }
+        }
+        if (is_null($url)) {
+            $url = "api/v4/projects/" . urlencode($target_project) . "/repository/commits/" . $commit_hash . "/comments";
+            $data = [ 'note' => $message ];
+        }
+
         $this->gitLabAPI($url, $data);
     }
 
@@ -200,7 +215,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
         $headers = [
             'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+            'User-Agent' => ProviderEnvironment::USER_AGENT,
         ];
 
         if ($this->hasToken()) {
@@ -232,13 +247,39 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             $errors[] = "Http status code: $httpCode";
         }
 
-        $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
-
-        if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('{service} error: {message} {errors}', ['service' => $service, 'message' => $message, 'errors' => implode("\n", $errors)]);
+        if (!empty($errors)) {
+            throw new TerminusException('Error: {message} {errors}', ['errors' => implode("\n", $errors)]);
         }
 
         return $resultData;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    function branchesForPullRequests($target_project, $state)
+    {
+        $stateParameters = [
+            'open' => ['opened'],
+            'closed' => ['closed'],
+            'all' => ['all']
+        ];
+
+        if (!isset($stateParameters[$state]))
+            throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
+
+        $data = $this->gitLabAPI("projects/$target_project/merge_requests?state=" . implode('', $stateParameters[$state]));
+        var_dump($data);
+        $branchList = array_column(array_map(
+            function ($item) {
+                $pr_number = $item['number'];
+                $branch_name = $item['head']['ref'];
+                return [$pr_number, $branch_name];
+            },
+            $data
+        ), 1, 0);
+
+        return $branchList;
     }
 
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])

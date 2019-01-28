@@ -4,7 +4,7 @@
 # TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
 set -e
 
-TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
+TERMINUS_SITE=build-tools-$CIRCLE_PROJECT_USERNAME-$CIRCLE_BUILD_NUM
 
 # If we are on the master branch
 if [[ $CIRCLE_BRANCH == "master" ]]
@@ -36,35 +36,52 @@ then
     BUILD_TOOLS_VERSION="${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
 # Otherwise use the current branch
 else
-    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
-fi
-
-if [ "$GIT_PROVIDER" == "github" ]; then
-    TARGET_REPO=$GITHUB_USERNAME/$TERMINUS_SITE
-    CLONE_URL="https://github.com/${TARGET_REPO}.git"
-else
-    if [ "$GIT_PROVIDER" == "bitbucket" ]; then
-        TARGET_REPO=$BITBUCKET_USERNAME/$TERMINUS_SITE
-        # Bitbucket repo is private, thus HTTP basic auth is integrated into clone URL
-        CLONE_URL="https://$BITBUCKET_USER:$BITBUCKET_PASS@bitbucket.org/${TARGET_REPO}.git"
+    # If on root repo use the current branch
+    if [[ $CIRCLE_PROJECT_USERNAME == "pantheon-systems" ]]; then
+        BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}#${CIRCLE_SHA1}"
+    # Otherwise use the dev tip from the pantheon-systems repo
     else
-        echo "Unsupported GIT_PROVIDER. Valid values are: github, bitbucket"
-        exit 1
+        BUILD_TOOLS_VERSION="dev-master"
     fi
 fi
 
-terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=$GIT_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
+if [ "$GIT_PROVIDER" == "github" ]; then
+    TARGET_REPO=$GITHUB_USER/$TERMINUS_SITE
+    CLONE_URL="https://github.com/${TARGET_REPO}.git"
+    CI_PROVIDER="circle"
+else
+    if [ "$GIT_PROVIDER" == "bitbucket" ]; then
+        TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
+        CLONE_URL="https://$BITBUCKET_USER@bitbucket.org/${TARGET_REPO}.git"
+        CI_PROVIDER="circle"
+    else
+        if [ "$GIT_PROVIDER" == "gitlab" ]; then
+            TARGET_REPO=$GITLAB_USER/$TERMINUS_SITE
+            CLONE_URL="https://$GITLAB_USER@gitlab.com/${TARGET_REPO}.git"
+            CI_PROVIDER="gitlabci"
+        else
+            echo "Unsupported GIT_PROVIDER. Valid values are: github, bitbucket, gitlab"
+            exit 1
+        fi
+    fi
+fi
+
+terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=$GIT_PROVIDER --ci=$CI_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
-# Confirm that the Github project was created
-git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
+# Confirm that the Github or Bitbucket project was created
+if [ "$GIT_PROVIDER" != "gitlab" ]
+then
+    git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
+fi
 # Confirm that Circle was configured for testing, and that the first test passed.
-
-(
-    set +ex
-    cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
-)
-
+if [ "$CI_PROVIDER" == "circle" ]
+then
+    (
+        set +ex
+        cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
+    )
+fi
 
 # Delete our test site, etc.
 ./.circleci/cleanup-fixtures.sh

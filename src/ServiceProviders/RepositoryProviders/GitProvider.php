@@ -67,4 +67,13 @@ interface GitProvider extends ProviderInterface
      * @param string $message The content of the comment.
      */
     public function commentOnCommit($target_project, $commit_hash, $message);
+
+    /**
+     * Return an array of PR-Number => branch-name for pull requests on a repo.
+     *
+     * @param string $target_project Project to check.
+     * @param string $state Check for pull requests with this state - 'open' or 'closed'.
+     */
+    public function branchesForPullRequests($target_project, $state);
+
 }

@@ -29,27 +29,23 @@ use Composer\Semver\Comparator;
  */
 class CIConfigureCommand extends BuildToolsBase
 {
+    use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
 
     /**
-     * Configure CI Tests for a Pantheon site created from the specified
-     * GitHub repository
+     * Configure CI Tests for a Pantheon site created via build:project:create.
      *
      * @authorize
      *
      * @command build:ci:configure
      * @aliases build-env:ci:configure
      * @param $site_name The pantheon site to test.
-     * @param $target_project The GitHub org/project to build the Pantheon site from.
      */
-    public function configureCI(
-        $site_name,
-        $target_project,
+    public function configureCI($site_name,
         $options = [
-            'test-site-name' => '',
             'email' => '',
             'admin-password' => '',
             'admin-email' => '',
-            'env' => [],
+            'ci' => 'circle'
         ])
     {
         $site = $this->getSite($site_name);
@@ -58,26 +54,32 @@ class CIConfigureCommand extends BuildToolsBase
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
         $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev") + ['url' => ''];
-        $desired_url = "git@github.com:{$target_project}.git";
-        if (!empty($buildMetadata['url']) && ($desired_url != $buildMetadata['url'])) {
-            throw new TerminusException('The site {site} is already configured to test {url}; you cannot use this site to test {desired}.', ['site' => $site_name, 'url' => $buildMetadata['url'], 'desired' => $desired_url]);
+        
+        if (empty($buildMetadata['url'])) {
+            throw new TerminusException('The site {site} does not have the required build metadata. This command can only be used for sites that have been correctly initialized with build:project:create.', ['site' => $site_name]);
         }
 
-        // Get our authenticated credentials from environment variables.
-        $github_token = $this->getRequiredGithubToken();
-        $circle_token = $this->getRequiredCircleToken();
+        // Create a git repository service provider appropriate to the URL
+        $this->inferGitProviderFromUrl($buildMetadata['url']);
+        $target_project = $this->projectFromRemoteUrl($buildMetadata['url']);
 
-        $circle_env = $this->getCIEnvironment($site_name, $options);
-        // TODO: check to see if we need to downgrade to only use dev environment
+        // Initialize providers
+        $this->createCIProvider($options['ci']);
 
-        // Add the github token if available
-        // TODO: How do we determine which Repository provider to use here?
-        $github_token = getenv('GITHUB_TOKEN');
-        if ($github_token) {
-            $repositoryState['GITHUB_TOKEN'] = $github_token;
-            $ci_env->storeState('repository', $repositoryState);
-        }
+        // Ensure that all of our providers are given the credentials they requested.
+        $this->providerManager()->validateCredentials();
 
-        $this->configureCircle($target_project, $circle_token, $circle_env);
+        // Prepare for builder
+        $ci_env = $this->getCIEnvironment($site_name, $options);
+        $this->git_provider->getEnvironment()->setProjectId($target_project);
+        $ci_env->storeState('repository', $this->git_provider->getEnvironment());
+        
+        // Use builder to set up CI
+        $builder = $this->collectionBuilder();
+        $builder->taskCISetup()
+            ->provider($this->ci_provider)
+            ->environment($ci_env);
+
+        return $builder;
     }
 }

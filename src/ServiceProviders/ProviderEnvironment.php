@@ -7,6 +7,9 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders;
  */
 class ProviderEnvironment extends \ArrayObject
 {
+
+    const USER_AGENT = 'pantheon/terminus-build-tools-plugin';
+
     public function __construct(array $data = [])
     {
         parent::__construct($data);

@@ -12,7 +12,7 @@ namespace Pantheon\TerminusBuildTools\Commands;
 /**
  * Commit Comment Command
  */
-class CommitCommentCommand extends BuildToolsBase
+class CommentAddCommitCommand extends BuildToolsBase
 {
 
     /**
@@ -20,21 +20,25 @@ class CommitCommentCommand extends BuildToolsBase
      *
      * @authorize
      *
-     * @command build:commit:comment
+     * @command build:comment:add:commit
      */
-    public function commitComment(
+    public function commentAddCommit(
         $options = [
+            'sha' => '',
             'message' => '',
             'site_url' => ''
         ])
     {
         // Get current repository and commit
         $remoteUrlFromGit = exec('git config --get remote.origin.url');
-        $commitHash = exec('git rev-parse HEAD');
+        $commitHash = $options['sha'];
+        if (empty($commitHash)) {
+            $commitHash = exec('git rev-parse HEAD');
+        }
 
         // Create a Git repository service provider appropriate to the URL
         $this->inferGitProviderFromUrl($remoteUrlFromGit);
-        
+
         // Ensure that credentials for the Git provider are available
         $this->providerManager()->validateCredentials();
 
@@ -46,7 +50,7 @@ class CommitCommentCommand extends BuildToolsBase
         }
 
         if (!empty($message)) {
-            // Submit message 
+            // Submit message
             $targetProject = $this->projectFromRemoteUrl($remoteUrlFromGit);
             $this->git_provider->commentOnCommit($targetProject, $commitHash, $message);
         }

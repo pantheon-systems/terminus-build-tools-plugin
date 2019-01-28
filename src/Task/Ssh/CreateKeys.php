@@ -77,7 +77,7 @@ class CreateKeys extends BaseTask
         $publicKey = "$privateKey.pub";
 
         // TODO: make a util class method to call passthru and throw on error
-        passthru("ssh-keygen -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
+        passthru("ssh-keygen -m PEM -t rsa -b 4096 -f $privateKey -N '' -C '$ssh_key_email'");
 
         return [$publicKey, $privateKey];
     }

@@ -2,7 +2,7 @@
 
 set -e
 
-TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
+TERMINUS_SITE=build-tools-$CIRCLE_PROJECT_USERNAME-$CIRCLE_BUILD_NUM
 
 # Delete our github repository and Pantheon site
 terminus build:env:obliterate -n --yes "$TERMINUS_SITE"

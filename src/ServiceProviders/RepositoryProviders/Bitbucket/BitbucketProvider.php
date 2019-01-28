@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -125,9 +126,9 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         $this->setBitBucketUser($credentials_provider->fetch(self::BITBUCKET_USER));
         $this->setBitBucketPassword($credentials_provider->fetch(self::BITBUCKET_PASS));
         $this->setToken(
-            $this->getBitBucketUser()
+            urlencode($this->getBitBucketUser())
             .':'.
-            $this->getBitBucketPassword()
+            urlencode($this->getBitBucketPassword())
         );
     }
 
@@ -142,15 +143,17 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $github_org = '')
+    public function createRepository($local_site_path, $target, $org = '')
     {
-        // Username for Bitbucket API is either provider $github_org
+        // repository id must be lower case.
+        $target = strtolower($target);
+
+        // Username for Bitbucket API is either provider $org
         // or username
-        $target_org = $github_org;
-        if (empty($github_org)) {
-            $target_org = $this->getBitBucketUser();
+        if (empty($org)) {
+            $org = $this->getBitBucketUser();
         }
-        $target_project = "$target_org/$target";
+        $target_project = "$org/$target";
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
@@ -207,6 +210,34 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         ]);
     }
 
+    /**
+     * @inheritdoc
+     */
+    function branchesForPullRequests($target_project, $state)
+    {
+        $stateParameters = [
+            'open' => ['OPEN'],
+            'closed' => ['MERGED', 'DECLINED', 'SUPERSEDED'],
+            'all' => ['MERGED', 'DECLINED', 'SUPERSEDED', 'OPEN']
+        ];
+        if (!isset($stateParameters[$state]))
+            throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
+        
+        $data = $this->bitbucketAPI("repositories/$target_project/pullrequests?state="
+            .implode('&state=', $stateParameters[$state]));
+
+        $branchList = array_column(array_map(
+            function ($item) {
+                $pr_number = $item['id'];
+                $branch_name = $item['source']['branch']['name'];
+                return [$pr_number, $branch_name];
+            },
+            $data['values']
+        ), 1, 0);
+
+        return $branchList;
+    }
+
     private function bitbucketAPIClient()
     {
         if (!isset($this->bitbucketClient))
@@ -214,7 +245,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
                 'base_uri' => 'https://api.bitbucket.org/2.0/',
                 'auth' => [ $this->getBitBucketUser(), $this->getBitBucketPassword() ],
                 'headers' => [
-                    'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+                    'User-Agent' => ProviderEnvironment::USER_AGENT,
                 ]
             ]);
         return $this->bitbucketClient;
@@ -227,6 +258,8 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
             $guzzleParams['json'] = $data;
         }
 
+        $this->logger->notice('Call Bitbucket API: {method} {uri}', ['method' => $method, 'uri' => $uri]);
+        
         $res = $this->bitbucketAPIClient()->request($method, $uri, $guzzleParams);
         $resultData = json_decode($res->getBody(), true);
         $httpCode = $res->getStatusCode();
