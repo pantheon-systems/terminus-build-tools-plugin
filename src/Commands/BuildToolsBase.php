@@ -791,20 +791,20 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function projectFromRemoteUrl($url)
     {
-        return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
+        return preg_replace('#[^:/]*[:/]([^/:]*/.*)\.git#', '\1', str_replace('https://', '', $url));
     }
 
     protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
     {
         $project = $this->projectFromRemoteUrl($remoteUrl);
-        // Get back a pr-number => branch-name list
+        // Get back a $multidev_delete_pattern-number (eg pr-NNN or ci-NNN) => branch-name list
 
         $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
 
-        // Find any that match "pr-NNN", for some NNN in pr-number.
-        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
-        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
-        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
+        // Find any that match $multidev_delete_pattern-NNN (eg pr-NNN or ci-NNN)", for some NNN in $multidev_delete_pattern-number.
+        $result = $this->filterBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
+        // Add any that match "$multidev_delete_pattern-BRANCH", for some BRANCH in branch-name.
+        $result = array_merge($result, $this->filterBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
 
         // If there are no closed pull requests, then there is no need
         // to look for open pull requests
@@ -814,9 +814,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
 
-        // Remove any that match "pr-NNN" and have an open pull request
+        // Remove any that match "$multidev_delete_pattern-NNN" (eg pr-NNN or ci-NNN) and have an open pull request
         $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
-        // Remove any that match "pr-BRANCH", and have an open pull request
+        // Remove any that match "$multidev_delete_pattern-BRANCH", and have an open pull request
         $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
 
         return $result;
@@ -875,9 +875,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return array_filter(
             $oldestEnvironments,
             function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
+                // Find items in $branchList that match $item (eg pr-NNN or ci-NNN).
+                $matches = preg_grep ("%$item%i", $branchList);
                 return empty($matches);
             }
         );
