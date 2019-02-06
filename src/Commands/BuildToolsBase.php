@@ -295,6 +295,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $options['admin-email'] = $options['email'];
         }
 
+        if (empty($options['ci'])) {
+            if ($options['git'] == 'gitlab') {
+                $options['ci'] = 'gitlabci';
+            }
+            else {
+                $options['ci'] = 'circleci';
+            }
+        }
+
         // Catch errors in email address syntax
         $this->validateEmail('email', $options['email']);
         $this->validateEmail('admin-email', $options['admin-email']);

@@ -30,11 +30,3 @@ git config --global user.email "$GIT_EMAIL"
 git config --global user.name "Circle CI"
 # Ignore file permissions.
 git config --global core.fileMode false
-
-# Get public key and add to Pantheon
-cd ~/.ssh
-openssl rsa -in id_rsa -out id_rsa_ssh2.pub -pubout
-cat id_rsa_ssh2.pub
-ssh-keygen -f id_rsa_ssh2.pub -i -m pkcs8 > id_rsa.pub
-chmod 0600 id_rsa.pub
-terminus ssh-key:add id_rsa.pub

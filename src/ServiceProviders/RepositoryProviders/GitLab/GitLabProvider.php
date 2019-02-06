@@ -25,7 +25,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     const SERVICE_NAME = 'gitlab';
     // We make this modifiable as individuals can self-host GitLab.
-    public $GITLAB_URL;
+    protected $GITLAB_URL;
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
     const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
     const GITLAB_URL_DEFAULT = 'gitlab.com';
@@ -36,12 +36,26 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function __construct(Config $config)
     {
         $this->config = $config;
-        $this->GITLAB_URL = $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
+        $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+    }
+
+    /**
+     * @return array|mixed|null
+     */
+    public function getGITLABURL() {
+        return $this->GITLAB_URL;
+    }
+
+    /**
+     * @param array|mixed|null $GITLAB_URL
+     */
+    public function setGITLABURL($GITLAB_URL) {
+        $this->GITLAB_URL = $GITLAB_URL;
     }
 
     public function infer($url)
     {
-        return strpos($url, $this->GITLAB_URL) !== false;
+        return strpos($url, $this->getGITLABURL()) !== false;
     }
 
     public function getEnvironment()
@@ -85,7 +99,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         // GITLAB_TOKEN that will be used to authenticate.
         $gitlabTokenRequest = new CredentialRequest(
             $this->tokenKey(),
-            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->GITLAB_URL . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->GITLAB_URL . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
+            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGITLABURL() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGITLABURL() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
             "Enter GitLab personal access token: ",
             '#^[0-9a-zA-Z\-]{20}$#',
             'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.'
@@ -165,7 +179,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function pushRepository($dir, $target_project)
     {
-        $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', ['token' => $this->token(), 'gitlab_url' => $this->GITLAB_URL, 'target' => $target_project], ['token']);
+        $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', ['token' => $this->token(), 'gitlab_url' => $this->getGITLABURL(), 'target' => $target_project], ['token']);
     }
 
     /**
@@ -182,7 +196,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      */
     public function projectURL($target_project)
     {
-        return 'https://' . $this->GITLAB_URL . '/' . $target_project;
+        return 'https://' . $this->getGITLABURL() . '/' . $target_project;
     }
 
     /**
@@ -211,7 +225,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     protected function gitLabAPI($uri, $data = [], $method = 'GET')
     {
-        $url = "https://" . $this->GITLAB_URL . "/" . $uri;
+        $url = "https://" . $this->getGITLABURL() . "/" . $uri;
 
         $headers = [
             'Content-Type' => 'application/json',

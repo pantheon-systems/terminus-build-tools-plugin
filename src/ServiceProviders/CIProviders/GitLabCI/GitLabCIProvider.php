@@ -26,7 +26,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     use LoggerAwareTrait;
 
     // We make this modifiable as individuals can self-host GitLab.
-    public $GITLAB_URL;
+    protected $GITLAB_URL;
     // Since GitLab and GitLabCI are so tightly coupled, use the Repository constants.
     const GITLAB_TOKEN = GitLabProvider::GITLAB_TOKEN;
     const GITLAB_CONFIG_PATH = GitLabProvider::GITLAB_CONFIG_PATH;
@@ -38,12 +38,26 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function __construct(Config $config)
     {
         $this->config = $config;
-        $this->GITLAB_URL = $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
+        $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+    }
+
+    /**
+     * @return array|mixed|null
+     */
+    public function getGITLABURL() {
+        return $this->GITLAB_URL;
+    }
+
+    /**
+     * @param array|mixed|null $GITLAB_URL
+     */
+    public function setGITLABURL($GITLAB_URL) {
+        $this->GITLAB_URL = $GITLAB_URL;
     }
 
     public function infer($url)
     {
-        return strpos($url, $this->GITLAB_URL) !== false;
+        return strpos($url, $this->getGITLABURL()) !== false;
     }
 
     /**
@@ -77,7 +91,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         // GITLAB_TOKEN that will be used to authenticate.
         $gitlabTokenRequest = new CredentialRequest(
             self::GITLAB_TOKEN,
-            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->GITLAB_URL . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->GITLAB_URL . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
+            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGITLABURL() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGITLABURL() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
             "Enter GitLab personal access token: ",
             '#^[0-9a-zA-Z\-]{20}$#',
             'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.'
@@ -105,7 +119,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
-        return 'https://' . $this->GITLAB_URL . '/' . $repositoryAttributes->projectId();
+        return 'https://' . $this->getGITLABURL() . '/' . $repositoryAttributes->projectId();
     }
 
     protected function apiUrl(CIState $ci_env)
@@ -114,7 +128,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $apiRepositoryType = $repositoryAttributes->serviceName();
         $target_project = urlencode($repositoryAttributes->projectId());
 
-        return "https://" . $this->GITLAB_URL . "/api/v4/projects/$target_project/variables";
+        return "https://" . $this->getGITLABURL() . "/api/v4/projects/$target_project/variables";
     }
 
     /**
