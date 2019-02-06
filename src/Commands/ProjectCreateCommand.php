@@ -240,7 +240,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
-            'ci' => false,
+            'ci' => '',
             'git' => 'github',
         ])
     {
