@@ -4,7 +4,7 @@
 # TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
 set -e
 
-TERMINUS_SITE=build-tools-$CIRCLE_PROJECT_USERNAME-$CIRCLE_BUILD_NUM
+TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
 # If we are on the master branch
 if [[ $CIRCLE_BRANCH == "master" ]]

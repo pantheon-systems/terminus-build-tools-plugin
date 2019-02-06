@@ -150,9 +150,15 @@ To use this tool on a Pantheon site that does not have multidev environments sup
 
 ## Adding More Providers
 
-At the moment, the build:project:create command only supports GitHub, BitBucket, GitLab, and Circle CI. It is possible to add other providers.
+At the moment, the build:project:create command only supports providers in the following combination: 
 
-There is no plugin mechanism for providers; additional implementations must be added to the Terminus Build Tools plugin. Pull requests are welcome.
+| Git Host  | CI Service |
+| --------- | ---------- |
+| GitHub    | CircleCI   |
+| GitLab    | GitLabCI   |
+| BitBucket | CircleCI   |
+
+It is possible to add other providers. There is no plugin mechanism for providers; additional implementations must be added to the Terminus Build Tools plugin. Pull requests are welcome.
 
 ### Declare the Provider Class
 
