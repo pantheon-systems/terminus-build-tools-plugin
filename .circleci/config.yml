@@ -74,7 +74,7 @@ jobs:
                 name: cleanup
                 command: |
                     echo "All tests passed."
-                    for key in $(terminus ssh-key:list --format=tsv --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sed -e 's/ci-bot-build-tools-//' | sort -rg | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
+                    for key in $(terminus ssh-key:list --format=csv --fields=ID,Description 2>/dev/null | grep ci-bot-build-tools | sed -e 's/ci-bot-build-tools-//' | sort -rg | sed -e '1,12d' | sed -e 's/,.*//') ; do terminus ssh-key:remove $key ; done
 
 workflows:
   version: 2
