@@ -29,6 +29,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteEnvironment;
 use Pantheon\Terminus\DataStore\FileStore;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
+use Pantheon\Terminus\Helpers\LocalMachineHelper;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
