@@ -29,6 +29,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteEnvironment;
 use Pantheon\Terminus\DataStore\FileStore;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
+use Pantheon\Terminus\Helpers\LocalMachineHelper;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -576,7 +577,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
 
             $this->log()->notice(' - {cmd}', ['cmd' => $redacted_command_line]);
-            $result = $env->sendCommandViaSsh(
+            $result = $this->sendCommandViaSsh(
+                $env,
                 $command_line,
                 function ($type, $buffer) {
                 }
@@ -586,6 +588,37 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 throw new TerminusException('{op} failed with exit code {status}', ['op' => $operation_label, 'status' => $result['exit_code']]);
             }
         }
+    }
+
+    /**
+     * Sends a command to an environment via SSH.
+     * We would rather not duplicate this method from Terminus.
+     *
+     * @param string $command The command to be run on the platform
+     */
+    protected function sendCommandViaSsh($env, $command)
+    {
+        $ssh_command = $this->getConnectionString($env) . ' ' . ProcessUtils::escapeArgument($command);
+        return $this->getContainer()->get(LocalMachineHelper::class)->execute(
+            $ssh_command,
+            function ($type, $buffer) {
+                },
+            false
+        );
+    }
+
+    /**
+     * We would rather not duplicate this method from Terminus.
+     *
+     * @return string SSH connection string
+     */
+    private function getConnectionString($env)
+    {
+        $sftp = $env->sftpConnectionInfo();
+        return vsprintf(
+            'ssh -T %s@%s -p %s -o "StrictHostKeyChecking=no" -o "AddressFamily inet"',
+            [$sftp['username'], $sftp['host'], $sftp['port'],]
+        );
     }
 
     protected function exportInitialConfiguration($site_env_id, $repositoryDir, $composer_json, $options)
@@ -987,6 +1020,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        if ($mode === $env->get('connection_mode')) {
+            return;
+        }
         $workflow = $env->changeConnectionMode($mode);
         if (is_string($workflow)) {
             $this->log()->notice($workflow);
