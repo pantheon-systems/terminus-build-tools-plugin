@@ -1019,6 +1019,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        if ($mode === $env->get('connection_mode')) {
+            return;
+        }
         $workflow = $env->changeConnectionMode($mode);
         if (is_string($workflow)) {
             $this->log()->notice($workflow);
