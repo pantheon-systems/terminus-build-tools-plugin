@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:latest
+    - image: quay.io/pantheon-public/php-ci:2.x
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -45,6 +45,9 @@ jobs:
             - run:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Check Terminus version
+                command: terminus --version
             - run:
                 name: Test D8 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
