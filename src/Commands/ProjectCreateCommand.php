@@ -371,20 +371,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             // It is not necessary to push to GitHub so soon, but it's helpful
             // for debugging et. al. to have the initial repo contents available.
 
-            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
-            /*
-            ->taskRepositoryPush()
-                ->provider($this->git_provider)
-                ->target($this->target_project)
-                ->dir($siteDir)
-            */
-            ->addCode(
-                function ($state) use ($ci_env, $siteDir) {
-                    $repositoryAttributes = $ci_env->getState('repository');
-
-                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
-                })
-
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
@@ -394,6 +380,21 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 ->environment($ci_env)
                 ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
                 ->dir($siteDir)
+
+            // Create public and private key pair and add them to any provider
+            // that requested them.
+            ->taskCreateKeys()
+                ->environment($ci_env)
+                ->provider($this->ci_provider)
+                ->provider($this->git_provider)
+                ->provider($this) // TODO: replace with site provider
+
+            /*
+            ->taskRepositoryPush()
+                ->provider($this->git_provider)
+                ->target($this->target_project)
+                ->dir($siteDir)
+            */
 
             // Push code to newly-created project.
             // Note that this also effectively does a 'git reset --hard'
@@ -435,7 +436,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 })
 
             // Push the local working repository to the server
-            ->progressMessage('Push updated configuration to {target}', ['target' => $target_label])
+            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
             /*
             ->taskRepositoryPush()
                 ->provider($this->git_provider)
@@ -447,14 +448,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $repositoryAttributes = $ci_env->getState('repository');
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
                 })
-
-            // Create public and private key pair and add them to any provider
-            // that requested them.
-            ->taskCreateKeys()
-                ->environment($ci_env)
-                ->provider($this->ci_provider)
-                ->provider($this->git_provider)
-                ->provider($this) // TODO: replace with site provider
 
             // Tell the CI server to start testing our project
             ->progressMessage('Beginning CI testing')
