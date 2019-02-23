@@ -33,10 +33,10 @@ defaults: &defaults
 version: 2
 jobs:
     # @todo: common initialization, maybe
-    build:
+    unit:
         <<: *defaults
         steps:
-            - run: echo "Nothing in the build step for now."
+            - run: echo "No unit tests yet."
 
     test_drupal_8_github:
         <<: *defaults
@@ -52,9 +52,12 @@ jobs:
                 name: Test D8 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
             - run:
+                name: D8 with GitHub Build passed
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
                 name: D8 with GitHub Build Failed
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_drupal_7_github:
         <<: *defaults
@@ -67,9 +70,12 @@ jobs:
                 name: Test D7 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
             - run:
+                name: D7 with GitHub Build passed
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
                 name: D7 with GitHub Build Failed
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_drupal_8_bitbucket:
         <<: *defaults
@@ -83,9 +89,12 @@ jobs:
                 command: echo "BitBucket test skipped"
                 #command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" bitbucket
             - run:
+                name: D8 with Bitbucket Build passed
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
                 name: D8 with Bitbucket Build Failed
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_wordpress:
         <<: *defaults
@@ -98,41 +107,27 @@ jobs:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
             - run:
+                name: WordPress with GitHub Build passed
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
                 name: WordPress with GitHub Build Failed
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
-
-    # @todo: anything to do once everything is complete?
-    # There is probably a way to check the results on the other jobs.
-    completion:
-        <<: *defaults
-        steps:
-            - run:
-                name: Clean up old keys
-                command: |
-                    echo "All tests passed."
-                    for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
+                command: ./.circleci/cleanup-fixtures.sh fail
 
 workflows:
   version: 2
   build_test:
     jobs:
-      - build
+      - unit
       - test_drupal_8_github:
           requires:
-            - build
+            - unit
       - test_drupal_7_github:
           requires:
-            - build
+            - unit
       - test_drupal_8_bitbucket:
           requires:
-            - build
+            - unit
       - test_wordpress:
           requires:
-            - build
-      - completion:
-          requires:
-            - test_drupal_8_github
-            - test_drupal_7_github
-            - test_drupal_8_bitbucket
-            - test_wordpress
+            - unit
