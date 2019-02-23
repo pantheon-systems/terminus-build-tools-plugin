@@ -958,7 +958,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
         $environmentExists = $site->getEnvironments()->has($multidev);
 
         // Check to see if we should create before pushing or after
-        $createBeforePush = $this->commitChangesFile('HEAD', 'pantheon.yml');
+        $createBeforePush = $this->commitChangesFile('HEAD', 'pantheon.yml') || $this->commitChangesFile('HEAD', 'pantheon.upstream.yml');
 
         if (!$environmentExists && $createBeforePush) {
             // If pantheon.yml exists, then we need to create the environment
