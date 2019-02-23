@@ -1,8 +1,11 @@
 #!/bin/bash
 
-set -e
-
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
+
+# If no site was created, then we won't attempt any cleanup
+terminus site:info $TERMINUS_SITE || exit 0
+
+set -e
 
 # Delete our github repository and Pantheon site
 #

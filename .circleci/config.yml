@@ -52,10 +52,10 @@ jobs:
                 name: Test D8 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
             - run:
-                name: D8 with GitHub Build passed
+                name: Clean up D8 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: D8 with GitHub Build Failed
+                name: Clean up D8 GitHub fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -70,10 +70,10 @@ jobs:
                 name: Test D7 with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
             - run:
-                name: D7 with GitHub Build passed
+                name: Clean up D7 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: D7 with GitHub Build Failed
+                name: Clean up D7 GitHub fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -89,10 +89,10 @@ jobs:
                 command: echo "BitBucket test skipped"
                 #command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" bitbucket
             - run:
-                name: D8 with Bitbucket Build passed
+                name: Clean up D8 Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: D8 with Bitbucket Build Failed
+                name: Clean up D8 Bitbucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -107,10 +107,10 @@ jobs:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
             - run:
-                name: WordPress with GitHub Build passed
+                name: Clean up WordPress GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: WordPress with GitHub Build Failed
+                name: Clean up WordPress GitHub fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
