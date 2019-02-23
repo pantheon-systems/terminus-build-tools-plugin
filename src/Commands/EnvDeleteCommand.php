@@ -49,6 +49,9 @@ class EnvDeleteCommand extends BuildToolsBase
         ])
     {
         $retentionController = $this->createRetentionController($site_id, self::TRANSIENT_CI_DELETE_PATTERN);
+        if (!$retentionController) {
+            return;
+        }
 
         $retentionController->eligibleIfOldest($options['keep']);
 
@@ -74,6 +77,9 @@ class EnvDeleteCommand extends BuildToolsBase
         ])
     {
         $retentionController = $this->createRetentionController($site_id, self::PR_BRANCH_DELETE_PATTERN);
+        if (!$retentionController) {
+            return;
+        }
 
         $retentionController->eligibleIfClosedPRExists();
 
@@ -83,6 +89,8 @@ class EnvDeleteCommand extends BuildToolsBase
     /**
      * createRetentionController returns an object that can be used to determine
      * which multidevs should be retained, and which are eligible for removal.
+     *
+     * @return MultiDevRetention|null
      */
     protected function createRetentionController($site_id, $multidev_delete_pattern)
     {
@@ -91,7 +99,8 @@ class EnvDeleteCommand extends BuildToolsBase
 
         // Bail out if nothing matched
         if (empty($oldestEnvironments)) {
-            throw new TerminusException('No environments matched the provided pattern "{pattern}".', ['pattern' => $multidev_delete_pattern]);
+            $this->log()->notice('No environments matched the provided pattern "{pattern}".', ['pattern' => $multidev_delete_pattern]);
+            return null;
         }
 
         // Reduce result list down to just the env id ('ci-123' et. al.)
