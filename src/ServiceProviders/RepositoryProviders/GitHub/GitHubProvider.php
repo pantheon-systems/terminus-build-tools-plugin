@@ -196,12 +196,12 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     /**
      * @inheritdoc
      */
-     function branchesForPullRequests($target_project, $state)
-     {
+    function branchesForPullRequests($target_project, $state, $callback = null)
+    {
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
 
-        $data = $this->gitHubAPI("repos/$target_project/pulls?state=$state", [], 'GET', TRUE);
+        $data = $this->gitHubPagedAPI("repos/$target_project/pulls?state=$state", $callback);
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['number'];
@@ -212,9 +212,62 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         ), 1, 0);
 
         return $branchList;
-     }
+    }
 
-    protected function gitHubAPI($uri, $data = [], $method = 'GET', $follow_next_link = FALSE)
+    protected function gitHubAPI($uri, $data = [], $method = 'GET')
+    {
+        $res = $this->getHubRequest($uri, $data, $method);
+
+        $resultData = json_decode($res->getBody(), true);
+        $httpCode = $res->getStatusCode();
+
+        return $this->processGitHubResponse($resultData, $httpCode);
+    }
+
+    protected function gitHubPagedAPI($uri, $callback = null)
+    {
+        $res = $this->getHubRequest($uri);
+
+        $resultData = json_decode($res->getBody(), true);
+        $httpCode = $res->getStatusCode();
+
+        // Remember all of the collected data in $accumulatedData
+        $accumulatedData = $resultData;
+
+        // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
+        // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
+        $headers = $res->getHeaders();
+        // Check if the array is numeric. Otherwise we can't consider this a collection. Ideally GitHub would tell us
+        // that the response is a collection but we'll need to guess from the response format.
+        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
+            $pager_info = $this->getPagerInfo($headers['Link']);
+            while (($httpCode == 200) && !$this->isLastPage($uri, $pager_info) && $this->checkPagedCallback($resultData, $callback)) {
+                $uri = $this->getNextPageUri($pager_info);
+
+                $res = $this->getHubRequest($uri);
+                $httpCode = $res->getStatusCode();
+                $resultData = json_decode($res->getBody(), true);
+
+                $accumulatedData = array_merge_recursive(
+                    $accumulatedData,
+                    $resultData
+                );
+            }
+        }
+
+        return $this->processGitHubResponse($accumulatedData, $httpCode);
+    }
+
+    protected function checkPagedCallback($resultData, $callback)
+    {
+        if (!$callback) {
+            return true;
+        }
+
+        return $callback($resultData);
+    }
+
+    protected function getHubRequest($uri, $data = [], $method = 'GET')
     {
         $url = "https://api.github.com/$uri";
 
@@ -239,9 +292,12 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
         $client = new \GuzzleHttp\Client();
         $res = $client->request($method, $url, $guzzleParams);
-        $resultData = json_decode($res->getBody(), true);
-        $httpCode = $res->getStatusCode();
 
+        return $res;
+    }
+
+    protected function processGitHubResponse($resultData, $httpCode)
+    {
         $errors = [];
         if (isset($resultData['errors'])) {
             foreach ($resultData['errors'] as $error) {
@@ -258,22 +314,6 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             throw new TerminusException('error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
         }
 
-        // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
-        // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
-        $headers = $res->getHeaders();
-        // Check if the array is numeric. Otherwise we can't consider this a collection. Ideally GitHub would tell us
-        // that the response is a collection but we'll need to guess from the response format.
-        if ($follow_next_link && $this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
-            $pager_info = $this->getPagerInfo($headers['Link']);
-            if (!$this->isLastPage($uri, $pager_info)) {
-                $next_page_uri = $this->getNextPageUri($pager_info);
-                // Request the next page and append the data.
-                $resultData = array_merge_recursive(
-                    $resultData,
-                    $this->gitHubAPI($next_page_uri, $data, $method, TRUE)
-                );
-            }
-        }
         return $resultData;
     }
 
@@ -342,7 +382,8 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             return isset($item['rel']) && $item['rel'] === 'last';
         });
         $last_item = reset($res);
-        return isset($next_item['href']) ? $last_item['href'] === $page_link : FALSE;
+
+        return isset($last_item) ? $last_item['href'] === $page_link : FALSE;
     }
 
     protected function getNextPageUri($pager_info)

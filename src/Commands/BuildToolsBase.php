@@ -42,8 +42,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     use LoadAllTasks; // uses TaskAccessor, which uses BuilderAwareTrait
     use SiteAwareTrait;
 
-    const TRANSIENT_CI_DELETE_PATTERN = '^ci-';
-    const PR_BRANCH_DELETE_PATTERN = '^pr-';
+    const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
+    const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
 
     protected $tmpDirs = [];
