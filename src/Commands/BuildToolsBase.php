@@ -91,10 +91,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
     {
-        if (isset($ci_provider_class_or_alias)) {
+        if (!empty($ci_provider_class_or_alias)) {
             $this->createCIProvider($ci_provider_class_or_alias);
         }
-        if (isset($git_provider_class_or_alias)) {
+        if (!empty($git_provider_class_or_alias)) {
             $this->createGitProvider($git_provider_class_or_alias);
         }
     }
