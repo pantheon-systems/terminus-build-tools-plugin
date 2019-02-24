@@ -31,7 +31,10 @@ class MultiDevRetention
     /** @var string */
     protected $project;
 
-    public function __construct(GitProvider $provider, $multidevs, $pattern, $project)
+    /** @var string */
+    protected $site_id;
+
+    public function __construct(GitProvider $provider, $multidevs, $pattern, $project, $site_id)
     {
         $this->provider = $provider;
         $this->examining = $multidevs;
@@ -39,6 +42,7 @@ class MultiDevRetention
         $this->eligible = [];
         $this->pattern = $pattern;
         $this->project = $project;
+        $this->site_id = $site_id;
     }
 
     /**
@@ -55,6 +59,14 @@ class MultiDevRetention
     public function project()
     {
         return $this->project;
+    }
+
+    /**
+     * project returns the cached site id.
+     */
+    public function siteId()
+    {
+        return $this->site_id;
     }
 
     /**

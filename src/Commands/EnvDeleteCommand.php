@@ -41,7 +41,7 @@ class EnvDeleteCommand extends BuildToolsBase
      * @option keep Number of environments to keep
      * @option dry-run Only print what would be deleted; do not delete anything.
      */
-    public function deleteBuildEnvCi(
+    public function deleteBuildEnvCI(
         $site_id,
         $options = [
             'keep' => 0,
@@ -128,7 +128,13 @@ class EnvDeleteCommand extends BuildToolsBase
 
         $project = $this->projectFromRemoteUrl($remoteUrl);
 
-        $retentionController = new MultiDevRetention($provider, $oldestEnvironments, $multidev_delete_pattern, $project);
+        $retentionController = new MultiDevRetention(
+            $provider,
+            $oldestEnvironments,
+            $multidev_delete_pattern,
+            $project,
+            $site_id
+        );
 
         return $retentionController;
     }
@@ -185,6 +191,7 @@ class EnvDeleteCommand extends BuildToolsBase
         }
 
         // Delete each of the selected environments.
+        $site_id = $retentionController->siteId();
         foreach ($environmentsToDelete as $env_id) {
             $site_env_id = "{$site_id}.{$env_id}";
 

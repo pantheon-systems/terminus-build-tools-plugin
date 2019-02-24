@@ -30,6 +30,7 @@ use Pantheon\Terminus\DataStore\FileStore;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 use Pantheon\Terminus\Helpers\LocalMachineHelper;
+use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -41,6 +42,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 {
     use LoadAllTasks; // uses TaskAccessor, which uses BuilderAwareTrait
     use SiteAwareTrait;
+    use WorkflowProcessingTrait;
 
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
@@ -872,13 +874,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function deleteEnv($env, $deleteBranch = false)
     {
-        $workflow = $env->delete(['delete_branch' => $deleteBranch,]);
-        $workflow->wait();
-        if ($workflow->isSuccessful()) {
-            $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
-        } else {
-            throw new TerminusException($workflow->getMessage());
-        }
+        $workflow = $env->delete(
+            ['delete_branch' => true,]
+        );
+        $this->processWorkflow($workflow);
+        $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
     }
 
     /**
