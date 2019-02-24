@@ -12,7 +12,7 @@ fi
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 TARGET_REPO=$GITLAB_USER/$TERMINUS_SITE
-CLONE_URL="https://$GITLAB_USER@gitlab.com/${TARGET_REPO}.git"
+CLONE_URL="https://oauth2:${GITLAB_TOKEN}@gitlab.com/${TARGET_REPO}.git"
 
 # Build a test project on gitlab
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=gitlab --ci=$CI_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
