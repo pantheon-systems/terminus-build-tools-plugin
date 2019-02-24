@@ -11,7 +11,7 @@
 #=====================================================================================================================
 (
   echo 'export PATH=$PATH:$HOME/bin'
-  echo 'export TERMINUS_HIDE_UPDATE_MESSAGE=1'
+  echo 'export TARGET_REPO_WORKING_COPY=$HOME/system-under-test'
 ) >> $BASH_ENV
 source $BASH_ENV
 
