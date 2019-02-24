@@ -57,6 +57,11 @@ class ProviderManager implements LoggerAwareInterface
         // i.e. --ci=circle-ci is the same as --ci=circleci
         $test_alias = preg_replace('#[^a-z0-9]#', '', $alias);
 
+        // Bail early on invalid input
+        if (empty($test_alias)) {
+            return $alias;
+        }
+
         // Allow providers to be specified
         foreach ($available_providers as $provider) {
             $provider_class = basename(strtr($provider, '\\', '/'));
