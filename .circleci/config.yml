@@ -26,9 +26,9 @@ defaults: &defaults
     # ADMIN_EMAIL:    The email address to give the admin when installing.
     #=========================================================================
 
-    BASH_ENV: ~/.bashrc
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
     TERM: dumb
+    TERMINUS_HIDE_UPDATE_MESSAGE: 1
 
 version: 2
 jobs:
@@ -43,14 +43,17 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Check Terminus version
                 command: terminus --version
             - run:
                 name: Test D8 with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
             - run:
                 name: Clean up D8 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -64,11 +67,14 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D7 with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
             - run:
                 name: Clean up D7 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -82,12 +88,16 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" bitbucket
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: echo "Skipping the watch-cicle step too"
+                #command: ./.circleci/watch-circle.sh
             - run:
                 name: Clean up D8 Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -101,11 +111,14 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
             - run:
                 name: Clean up WordPress GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
