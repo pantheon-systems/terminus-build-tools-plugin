@@ -839,6 +839,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function orgUserFromRemoteUrl($url)
     {
+        if (strpos($url, 'https://') !== false)
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[0];
+        }
         return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
     }
 
@@ -848,6 +854,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function repositoryFromRemoteUrl($url)
     {
+        if (strpos($url, 'https://') !== false)
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[1];
+        }
         return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
     }
 
