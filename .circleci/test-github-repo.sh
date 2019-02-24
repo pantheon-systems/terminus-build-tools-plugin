@@ -4,8 +4,6 @@
 # TODO: We should also pass the $GITHUB_TOKEN when cloning the GitHub repo so that it can be a private repo if desired.
 set -e
 
-echo "Sut is $TARGET_REPO_WORKING_COPY"
-
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
 # If we are on the master branch
