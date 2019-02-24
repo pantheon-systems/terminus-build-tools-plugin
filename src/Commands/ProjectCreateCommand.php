@@ -57,6 +57,11 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
 
+        // If using GitLab, override the CI choice as GitLabCI is the only option.
+        if ($git_provider_class_or_alias == 'gitlab') {
+            $ci_provider_class_or_alias = 'gitlabci';
+        }
+
         // Create the providers via the provider manager
         $this->createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias);
 
@@ -240,7 +245,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
-            'ci' => '',
+            'ci' => 'circleci',
             'git' => 'github',
         ])
     {
