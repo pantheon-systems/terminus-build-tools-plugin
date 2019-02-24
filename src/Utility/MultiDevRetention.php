@@ -138,7 +138,6 @@ class MultiDevRetention
     {
         $number = $item['number'];
         $name = $this->pattern . $number;
-        unset($this->examining[$name]);
 
         if ($item['state'] == 'closed') {
             return $this->processClosed($name);
@@ -160,6 +159,5 @@ class MultiDevRetention
             unset($this->examining[$name]);
             $this->retain[$name] = $name;
         }
-
     }
 }
