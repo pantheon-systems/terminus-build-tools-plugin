@@ -82,6 +82,3 @@ then
         cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
     )
 fi
-
-# Delete our test site, etc.
-./.circleci/cleanup-fixtures.sh
