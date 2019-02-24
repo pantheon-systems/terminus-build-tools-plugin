@@ -69,7 +69,3 @@ git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
     set +ex
     cd "$TARGET_REPO_WORKING_COPY" && circle token "$CIRCLE_TOKEN" && circle watch
 )
-
-
-# Delete our test site, etc.
-./.circleci/cleanup-fixtures.sh

@@ -30,6 +30,7 @@ use Pantheon\Terminus\DataStore\FileStore;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 use Pantheon\Terminus\Helpers\LocalMachineHelper;
+use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -41,9 +42,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 {
     use LoadAllTasks; // uses TaskAccessor, which uses BuilderAwareTrait
     use SiteAwareTrait;
+    use WorkflowProcessingTrait;
 
-    const TRANSIENT_CI_DELETE_PATTERN = '^ci-';
-    const PR_BRANCH_DELETE_PATTERN = '^pr-';
+    const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
+    const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
 
     protected $tmpDirs = [];
@@ -822,112 +824,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $metadata;
     }
 
+    /**
+     * orgUserFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "org" portion of the provided url.
+     */
+    protected function orgUserFromRemoteUrl($url)
+    {
+        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
+    }
+
+    /**
+     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "repo" portion of the provided url.
+     */
+    protected function repositoryFromRemoteUrl($url)
+    {
+        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
+    }
+
+    /**
+     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "org/repo" portion of the provided url.
+     */
     protected function projectFromRemoteUrl($url)
     {
-        return preg_replace('#[^:/]*[:/]([^/:]*/.*)\.git#', '\1', str_replace('https://', '', $url));
-    }
-
-    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
-    {
-        $project = $this->projectFromRemoteUrl($remoteUrl);
-        // Get back a pr-number => branch-name list
-
-        $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
-
-        // Find any that match "pr-NNN", for some NNN in pr-number.
-        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
-        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
-        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
-
-        // If there are no closed pull requests, then there is no need
-        // to look for open pull requests
-        if (empty($result)) {
-            return $result;
-        }
-
-        $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
-
-        // Remove any that match "pr-NNN" and have an open pull request
-        $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
-        // Remove any that match "pr-BRANCH", and have an open pull request
-        $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
-
-        return $result;
-    }
-
-    // TODO: At the moment, this takes multidev environment names,
-    // e.g.:
-    //   pr-dc-worka
-    // And compares them against a list of branches, e.g.:
-    //   dc-workaround
-    //   lightning-fist-2
-    //   composer-merge-pantheon
-    // In its current form, the 'pr-' is stripped from the beginning of
-    // the environment name, and then a 'begins-with' test is done. This
-    // is not perfect, but if it goes wrong, the result will be that a
-    // multidev environment that should have been eligible for deletion will
-    // not be deleted.
-    //
-    // This could be made better if we could fetch the build-metadata.json
-    // file from the repository root of each multidev environment, which would
-    // give us the correct branch name for every environment. We could do
-    // this without too much trouble via rsync; this might be a little slow, though.
-    protected function preserveEnvsWithBranches($oldestEnvironments, $multidev_delete_pattern)
-    {
-        $remoteBranch = 'origin';
-
-        // Update the local repository -- prune / add remote branches.
-        // We could use `git remote prune origin` to only prune remote branches.
-        $this->passthru('git remote update --prune origin');
-
-        // List all of the remote branches
-        $outputLines = $this->exec('git branch -ar');
-
-        // Remove branch lines that do not begin with 'origin/'
-        $outputLines = array_filter(
-            $outputLines,
-            function ($item) use ($remoteBranch) {
-                return preg_match("%^ *$remoteBranch/%", $item);
-            }
-        );
-
-        // Strip the 'origin/' from the beginning of each branch line
-        $outputLines = array_map(
-            function ($item) use ($remoteBranch) {
-                return preg_replace("%^ *$remoteBranch/%", '', $item);
-            },
-            $outputLines
-        );
-
-        return $this->filterBranches($oldestEnvironments, $outputLines, $multidev_delete_pattern);
-    }
-
-    protected function filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
-    {
-        // Filter environments that have matching remote branches in origin
-        return array_filter(
-            $oldestEnvironments,
-            function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
-                return empty($matches);
-            }
-        );
-    }
-
-    protected function findBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
-    {
-        // Filter environments that have matching remote branches in origin
-        return array_filter(
-            $oldestEnvironments,
-            function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
-                return !empty($matches);
-            }
-        );
+        $org_user = $this->orgUserFromRemoteUrl($url);
+        $repository = $this->repositoryFromRemoteUrl($url);
+        return "$org_user/$repository";
     }
 
     protected function getMatchRegex($item, $multidev_delete_pattern)
@@ -951,13 +874,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function deleteEnv($env, $deleteBranch = false)
     {
-        $workflow = $env->delete(['delete_branch' => $deleteBranch,]);
-        $workflow->wait();
-        if ($workflow->isSuccessful()) {
-            $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
-        } else {
-            throw new TerminusException($workflow->getMessage());
-        }
+        $workflow = $env->delete(
+            ['delete_branch' => true,]
+        );
+        $this->processWorkflow($workflow);
+        $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
     }
 
     /**

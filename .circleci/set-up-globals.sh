@@ -21,6 +21,7 @@ cd ~/terminus_build_tools_plugin
 mkdir -p $HOME/.terminus/plugins
 ln -s $(pwd) $HOME/.terminus/plugins
 terminus list -n build
+terminus --version
 
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
