@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "Path is: $PATH"
+echo "SUT is: $TARGET_REPO_WORKING_COPY"
+
 set -ex
 
 cd ~/terminus_build_tools_plugin
