@@ -29,6 +29,7 @@ defaults: &defaults
     BASH_ENV: ~/.bashrc
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
     TERM: dumb
+    TERMINUS_HIDE_UPDATE_MESSAGE: 1
 
 version: 2
 jobs:
@@ -43,7 +44,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Check Terminus version
@@ -67,7 +68,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D7 with GitHub
@@ -88,7 +89,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
@@ -111,7 +112,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
