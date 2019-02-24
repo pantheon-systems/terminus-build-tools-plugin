@@ -26,7 +26,6 @@ defaults: &defaults
     # ADMIN_EMAIL:    The email address to give the admin when installing.
     #=========================================================================
 
-    BASH_ENV: ~/.bashrc
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
     TERM: dumb
     TERMINUS_HIDE_UPDATE_MESSAGE: 1

@@ -1,7 +1,6 @@
 #!/bin/bash
 
-echo "Home is $HOME"
-mkdir $HOME
+echo "bash env is $BASH_ENV"
 
 #=====================================================================================================================
 # EXPORT needed environment variables
