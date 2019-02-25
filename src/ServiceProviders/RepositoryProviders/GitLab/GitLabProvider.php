@@ -223,6 +223,31 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $this->gitLabAPI($url, $data);
     }
 
+    /**
+     * @inheritdoc
+     */
+    protected function getProjectID($target_project)
+    {
+        $target_project_pieces = explode( '/', $target_project );
+        $target_user = $target_project_pieces[0];
+        $target_repo = $target_project_pieces[1];
+        
+        $requested_projects = $this->gitLabAPI("api/v4/users/" . urlencode($target_user) . "/projects?simple=true&search=" . urlencode($target_repo) );
+        
+        $found_project = null;
+
+        foreach ($requested_projects as $requested_project) {
+            if( $target_project === $requested_project['path_with_namespace'] ) {
+                $found_project = $requested_project;
+            }
+        }
+        if ( is_null( $found_project ) ) {
+            throw new TerminusException('Error: No GitLab project found when searching for {target_repo} against the user {target_user}', ['target_user' => $target_user, 'target_repo' => $target_repo]);
+        }
+
+        return $found_project['id'];
+    }
+
     protected function gitLabAPI($uri, $data = [], $method = 'GET')
     {
         $url = "https://" . $this->getGITLABURL() . "/" . $uri;
@@ -233,7 +258,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         ];
 
         if ($this->hasToken()) {
-            $headers['PRIVATE-TOKEN'] = $this->token();;
+            $headers['PRIVATE-TOKEN'] = $this->token();
         }
 
         $guzzleParams = [
@@ -279,11 +304,14 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
             'all' => ['all']
         ];
 
-        if (!isset($stateParameters[$state]))
+        if (!isset($stateParameters[$state])) {
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
+        }
 
-        $data = $this->gitLabAPI("projects/$target_project/merge_requests?state=" . implode('', $stateParameters[$state]));
-        var_dump($data);
+        $project_id = $this->getProjectID($target_project);
+
+        $data = $this->gitLabAPI("api/v4/projects/$project_id/merge_requests?state=" . implode('', $stateParameters[$state]));
+
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['number'];
