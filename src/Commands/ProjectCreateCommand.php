@@ -373,9 +373,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
-            // It is not necessary to push to GitHub so soon, but it's helpful
-            // for debugging et. al. to have the initial repo contents available.
-
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
