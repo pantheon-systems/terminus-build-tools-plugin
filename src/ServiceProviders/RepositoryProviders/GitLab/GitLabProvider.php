@@ -282,7 +282,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         if (!isset($stateParameters[$state]))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
 
-        $data = $this->gitLabAPI("projects/$target_project/merge_requests?state=" . implode('', $stateParameters[$state]));
+        $data = $this->gitLabAPI("api/v4/projects/$target_project/merge_requests?state=" . implode('', $stateParameters[$state]));
         var_dump($data);
         $branchList = array_column(array_map(
             function ($item) {
