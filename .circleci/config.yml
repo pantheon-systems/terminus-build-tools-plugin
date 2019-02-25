@@ -165,6 +165,6 @@ workflows:
             - test_wordpress:
                 requires:
                    - unit
-            - test_drupal_7_gitlab:
+            - test_wordpress_gitlab:
                 requires:
                    - unit
