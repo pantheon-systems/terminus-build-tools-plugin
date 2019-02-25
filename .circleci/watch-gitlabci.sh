@@ -1,2 +1,20 @@
 # TODO: Watch the GitLab CI build. Exit with an error if that job fails.
-# https://github.com/zaquestion/lab/issues/261 contains the start of functionality to watch tests until they pass.
+
+curl -s https://raw.githubusercontent.com/zaquestion/lab/master/install.sh | bash
+
+# Confirm that GitLab was configured for testing, and that the first test passed.
+set +ex
+
+cd "$TARGET_REPO_WORKING_COPY"
+export LAB_CORE_HOST
+export LAB_CORE_USER
+export LAB_CORE_TOKEN
+(
+  echo 'export LAB_CORE_HOST=https://gitlab.com'
+  echo 'export LAB_CORE_USER=$GITLAB_USER'
+  echo 'export LAB_CORE_TOKEN=$GITLAB_TOKEN'
+) >> $BASH_ENV
+source $BASH_ENV
+
+lab ci status --wait
+
