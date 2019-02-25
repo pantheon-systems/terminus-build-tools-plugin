@@ -30,6 +30,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
     const GITLAB_URL_DEFAULT = 'gitlab.com';
     protected $config;
+    protected $self_hosted;
 
     protected $repositoryEnvironment;
 
@@ -37,6 +38,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         $this->config = $config;
         $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+        $this->self_hosted = ( false === stripos( $this->getGITLABURL(), self::GITLAB_URL_DEFAULT ) );
     }
 
     /**
@@ -312,14 +314,29 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
         $data = $this->gitLabAPI("api/v4/projects/$project_id/merge_requests?state=" . implode('', $stateParameters[$state]));
 
-        $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['number'];
-                $branch_name = $item['head']['ref'];
-                return [$pr_number, $branch_name];
-            },
-            $data
-        ), 1, 0);
+        if( $this->self_hosted ) {
+
+            $branchList = array_column(array_map(
+                function ($item) {
+                    $pr_number = $item['number'];
+                    $branch_name = $item['head']['ref'];
+                    return [$pr_number, $branch_name];
+                },
+                $data
+            ), 1, 0);
+
+        } else {
+
+            $branchList = array_column(array_map(
+                function ($item) {
+                    $pr_number = $item['iid'];
+                    $branch_name = $item['source_branch'];
+                    return [$pr_number, $branch_name];
+                },
+                $data
+            ), 1, 0);
+
+        }
 
         return $branchList;
     }
