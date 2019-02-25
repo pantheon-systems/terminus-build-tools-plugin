@@ -127,7 +127,7 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_drupal_7_gitlab:
+    test_wordpress_gitlab:
         <<: *defaults
         steps:
             - checkout
@@ -135,16 +135,16 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D7 with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" gitlabci
+                name: Test WordPress with GitLab
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
             - run:
-                name: Clean up D7 GitLab fixtures after pass
+                name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D7 GitLab fixtures after failure
+                name: Clean up WordPress GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
