@@ -25,3 +25,4 @@ use its own circle-ci instance as it requires access to GitHub, Pantheon etc.
      - `GIT_EMAIL` The email to use for commits.
      - `TERMINUS_ORG` The agency account to use for creating Pantheon sites.
      - `TERMINUS_TOKEN` A generated Pantheon/Terminus access token.
+     - `GITLAB_TOKEN` A generated GitLab token - needs at least api and read_user scopes.

@@ -57,6 +57,11 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
 
+        // If using GitLab, override the CI choice as GitLabCI is the only option.
+        if ($git_provider_class_or_alias == 'gitlab') {
+            $ci_provider_class_or_alias = 'gitlabci';
+        }
+
         // Create the providers via the provider manager
         $this->createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias);
 
@@ -207,6 +212,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
      * CircleCI configuration:
      *   export CIRCLE_TOKEN=circle_personal_api_token
      *
+     * GitLab/GitLabCI configuration:
+     *   export GITLAB_TOKEN=gitlab_personal_access_token
+     *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
@@ -237,7 +245,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
-            'ci' => 'circle',
+            'ci' => 'circleci',
             'git' => 'github',
         ])
     {
@@ -365,23 +373,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
-            // It is not necessary to push to GitHub so soon, but it's helpful
-            // for debugging et. al. to have the initial repo contents available.
-
-            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
-            /*
-            ->taskRepositoryPush()
-                ->provider($this->git_provider)
-                ->target($this->target_project)
-                ->dir($siteDir)
-            */
-            ->addCode(
-                function ($state) use ($ci_env, $siteDir) {
-                    $repositoryAttributes = $ci_env->getState('repository');
-
-                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
-                })
-
             ->progressMessage('Set up CI services')
 
             // Set up CircleCI to test our project.
@@ -391,6 +382,21 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 ->environment($ci_env)
                 ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
                 ->dir($siteDir)
+
+            // Create public and private key pair and add them to any provider
+            // that requested them.
+            ->taskCreateKeys()
+                ->environment($ci_env)
+                ->provider($this->ci_provider)
+                ->provider($this->git_provider)
+                ->provider($this) // TODO: replace with site provider
+
+            /*
+            ->taskRepositoryPush()
+                ->provider($this->git_provider)
+                ->target($this->target_project)
+                ->dir($siteDir)
+            */
 
             // Push code to newly-created project.
             // Note that this also effectively does a 'git reset --hard'
@@ -432,7 +438,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 })
 
             // Push the local working repository to the server
-            ->progressMessage('Push updated configuration to {target}', ['target' => $target_label])
+            ->progressMessage('Push initial code to {target}', ['target' => $target_label])
             /*
             ->taskRepositoryPush()
                 ->provider($this->git_provider)
@@ -445,15 +451,8 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
                 })
 
-            // Create public and private key pair and add them to any provider
-            // that requested them.
-            ->taskCreateKeys()
-                ->environment($ci_env)
-                ->provider($this->ci_provider)
-                ->provider($this->git_provider)
-                ->provider($this) // TODO: replace with site provider
-
             // Tell the CI server to start testing our project
+            ->progressMessage('Beginning CI testing')
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
                 ->environment($ci_env);

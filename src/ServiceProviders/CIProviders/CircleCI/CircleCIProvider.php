@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -154,7 +155,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
         $headers = [
             'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+            'User-Agent' => ProviderEnvironment::USER_AGENT,
         ];
 
         $client = new \GuzzleHttp\Client();

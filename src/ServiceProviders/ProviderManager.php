@@ -5,17 +5,20 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Robo\Config\Config;
 
 class ProviderManager implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
     protected $credential_manager;
+    protected $config;
     protected $providers = [];
 
-    public function __construct(CredentialManager $credential_manager)
+    public function __construct(CredentialManager $credential_manager, Config $config)
     {
         $this->credential_manager = $credential_manager;
+        $this->config = $config;
     }
 
     protected function availableProviders()
@@ -25,6 +28,8 @@ class ProviderManager implements LoggerAwareInterface
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI\GitLabCIProvider',
         ];
     }
 
@@ -35,7 +40,7 @@ class ProviderManager implements LoggerAwareInterface
         foreach ($available_providers as $provider) {
             $providerClass = new \ReflectionClass($provider);
             if ($providerClass->implementsInterface($expectedInterface)) {
-                $providerInstance = new $provider();
+                $providerInstance = new $provider($this->config);
                 if ($providerInstance->infer($url)) {
                     $this->initializeProvider($providerInstance);
                     return $providerInstance;
@@ -51,6 +56,11 @@ class ProviderManager implements LoggerAwareInterface
         // Only compare the alphanumeric parts of the provided alias.
         // i.e. --ci=circle-ci is the same as --ci=circleci
         $test_alias = preg_replace('#[^a-z0-9]#', '', $alias);
+
+        // Bail early on invalid input
+        if (empty($test_alias)) {
+            return $alias;
+        }
 
         // Allow providers to be specified
         foreach ($available_providers as $provider) {
@@ -70,7 +80,7 @@ class ProviderManager implements LoggerAwareInterface
         if (!class_exists($providerClass)) {
             throw new \Exception("Could not load class $providerClass");
         }
-        $provider = new $providerClass();
+        $provider = new $providerClass($this->config);
         if (!$provider instanceof $expectedInterface) {
             throw new \Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
         }

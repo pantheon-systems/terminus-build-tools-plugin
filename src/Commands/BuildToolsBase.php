@@ -73,7 +73,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
             $credentialManager = new CredentialManager($credential_store);
             $credentialManager->setUserId($this->loggedInUserEmail());
-            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager = new ProviderManager($credentialManager, $this->getConfig());
             $this->provider_manager->setLogger($this->logger);
         }
         return $this->provider_manager;
@@ -91,10 +91,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
     {
-        if (isset($ci_provider_class_or_alias)) {
+        if (!empty($ci_provider_class_or_alias)) {
             $this->createCIProvider($ci_provider_class_or_alias);
         }
-        if (isset($git_provider_class_or_alias)) {
+        if (!empty($git_provider_class_or_alias)) {
             $this->createGitProvider($git_provider_class_or_alias);
         }
     }
@@ -105,7 +105,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // no build metadata on the master branch of the Pantheon site.
         $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env) + ['url' => ''];
         if (empty($buildMetadata['url'])) {
-            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name]);
+            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name_and_env]);
         }
         return $buildMetadata['url'];
     }
@@ -296,6 +296,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         if (empty($options['admin-email'])) {
             $options['admin-email'] = $options['email'];
+        }
+
+        if (empty($options['ci'])) {
+            if ($options['git'] == 'gitlab') {
+                $options['ci'] = 'gitlabci';
+            }
+            else {
+                $options['ci'] = 'circleci';
+            }
         }
 
         // Catch errors in email address syntax
@@ -830,6 +839,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function orgUserFromRemoteUrl($url)
     {
+        if (strpos($url, 'https://') !== false)
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[0];
+        }
         return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
     }
 
@@ -839,6 +854,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function repositoryFromRemoteUrl($url)
     {
+        if (strpos($url, 'https://') !== false)
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[1];
+        }
         return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
     }
 

@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -244,7 +245,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
                 'base_uri' => 'https://api.bitbucket.org/2.0/',
                 'auth' => [ $this->getBitBucketUser(), $this->getBitBucketPassword() ],
                 'headers' => [
-                    'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+                    'User-Agent' => ProviderEnvironment::USER_AGENT,
                 ]
             ]);
         return $this->bitbucketClient;
