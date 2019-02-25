@@ -16,5 +16,6 @@ export LAB_CORE_TOKEN
 ) >> $BASH_ENV
 source $BASH_ENV
 
-lab ci status --wait
+# Comment out ci waiting as it seems unstable. https://github.com/zaquestion/lab/issues/240
+# lab ci status --wait
 
