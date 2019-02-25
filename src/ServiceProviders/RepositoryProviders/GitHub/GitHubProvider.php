@@ -242,7 +242,9 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         // that the response is a collection but we'll need to guess from the response format.
         if ($this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
             $pager_info = $this->getPagerInfo($headers['Link']);
-            while (($httpCode == 200) && !$this->isLastPage($uri, $pager_info) && $this->checkPagedCallback($resultData, $callback)) {
+            $isDone = false;
+            while (($httpCode == 200) && !$isDone && $this->checkPagedCallback($resultData, $callback)) {
+                $isDone = $this->isLastPage($uri, $pager_info);
                 $uri = $this->getNextPageUri($pager_info);
 
                 $res = $this->getHubRequest($uri);
@@ -253,6 +255,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
                     $accumulatedData,
                     $resultData
                 );
+
             }
         }
 
