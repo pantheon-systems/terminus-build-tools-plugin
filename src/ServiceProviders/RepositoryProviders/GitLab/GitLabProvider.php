@@ -314,29 +314,14 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
         $data = $this->gitLabAPI("api/v4/projects/$project_id/merge_requests?state=" . implode('', $stateParameters[$state]));
 
-        if( $this->self_hosted ) {
-
-            $branchList = array_column(array_map(
-                function ($item) {
-                    $pr_number = $item['number'];
-                    $branch_name = $item['head']['ref'];
-                    return [$pr_number, $branch_name];
-                },
-                $data
-            ), 1, 0);
-
-        } else {
-
-            $branchList = array_column(array_map(
-                function ($item) {
-                    $pr_number = $item['iid'];
-                    $branch_name = $item['source_branch'];
-                    return [$pr_number, $branch_name];
-                },
-                $data
-            ), 1, 0);
-
-        }
+        $branchList = array_column(array_map(
+            function ($item) {
+                $pr_number = $item['iid'];
+                $branch_name = $item['source_branch'];
+                return [$pr_number, $branch_name];
+            },
+            $data
+        ), 1, 0);
 
         return $branchList;
     }
