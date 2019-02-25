@@ -31,6 +31,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 use Pantheon\Terminus\Helpers\LocalMachineHelper;
 use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
+use Pantheon\Terminus\Models\Environment;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -520,16 +521,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     /**
      * Run an env:clone-content operation
-     * @param Pantheon\Terminus\Models\Environment $target
-     * @param string $from_name
+     * @param Environment $target
+     * @param Environment $from_env
      * @param bool $db_only
      * @param bool $files_only
      */
-    public function cloneContent($target, $from_name, $db_only = false, $files_only = false)
+    public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
+        $from_name = $from_env->name();
+
         // Clone files if we're only doing files, or if "only do db" is not set.
         if ($files_only || !$db_only) {
-            $workflow = $target->cloneFiles($from_name);
+            $workflow = $target->cloneFiles($from_env);
             $this->log()->notice(
                 "Cloning files from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
@@ -542,7 +545,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Clone database if we're only doing the database, or if "only do files" is not set.
         if ($db_only || !$files_only) {
-            $workflow = $target->cloneDatabase($from_name);
+            $workflow = $target->cloneDatabase($from_env);
             $this->log()->notice(
                 "Cloning database from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
