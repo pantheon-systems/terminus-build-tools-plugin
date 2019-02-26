@@ -528,7 +528,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
-        $from_name = $from_env->name();
+        $from_name = $from_env->getName();
 
         // Clone files if we're only doing files, or if "only do db" is not set.
         if ($files_only || !$db_only) {
