@@ -3,7 +3,7 @@
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
 [![Terminus v1.x Compatible](https://img.shields.io/badge/terminus-v1.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x)
 
-Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a GitHub PR workflow with Behat tests run via Circle CI (or some other testing service). For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/).
+Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a GitHub PR workflow with Behat tests run via Circle CI (or some other testing service). For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). There is also a startup command that will set up and configure a new Composer-managed test site with scripts.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ PHP 7.2 is recommended.
 ### Installing Build Tools 2.x:
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2
+composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta6
 ```
 
 ### Installing Build Tools 1.x:
