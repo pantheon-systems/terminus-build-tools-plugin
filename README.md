@@ -152,7 +152,7 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 - Automatic multidev deletion not working; test multidevs must be deleted manually
 - Neither Drupal 8 nor Drupal 7 projects available yet
 - Commits to the Pantheon site are not pushed back to the GitLab repository
-- Comments are not added to MRs when multidevs are created
+- Comments are not added to merge requests when multidevs are created
 
 ### Starting a new BitBucket Project
 
@@ -164,7 +164,7 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 
 - Automatic multidev deletion not working; test multidevs must be deleted manually
 - Commits to the Pantheon site are not pushed back to the GitLab repository
-- Comments are not added to PRs when multidevs are created
+- Comments are not added to pull requests when multidevs are created
 
 ## Other Build Tools Commands
 
