@@ -7,7 +7,7 @@ Terminus Plugin that contains a collection of commands useful during the build s
 
 ## Requirements
 
-- If you are using Terminus 2, you must use the unstable Build Tools 2.x release
+- If you are using Terminus 2, you must use the development Build Tools 2.x release
 - If you are using Terminus 1, you must use the stable Build Tools 1.x release
 
 PHP 7.2 is recommended.
@@ -49,6 +49,45 @@ It will prompt you for the credentials it needs to create these assets.
 Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
 Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will not have the capability to create multidev environments.
+
+## Available Services
+
+At the moment, the build:project:create command only supports services in the following combination: 
+
+| Git Host  | CI Service |
+| --------- | ---------- |
+| GitHub    | CircleCI   |
+| GitLab    | GitLabCI   |
+| BitBucket | CircleCI   |
+
+Of these, only GitHub with CircleCI is complete and stable. The GitLab and BitBucket services are incomplete; see the sections below for details.
+
+### Starting a new GitLab Project
+
+```
+$ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
+```
+
+#### Limitations
+
+- Automatic multidev deletion not working; test multidevs must be deleted manually
+- Neither Drupal 8 nor Drupal 7 projects available yet
+- Commits to the Pantheon site are not pushed back to the GitLab repository
+- Comments are not added to merge requests when multidevs are created
+
+### Starting a new BitBucket Project
+
+```
+$ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
+```
+
+#### Limitations
+
+- Automatic multidev deletion not working; test multidevs must be deleted manually
+- Commits to the Pantheon site are not pushed back to the GitLab repository
+- Comments are not added to pull requests when multidevs are created
+
+## Customization
 
 More starter sites will be available in the future. You may easily create your own by forking one of the standard starter sites and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the build:project:create command:
 ```
@@ -128,43 +167,6 @@ To use this tool on a Pantheon site that does not have multidev environments sup
     TERMINUS_ENV: dev
 ```
 ** IMPORTANT NOTE: ** If you initially set up your site using `terminus build:project:create`, and you do **not** use the `--team` option, or the team you specify is not an Agency organization, then your Circle configuration will automatically be set up to use only the dev environment. If you later add multidev capabilities to your site, you will need to [visit the Circle CI environment variables configuration page](https://circleci.com/docs/api/#authentication) and **delete** the entry for TERMINUS_ENV.
-
-## Available Services
-
-At the moment, the build:project:create command only supports services in the following combination: 
-
-| Git Host  | CI Service |
-| --------- | ---------- |
-| GitHub    | CircleCI   |
-| GitLab    | GitLabCI   |
-| BitBucket | CircleCI   |
-
-Of these, only GitHub with CircleCI is complete and stable. The GitLab and BitBucket services are incomplete; see the sections below for details.
-
-### Starting a new GitLab Project
-
-```
-$ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
-```
-
-#### Limitations
-
-- Automatic multidev deletion not working; test multidevs must be deleted manually
-- Neither Drupal 8 nor Drupal 7 projects available yet
-- Commits to the Pantheon site are not pushed back to the GitLab repository
-- Comments are not added to merge requests when multidevs are created
-
-### Starting a new BitBucket Project
-
-```
-$ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
-```
-
-#### Limitations
-
-- Automatic multidev deletion not working; test multidevs must be deleted manually
-- Commits to the Pantheon site are not pushed back to the GitLab repository
-- Comments are not added to pull requests when multidevs are created
 
 ## Other Build Tools Commands
 
