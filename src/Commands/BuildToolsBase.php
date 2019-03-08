@@ -196,19 +196,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Fetch the environment variable 'GITHUB_TOKEN', or throw an exception if it is not set.
-     * @return string
-     */
-    protected function getRequiredGithubToken()
-    {
-        $github_token = getenv('GITHUB_TOKEN');
-        if (empty($github_token)) {
-            throw new TerminusException("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/. Then run: \n\nexport GITHUB_TOKEN=my_personal_access_token_value");
-        }
-        return $github_token;
-    }
-
-    /**
      * Fetch the environment variable 'CIRCLE_TOKEN', or throw an exception if it is not set.
      * @return string
      */

@@ -127,19 +127,20 @@ class MultiDevRetention
      */
     public function __invoke($resultData)
     {
-        foreach ($resultData as $item) {
-            $this->process($item);
+        foreach ($resultData as $data) {
+            $prInfo = $this->$provider->convertPRInfo($data);
+            $this->process($prInfo);
         }
 
         return !empty($this->examining);
     }
 
-    protected function process($item)
+    protected function process($prInfo)
     {
-        $number = $item['number'];
-        $name = $this->pattern . $number;
+        $prNumber = $prInfo->prNumber();
+        $name = $this->pattern . $prNumber;
 
-        if ($item['state'] == 'closed') {
+        if ($prInfo->isClosed()) {
             return $this->processClosed($name);
         }
         return $this->processOpen($name);

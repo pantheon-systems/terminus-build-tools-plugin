@@ -72,16 +72,16 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return self::GITLAB_TOKEN;
     }
 
-    public function hasToken()
+    public function hasToken($key = false)
     {
         $repositoryEnvironment = $this->getEnvironment();
-        return $repositoryEnvironment->hasToken();
+        return $repositoryEnvironment->hasToken($key);
     }
 
-    public function token()
+    public function token($key = false)
     {
         $repositoryEnvironment = $this->getEnvironment();
-        return $repositoryEnvironment->token();
+        return $repositoryEnvironment->token($key);
     }
 
     public function setToken($token)
