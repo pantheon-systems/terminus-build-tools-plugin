@@ -52,7 +52,7 @@ trait BitbucketAPITrait
     public function setToken($token)
     {
         $repositoryEnvironment = $this->getEnvironment();
-        $repositoryEnvironment->setToken(self::BITBUCKET_AUTH, $token);
+        $repositoryEnvironment->setToken(BitbucketAPI::BITBUCKET_AUTH, $token);
     }
 
     public function getBitBucketUser()

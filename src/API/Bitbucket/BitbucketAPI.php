@@ -17,6 +17,7 @@ class BitbucketAPI extends WebAPI
     const SERVICE_NAME = 'bitbucket';
     const BITBUCKET_USER = 'BITBUCKET_USER';
     const BITBUCKET_PASS = 'BITBUCKET_PASS';
+    const BITBUCKET_AUTH = 'BITBUCKET_AUTH';
 
     public function serviceHumanReadableName()
     {
