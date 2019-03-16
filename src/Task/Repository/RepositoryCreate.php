@@ -29,7 +29,7 @@ class RepositoryCreate extends Base
     public function run()
     {
         $target_project = $this->provider->createRepository($this->dir, $this->target, $this->target_org);
-        $this->log()->notice('Created repository {target}', ['target' => $target_project]);
+        $this->logger()->notice('Created repository {target}', ['target' => $target_project]);
         // $repositoryAttributes->setProjectId($target_project);
 
         return Result::success($this);

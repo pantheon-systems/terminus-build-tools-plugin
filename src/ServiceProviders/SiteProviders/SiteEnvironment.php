@@ -13,6 +13,7 @@ class SiteEnvironment extends ProviderEnvironment
 
     public function setSiteName($siteName)
     {
+        $this->makeVariableValuePublic('TERMINUS_SITE');
         $this['TERMINUS_SITE'] = $siteName;
         return $this;
     }
@@ -35,6 +36,7 @@ class SiteEnvironment extends ProviderEnvironment
 
     public function setTestSiteName($siteName)
     {
+        $this->makeVariableValuePublic('TEST_SITE_NAME');
         $this['TEST_SITE_NAME'] = $siteName;
         return $this;
     }

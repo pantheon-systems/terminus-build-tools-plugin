@@ -4,6 +4,7 @@ namespace Pantheon\TerminusBuildTools\Credentials;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Pantheon\Terminus\DataStore\DataStoreInterface;
+use Symfony\Component\Console\Input\InputInterface;
 
 /**
  * The credential manager stores and fetches credentials from a cache.
@@ -87,7 +88,7 @@ class CredentialManager implements CredentialProviderInterface
     }
 
     /**
-     * Fetch a credential from the cache
+     * Store a credential in the cache
      */
     public function store($id, $credential)
     {
@@ -111,6 +112,22 @@ class CredentialManager implements CredentialProviderInterface
     }
 
     /**
+     * If any of the credenitals were provided via commandline options,
+     * insert their values into the cache.
+     */
+    public function setFromOptions(InputInterface $input)
+    {
+        foreach ($this->credentialRequests as $request) {
+            if ($input->hasOption($request->optionKey())) {
+                $value = $input->getOption($request->optionKey(), '');
+                if (!empty($value)) {
+                    $this->store($request->id(), $value);
+                }
+            }
+        }
+    }
+
+    /**
      * Ask the user to enter needed credentials.
      *
      * @param CredentialRequestInterface[] $credentialRequests
@@ -118,7 +135,7 @@ class CredentialManager implements CredentialProviderInterface
     public function ask(SymfonyStyle $io)
     {
         foreach ($this->credentialRequests as $request) {
-            if (!$this->has($request->id())) {
+            if (!$this->has($request->id()) && $request->required()) {
                 $this->askOne($request, $io);
             }
         }

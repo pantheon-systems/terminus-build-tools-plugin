@@ -35,6 +35,14 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
     }
 
+    /**
+     * @return string
+     */
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
+    }
+
     public function infer($url)
     {
         return strpos($url, 'github.com') !== false;

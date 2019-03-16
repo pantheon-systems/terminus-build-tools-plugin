@@ -12,6 +12,7 @@ use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
+use Pantheon\Terminus\Exceptions\TerminusException;
 
 use GuzzleHttp\Client;
 
@@ -26,13 +27,20 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
 
     const SERVICE_NAME = 'bitbucket';
     const BITBUCKET_URL = 'https://bitbucket.org';
-    const BITBUCKET_AUTH = 'BITBUCKET_AUTH';
 
     private $bitbucketClient;
     protected $repositoryEnvironment;
 
     public function __construct()
     {
+    }
+
+    /**
+     * @return string
+     */
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
     }
 
     public function infer($url)

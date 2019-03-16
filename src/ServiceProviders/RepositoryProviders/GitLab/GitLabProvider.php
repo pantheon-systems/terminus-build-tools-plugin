@@ -40,6 +40,14 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     }
 
     /**
+     * @return string
+     */
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
+    }
+
+    /**
      * @return array|mixed|null
      */
     public function getGitLabUrl() {

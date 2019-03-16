@@ -54,6 +54,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected $provider_manager;
     protected $ci_provider;
     protected $git_provider;
+    protected $site_provider;
 
     /**
      * Constructor
@@ -80,6 +81,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $this->provider_manager;
     }
 
+    /**
+     * Given a git provider and (optionally) a ci provider, return the
+     *
+     */
+    public function selectCIProvider($git_provider_class_or_alias, $ci_provider_class_or_alias = '')
+    {
+        // If using GitLab, override the CI choice as GitLabCI is the only option.
+        // CircleCI theoretically works with GitLab, but its API will not start
+        // up testing on new projects seamlessly, so we can't really use it here.
+        if ($git_provider_class_or_alias == 'gitlab') {
+            $ci_provider_class_or_alias = 'gitlabci';
+        }
+
+        // If using bitbucket and ci is not explicitly provided,
+        // assume bitbucket pipelines
+        if (($git_provider_class_or_alias == 'bitbucket') && (!$ci_provider_class_or_alias)) {
+            $ci_provider_class_or_alias = 'pipelines';
+        }
+
+        // If nothing was provided and no default was inferred, use Circle.
+        if (!$ci_provider_class_or_alias) {
+            $ci_provider_class_or_alias = 'circleci';
+        }
+
+        return $ci_provider_class_or_alias;
+    }
+
     protected function createGitProvider($git_provider_class_or_alias)
     {
         $this->git_provider = $this->providerManager()->createProvider($git_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider::class);
@@ -90,7 +118,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
     }
 
-    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    protected function createSiteProvider($site_provider_class_or_alias)
+    {
+        $this->site_provider = $this->providerManager()->createProvider($site_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteProvider::class);
+        $this->site_provider->setMachineToken($this->recoverSessionMachineToken());
+        $this->site_provider->setSession($this->session());
+    }
+
+    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias, $site_provider_class_or_alias = 'pantheon')
     {
         if (!empty($ci_provider_class_or_alias)) {
             $this->createCIProvider($ci_provider_class_or_alias);
@@ -98,13 +133,23 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (!empty($git_provider_class_or_alias)) {
             $this->createGitProvider($git_provider_class_or_alias);
         }
+        if (!empty($site_provider_class_or_alias)) {
+            $this->createSiteProvider($site_provider_class_or_alias);
+        }
     }
 
     protected function getUrlFromBuildMetadata($site_name_and_env)
     {
+        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env);
+        return $this->getMetadataUrl($buildMetadata);
+    }
+
+    protected function getMetadataUrl($buildMetadata)
+    {
+        $site_name_and_env = $buildMetadata['site'];
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
-        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env) + ['url' => ''];
+        $buildMetadata = $buildMetadata + ['url' => ''];
         if (empty($buildMetadata['url'])) {
             throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name_and_env]);
         }
@@ -182,6 +227,19 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
+     * Determine whether or not this site can create multidev environments.
+     */
+    protected function siteHasMultidevCapability($site)
+    {
+        // Can our site create multidevs?
+        $settings = $site->get('settings');
+        if (!$settings) {
+            return false;
+        }
+        return $settings->max_num_cdes > 0;
+    }
+
+    /**
      * Return the list of available Pantheon organizations
      */
     protected function availableOrgs()
@@ -215,44 +273,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * @param array $options
      * @return CIState
      */
-    public function getCIEnvironment($site_name, $options)
+    public function getCIEnvironment($extra_env)
     {
-        $options += [
-            'test-site-name' => '',
-            'email' => '',
-            'admin-password' => '',
-            'admin-email' => '',
-            'env' => [],
-        ];
-
-        $test_site_name = $options['test-site-name'];
-        $git_email = $options['email'];
-        $admin_password = $options['admin-password'];
-        $admin_email = $options['admin-email'];
-        $extra_env = $options['env'];
-
-        if (empty($test_site_name)) {
-            $test_site_name = $site_name;
-        }
-
-        // We should always be authenticated by the time we get here, but
-        // we will test just to be sure.
-        $terminus_token = $this->recoverSessionMachineToken();
-        if (empty($terminus_token)) {
-            throw new TerminusException("Please generate a Pantheon machine token, as described in https://pantheon.io/docs/machine-tokens/. Then log in via: \n\nterminus auth:login --machine-token=my_machine_token_value");
-        }
-
         $ci_env = new CIState();
-
-        $siteAttributes = (new SiteEnvironment())
-            ->setSiteName($site_name)
-            ->setSiteToken($terminus_token)
-            ->setTestSiteName($test_site_name)
-            ->setAdminPassword($admin_password)
-            ->setAdminEmail($admin_email)
-            ->setGitEmail($git_email);
-
-        $ci_env->storeState('site', $siteAttributes);
 
         // Add in extra environment provided on command line via
         // --env='key=value' --env='another=v2'
@@ -266,53 +289,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $ci_env->storeState('env', $envState);
 
         return $ci_env;
-    }
-
-    /**
-     * Check to see if common options are valid. Provide sensible defaults
-     * where values are unspecified.
-     */
-    protected function validateOptionsAndSetDefaults($options)
-    {
-        if (empty($options['admin-password'])) {
-            $options['admin-password'] = mt_rand();
-        }
-
-        if (empty($options['email'])) {
-            $options['email'] = exec('git config user.email');
-        }
-
-        if (empty($options['admin-email'])) {
-            $options['admin-email'] = $options['email'];
-        }
-
-        if (empty($options['ci'])) {
-            if ($options['git'] == 'gitlab') {
-                $options['ci'] = 'gitlabci';
-            }
-            else {
-                $options['ci'] = 'circleci';
-            }
-        }
-
-        // Catch errors in email address syntax
-        $this->validateEmail('email', $options['email']);
-        $this->validateEmail('admin-email', $options['admin-email']);
-
-        return $options;
-    }
-
-    /**
-     * Check to see if the provided email address is valid.
-     */
-    protected function validateEmail($emailOptionName, $emailValue)
-    {
-        // http://www.regular-expressions.info/email.html
-        if (preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}$/i', $emailValue)) {
-            return;
-        }
-
-        throw new TerminusException("The email address '{email}'' is not valid. Please set a valid email address via 'git config --global user.email <address>', or override this setting with the --{option} option.", ['email' => $emailValue, 'option' => $emailOptionName]);
     }
 
     /**
@@ -386,7 +362,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Use composer create-project to create a new local copy of the source project.
+     * Create our project from source, either via composer create-project,
+     * or from an existing source directory. Record the build metadata.
      */
     protected function createFromSource($source, $target, $stability = '', $options = [])
     {
@@ -413,6 +390,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $source;
     }
 
+    /**
+     * Use composer create-project to create a new local copy of the source project.
+     */
     protected function createFromSourceProject($source, $target, $stability = '')
     {
         $source_project = $this->sourceProjectFromSource($source);
@@ -1081,14 +1061,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = '/tmp/build-metadata.json';
 
         $status = $this->rsync($site_env_id, $src, $dest);
-        if ($status != 0) {
-            return [];
+        if ($status == 0) {
+            $metadataContents = file_get_contents($dest);
+            $metadata = json_decode($metadataContents, true);
         }
 
-        $metadataContents = file_get_contents($dest);
-        $metadata = json_decode($metadataContents, true);
+        $metadata['site'] = $site_env_id;
 
-        unlink($dest);
+        @unlink($dest);
 
         return $metadata;
     }
