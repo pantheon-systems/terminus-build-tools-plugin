@@ -128,7 +128,7 @@ class MultiDevRetention
     public function __invoke($resultData)
     {
         foreach ($resultData as $data) {
-            $prInfo = $this->$provider->convertPRInfo($data);
+            $prInfo = $this->provider->convertPRInfo($data);
             $this->process($prInfo);
         }
 

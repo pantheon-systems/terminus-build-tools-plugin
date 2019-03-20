@@ -73,7 +73,7 @@ class GitLabAPI extends WebAPI
 
     protected function getPagerInfo($links)
     {
-        $links = $headers['Link'];
+        $links = $links['Link'];
         // Find a link header that contains a "rel" type set to "next" or "last".
         $pager_headers = array_filter($links, function ($link) {
             return strpos($link, 'rel="next"') !== FALSE || strpos($link, 'rel="last"') !== FALSE;
@@ -107,7 +107,7 @@ class GitLabAPI extends WebAPI
         });
         $last_item = reset($res);
 
-        return isset($last_item) ? $last_item['href'] === $page_link : FALSE;
+        return (isset($last_item) ? $last_item['href'] === $page_link : FALSE) || is_null($this->getNextPageUri($pager_info));
     }
 
     protected function getNextPageUri($pager_info)

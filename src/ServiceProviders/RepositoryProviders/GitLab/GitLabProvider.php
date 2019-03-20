@@ -13,6 +13,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
+use Pantheon\TerminusBuildTools\API\PullRequestInfo;
 use Robo\Common\ConfigAwareTrait;
 use Robo\Config\Config;
 
@@ -186,10 +187,10 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
         $projectID = $this->getProjectID($target_project);
 
-        $data = $this->api()->pagedRequest("projects/$projectID/merge_requests?scope=all&state=" . implode('', $stateParameters[$state]), $callback);
+        $data = $this->api()->pagedRequest("api/v4/projects/$projectID/merge_requests?scope=all&state=" . implode('', $stateParameters[$state]), $callback);
         $branchList = array_column(array_map(
             function ($item) {
-                $pr_number = $item['id'];
+                $pr_number = $item['iid'];
                 $branch_name = $item['sha'];
                 return [$pr_number, $branch_name];
             },
@@ -201,8 +202,8 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     public function convertPRInfo($data)
     {
-        $isClosed = ($data['state'] == 'closed');
-        return new PullRequestInfo($data['id'], $isClosed, $data['sha']);
+        $isClosed = in_array($data['state'], ['closed', 'merged']);
+        return new PullRequestInfo($data['iid'], $isClosed, $data['sha']);
     }
 
     protected function execGit($dir, $cmd, $replacements = [], $redacted = [])

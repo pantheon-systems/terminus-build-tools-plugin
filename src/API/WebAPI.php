@@ -68,10 +68,13 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                 $httpCode = $res->getStatusCode();
                 $resultData = json_decode($res->getBody(), true);
 
-                $accumulatedData = array_merge_recursive(
-                    $accumulatedData,
-                    $resultData
-                );
+                if (!is_null($resultData))
+                {
+                    $accumulatedData = array_merge_recursive(
+                        $accumulatedData,
+                        $resultData
+                    );
+                }
 
             }
         }
