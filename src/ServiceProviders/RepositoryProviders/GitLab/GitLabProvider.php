@@ -161,7 +161,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     public function getProjectID($target_project)
     {
-        $project = $this->api->request("api/v4/projects/" . urlencode($target_project));
+        $project = $this->api()->request("api/v4/projects/" . urlencode($target_project));
 
         if (empty($project)) {
             throw new TerminusException('Error: No GitLab project found for {target_project}', ['target_project' => $target_project]);
