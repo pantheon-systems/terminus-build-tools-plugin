@@ -7,6 +7,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Pantheon\Terminus\Exceptions\TerminusException;
 
 /**
  * WebAPI is an abstract class for managing web APIs for different services.
