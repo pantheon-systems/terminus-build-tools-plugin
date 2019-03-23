@@ -31,6 +31,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 use Pantheon\Terminus\Helpers\LocalMachineHelper;
 use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
+use Pantheon\Terminus\Models\Environment;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -192,19 +193,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->session()->getUser()->getOrganizations()
         );
         return $orgs;
-    }
-
-    /**
-     * Fetch the environment variable 'GITHUB_TOKEN', or throw an exception if it is not set.
-     * @return string
-     */
-    protected function getRequiredGithubToken()
-    {
-        $github_token = getenv('GITHUB_TOKEN');
-        if (empty($github_token)) {
-            throw new TerminusException("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/. Then run: \n\nexport GITHUB_TOKEN=my_personal_access_token_value");
-        }
-        return $github_token;
     }
 
     /**
@@ -520,16 +508,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     /**
      * Run an env:clone-content operation
-     * @param Pantheon\Terminus\Models\Environment $target
-     * @param string $from_name
+     * @param Environment $target
+     * @param Environment $from_env
      * @param bool $db_only
      * @param bool $files_only
      */
-    public function cloneContent($target, $from_name, $db_only = false, $files_only = false)
+    public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
+        $from_name = $from_env->getName();
+
         // Clone files if we're only doing files, or if "only do db" is not set.
         if ($files_only || !$db_only) {
-            $workflow = $target->cloneFiles($from_name);
+            $workflow = $target->cloneFiles($from_env);
             $this->log()->notice(
                 "Cloning files from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
@@ -542,7 +532,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Clone database if we're only doing the database, or if "only do files" is not set.
         if ($db_only || !$files_only) {
-            $workflow = $target->cloneDatabase($from_name);
+            $workflow = $target->cloneDatabase($from_env);
             $this->log()->notice(
                 "Cloning database from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]

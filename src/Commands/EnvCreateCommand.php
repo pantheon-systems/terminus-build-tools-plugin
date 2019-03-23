@@ -120,7 +120,7 @@ class EnvCreateCommand extends BuildToolsBase
         // instead -- but only if requested. No point in running 'clone'
         // if the user plans on re-installing Drupal.
         if ($environmentExists && $options['clone-content']) {
-            $this->cloneContent($target, $env_id, $options['db-only']);
+            $this->cloneContent($target, $env, $options['db-only']);
         }
 
         // Set the target environment to sftp mode
