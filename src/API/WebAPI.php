@@ -111,6 +111,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
     protected function processResponse($resultData, $httpCode)
     {
         $errors = [];
+        $message = '';
         if (isset($resultData['errors'])) {
             foreach ($resultData['errors'] as $error) {
                 $errors[] = $error['message'];
@@ -118,9 +119,8 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         }
         if ($httpCode && ($httpCode >= 300)) {
             $errors[] = "Http status code: $httpCode";
+            $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
         }
-
-        $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
 
         if (!empty($message) || !empty($errors)) {
             throw new TerminusException('error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
