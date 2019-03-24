@@ -154,7 +154,8 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
         $headers = [
             'Content-Type' => 'application/json',
-            'User-Agent' => 'pantheon/terminus-build-tools-plugin'
+            'User-Agent' => 'pantheon/terminus-build-tools-plugin',
+            'Accept: application/json',
         ];
 
         $client = new \GuzzleHttp\Client();
