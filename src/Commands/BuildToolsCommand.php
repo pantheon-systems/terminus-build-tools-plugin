@@ -1575,6 +1575,7 @@ class BuildToolsCommand extends TerminusCommand implements SiteAwareInterface
     {
         $headers = [
             'Content-Type: application/json',
+            'Accept: application/json',
             'User-Agent: pantheon/terminus-build-tools-plugin'
         ];
 
