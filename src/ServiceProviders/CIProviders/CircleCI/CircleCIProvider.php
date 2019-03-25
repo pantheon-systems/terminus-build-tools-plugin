@@ -156,6 +156,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $headers = [
             'Content-Type' => 'application/json',
             'User-Agent' => ProviderEnvironment::USER_AGENT,
+            'Accept' => 'application/json',
         ];
 
         $client = new \GuzzleHttp\Client();
