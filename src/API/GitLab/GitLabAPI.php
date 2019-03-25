@@ -53,14 +53,6 @@ class GitLabAPI extends WebAPI
 
     public static function determineGitLabUrl(Config $config)
     {
-        // Start by seeing if GitLab CI has set a potential Project URL for us.
-        $potential_ci_url = getenv('CI_PROJECT_URL');
-        if ($potential_ci_url && is_string($potential_ci_url))
-        {
-            $parsed_ci_url = parse_url($potential_ci_url, PHP_URL_HOST);
-            return !empty($parsed_ci_url) ? $parsed_ci_url : self::GITLAB_URL_DEFAULT;
-        }
-
         return $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
     }
 
