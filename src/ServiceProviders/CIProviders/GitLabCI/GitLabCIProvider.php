@@ -4,7 +4,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI;
 
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
@@ -29,8 +29,6 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     protected $GITLAB_URL;
     // Since GitLab and GitLabCI are so tightly coupled, use the Repository constants.
     const GITLAB_TOKEN = GitLabProvider::GITLAB_TOKEN;
-    const GITLAB_CONFIG_PATH = GitLabProvider::GITLAB_CONFIG_PATH;
-    const GITLAB_URL_DEFAULT = GitLabProvider::GITLAB_URL_DEFAULT;
 
     protected $gitlab_token;
     protected $config;
@@ -38,7 +36,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function __construct(Config $config)
     {
         $this->config = $config;
-        $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+        $this->setGITLABURL(GitLabAPI::determineGitLabUrl($config));
     }
 
     /**

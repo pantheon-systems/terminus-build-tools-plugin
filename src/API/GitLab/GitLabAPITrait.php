@@ -7,7 +7,7 @@ use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -56,7 +56,7 @@ trait GitLabAPITrait
 
   public function getGITLABURL()
   {
-    return GitLabProvider::GITLAB_URL_DEFAULT;
+    return GitLabAPI::GITLAB_URL_DEFAULT;
   }
 
   /**

@@ -8,6 +8,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Robo\Config\Config;
 
 /**
  * GitLabAPI manages calls to the GitLab API.
@@ -16,6 +17,8 @@ class GitLabAPI extends WebAPI
 {
     const SERVICE_NAME = 'gitlab';
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
+    const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
+    const GITLAB_URL_DEFAULT = 'gitlab.com';
 
     private $GITLAB_URL;
 
@@ -46,6 +49,19 @@ class GitLabAPI extends WebAPI
                 'headers' => $headers,
             ]
         );
+    }
+
+    public static function determineGitLabUrl(Config $config)
+    {
+        // Start by seeing if GitLab CI has set a potential Project URL for us.
+        $potential_ci_url = getenv('CI_PROJECT_URL');
+        if ($potential_ci_url && is_string($potential_ci_url))
+        {
+            $parsed_ci_url = parse_url($potential_ci_url, PHP_URL_HOST);
+            return !empty($parsed_ci_url) ? $parsed_ci_url : self::GITLAB_URL_DEFAULT;
+        }
+
+        return $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
     }
 
     public function getGITLABURL()

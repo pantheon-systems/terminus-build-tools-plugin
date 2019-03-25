@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab;
 
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Psr\Log\LoggerAwareInterface;
@@ -29,15 +30,13 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
-    const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
-    const GITLAB_URL_DEFAULT = 'gitlab.com';
     protected $config;
 
     protected $repositoryEnvironment;
 
     public function __construct(Config $config) {
         $this->config = $config;
-        $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+        $this->setGITLABURL(GitLabAPI::determineGitLabUrl($config));
     }
 
     /**
