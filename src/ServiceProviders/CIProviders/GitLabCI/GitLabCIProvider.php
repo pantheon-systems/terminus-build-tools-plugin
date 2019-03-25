@@ -159,7 +159,8 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             $this->gitlabCIAPI($data, $gitlab_url);
         }
 
-        // Also set the GitLab URL for future use.
+        // Also set the GitLab URL for future use. This will allow it to override the
+        // default GitLab URL when run during CI builds (such as retrieving Merge Requests).
         $data = ['key' => 'TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL', 'value' => $this->getGITLABURL()];
         $this->gitlabCIAPI($data, $gitlab_url);
     }
