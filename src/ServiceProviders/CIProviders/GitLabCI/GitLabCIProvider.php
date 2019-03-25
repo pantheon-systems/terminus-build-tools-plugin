@@ -158,6 +158,10 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             $data = ['key' => $key, 'value' => $value];
             $this->gitlabCIAPI($data, $gitlab_url);
         }
+
+        // Also set the GitLab URL for future use.
+        $data = ['key' => 'TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL', 'value' => $this->getGITLABURL()];
+        $this->gitlabCIAPI($data, $gitlab_url);
     }
 
     public function startTesting(CIState $ci_env) {

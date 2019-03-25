@@ -17,7 +17,7 @@ class GitLabAPI extends WebAPI
 {
     const SERVICE_NAME = 'gitlab';
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
-    const GITLAB_CONFIG_PATH = 'command.build.provider.git.gitlab_url';
+    const GITLAB_CONFIG_PATH = 'build-tools.provider.git.gitlab.url';
     const GITLAB_URL_DEFAULT = 'gitlab.com';
 
     private $GITLAB_URL;
