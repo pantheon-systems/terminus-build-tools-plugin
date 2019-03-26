@@ -116,7 +116,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
     public function projectUrl(CIState $ci_env)
     {
-        $repositoryAttributes = $ci_env->getState('repository');
+        $repositoryAttributes = $ci_env->getState('repository') . '/pipelines';
         return 'https://' . $this->getGitLabUrl() . '/' . $repositoryAttributes->projectId();
     }
 
@@ -135,7 +135,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function badge(CIState $ci_env)
     {
         $url = $this->projectUrl($ci_env);
-        return "[![GitLabCI]($url/bradges/master/build.svg?style=shield)]($url)";
+        return "[![GitLabCI]($url/badges/master/pipeline.svg)]($url)";
     }
 
     /**
