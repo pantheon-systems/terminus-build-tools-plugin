@@ -40,7 +40,12 @@ class ProjectRepairCommand extends BuildToolsBase
      */
     public function initOptionValues(InputInterface $input, AnnotationData $annotationData)
     {
+        // Get the site name argument. If there is none, skip init
+        // and allow the command to fail with "not enough arguments"
         $site_name = $input->getArgument('site_name');
+        if (empty($site_name)) {
+            return;
+        }
 
         // Fetch the build metadata
         $buildMetadata = $this->retrieveBuildMetadata("{$site_name}.dev");
