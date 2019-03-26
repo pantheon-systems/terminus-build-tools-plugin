@@ -4,7 +4,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI;
 
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
@@ -29,8 +29,6 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     protected $GITLAB_URL;
     // Since GitLab and GitLabCI are so tightly coupled, use the Repository constants.
     const GITLAB_TOKEN = GitLabProvider::GITLAB_TOKEN;
-    const GITLAB_CONFIG_PATH = GitLabProvider::GITLAB_CONFIG_PATH;
-    const GITLAB_URL_DEFAULT = GitLabProvider::GITLAB_URL_DEFAULT;
 
     protected $gitlab_token;
     protected $config;
@@ -38,26 +36,26 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function __construct(Config $config)
     {
         $this->config = $config;
-        $this->setGITLABURL($config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT));
+        $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
     }
 
     /**
      * @return array|mixed|null
      */
-    public function getGITLABURL() {
+    public function getGitLabUrl() {
         return $this->GITLAB_URL;
     }
 
     /**
      * @param array|mixed|null $GITLAB_URL
      */
-    public function setGITLABURL($GITLAB_URL) {
+    public function setGitLabUrl($GITLAB_URL) {
         $this->GITLAB_URL = $GITLAB_URL;
     }
 
     public function infer($url)
     {
-        return strpos($url, $this->getGITLABURL()) !== false;
+        return strpos($url, $this->getGitLabUrl()) !== false;
     }
 
     /**
@@ -91,7 +89,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         // GITLAB_TOKEN that will be used to authenticate.
         $gitlabTokenRequest = new CredentialRequest(
             self::GITLAB_TOKEN,
-            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGITLABURL() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGITLABURL() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
+            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
             "Enter GitLab personal access token: ",
             '#^[0-9a-zA-Z\-]{20}$#',
             'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.'
@@ -119,7 +117,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
-        return 'https://' . $this->getGITLABURL() . '/' . $repositoryAttributes->projectId();
+        return 'https://' . $this->getGitLabUrl() . '/' . $repositoryAttributes->projectId();
     }
 
     protected function apiUrl(CIState $ci_env)
@@ -128,7 +126,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $apiRepositoryType = $repositoryAttributes->serviceName();
         $target_project = urlencode($repositoryAttributes->projectId());
 
-        return "https://" . $this->getGITLABURL() . "/api/v4/projects/$target_project/variables";
+        return "https://" . $this->getGitLabUrl() . "/api/v4/projects/$target_project/variables";
     }
 
     /**
@@ -160,6 +158,11 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             $data = ['key' => $key, 'value' => $value];
             $this->gitlabCIAPI($data, $gitlab_url);
         }
+
+        // Also set the GitLab URL for future use. This will allow it to override the
+        // default GitLab URL when run during CI builds (such as retrieving Merge Requests).
+        $data = ['key' => 'TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL', 'value' => $this->getGitLabUrl()];
+        $this->gitlabCIAPI($data, $gitlab_url);
     }
 
     public function startTesting(CIState $ci_env) {

@@ -5,7 +5,7 @@ namespace Pantheon\TerminusBuildTools\API;
 /**
  * PullRequestInfo caches info about pull requests
  */
-interface PullRequestInfo
+class PullRequestInfo
 {
     protected $prNumber;
     protected $isClosed;
