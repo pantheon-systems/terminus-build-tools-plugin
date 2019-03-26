@@ -36,7 +36,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     public function __construct(Config $config) {
         $this->config = $config;
-        $this->setGITLABURL(GitLabAPI::determineGitLabUrl($config));
+        $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
     }
 
     /**
@@ -49,7 +49,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     /**
      * @param array|mixed|null $GITLAB_URL
      */
-    public function setGITLABURL($GITLAB_URL) {
+    public function setGitLabUrl($GITLAB_URL) {
         $this->GITLAB_URL = $GITLAB_URL;
     }
 

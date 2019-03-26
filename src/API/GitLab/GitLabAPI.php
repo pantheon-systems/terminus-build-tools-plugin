@@ -61,7 +61,7 @@ class GitLabAPI extends WebAPI
         return $this->GITLAB_URL;
     }
 
-    public function setGITLABURL($gitlab_url)
+    public function setGitLabUrl($gitlab_url)
     {
         $this->GITLAB_URL = $gitlab_url;
     }

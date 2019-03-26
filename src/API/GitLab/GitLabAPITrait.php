@@ -26,7 +26,7 @@ trait GitLabAPITrait
     if (!$this->api) {
       $this->api = new GitLabAPI($this->getEnvironment());
       $this->api->setLogger($this->logger);
-      $this->api->setGITLABURL($this->GITLAB_URL);
+      $this->api->setGitLabUrl($this->GITLAB_URL);
     }
     return $this->api;
   }
