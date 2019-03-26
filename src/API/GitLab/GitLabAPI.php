@@ -45,7 +45,7 @@ class GitLabAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
-                'base_uri' => 'https://' . $this->getGITLABURL(),
+                'base_uri' => 'https://' . $this->getGitLabUrl(),
                 'headers' => $headers,
             ]
         );
@@ -56,7 +56,7 @@ class GitLabAPI extends WebAPI
         return $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
     }
 
-    public function getGITLABURL()
+    public function getGitLabUrl()
     {
         return $this->GITLAB_URL;
     }
@@ -95,7 +95,7 @@ class GitLabAPI extends WebAPI
             $sub_parts = array_map('trim', explode(';', $link_pager_part));
 
             $href = array_shift($sub_parts);
-            $href = preg_replace('@^https:\/\/' . $this->getGITLABURL() . '\/@', '', trim($href, '<>'));
+            $href = preg_replace('@^https:\/\/' . $this->getGitLabUrl() . '\/@', '', trim($href, '<>'));
             $parsed = ['href' => $href];
             return array_reduce($sub_parts, function ($carry, $sub_part) {
                 list($key, $value) = explode('=', $sub_part);

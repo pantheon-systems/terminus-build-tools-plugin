@@ -42,7 +42,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     /**
      * @return array|mixed|null
      */
-    public function getGITLABURL() {
+    public function getGitLabUrl() {
         return $this->GITLAB_URL;
     }
 
@@ -54,7 +54,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     }
 
     public function infer($url) {
-        return strpos($url, $this->getGITLABURL()) !== FALSE;
+        return strpos($url, $this->getGitLabUrl()) !== FALSE;
     }
 
     public function getEnvironment() {
@@ -112,7 +112,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function pushRepository($dir, $target_project) {
         $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', [
             'token' => $this->token(),
-            'gitlab_url' => $this->getGITLABURL(),
+            'gitlab_url' => $this->getGitLabUrl(),
             'target' => $target_project
         ], ['token']);
     }
@@ -129,7 +129,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
      * @inheritdoc
      */
     public function projectURL($target_project) {
-        return 'https://' . $this->getGITLABURL() . '/' . $target_project;
+        return 'https://' . $this->getGitLabUrl() . '/' . $target_project;
     }
 
     /**

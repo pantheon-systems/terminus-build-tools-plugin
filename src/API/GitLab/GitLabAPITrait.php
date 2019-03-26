@@ -54,7 +54,7 @@ trait GitLabAPITrait
     $repositoryEnvironment->setToken($this->tokenKey(), $token);
   }
 
-  public function getGITLABURL()
+  public function getGitLabUrl()
   {
     return GitLabAPI::GITLAB_URL_DEFAULT;
   }
@@ -68,7 +68,7 @@ trait GitLabAPITrait
     // GITLAB_TOKEN that will be used to authenticate with the GitLab server.
     $gitlabTokenRequest = new CredentialRequest(
       $this->tokenKey(),
-      "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGITLABURL() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGITLABURL() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
+      "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
       "Enter GitLab personal access token: ",
       '#^[0-9a-zA-Z\-]{20}$#',
       'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.'
