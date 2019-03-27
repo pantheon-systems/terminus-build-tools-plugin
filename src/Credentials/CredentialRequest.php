@@ -95,7 +95,7 @@ class CredentialRequest implements CredentialRequestInterface
     public function validate($credential)
     {
         if ($this->validateFn) {
-            return $this->validateFn($credential);
+            return call_user_func($this->validateFn, $credential);
         }
         if (!empty($this->validateRegEx)) {
             return preg_match($this->validateRegEx, $credential);
