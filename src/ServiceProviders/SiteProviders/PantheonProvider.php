@@ -19,7 +19,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
     protected $machineToken;
     protected $session;
 
-    const PASSWORD_ERROR_MESSAGE = "Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.";
+    const PASSWORD_ERROR_MESSAGE = "The CMS admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.";
 
     const EMAIL_FORMAT_ERROR = "The email address '{email}' is not valid. Please set a valid email address via 'git config --global user.email <address>', or override this setting with the --{option} option.";
 
@@ -27,9 +27,9 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
 
     const MISSING_SITE_NAME_ERROR = "A site name must be provided.";
 
-    const PASSWORD_INSTRUCTIONS = "Enter the password you would like to use to log in to your test site,\n or leave empty for a random password";
+    const PASSWORD_INSTRUCTIONS = "Enter the password you would like to use to log in to the CMS of your test site";
 
-    const PASSWORD_PROMPT = "Enter test site password: ";
+    const PASSWORD_PROMPT = "Enter test site CMS password: ";
 
     public function setMachineToken($token)
     {
