@@ -129,12 +129,14 @@ class CredentialManager implements CredentialProviderInterface
     }
 
     /**
-     * Clear everything from the credential cache
+     * Clear everything from the credential cache. Re-apply environment
+     * variables.
      */
     public function clearAll()
     {
         foreach ($this->credentialRequests as $request) {
             $this->remove($request->id());
+            $this->getEnvironmentVariableIfAvailable($request);
         }
     }
 
