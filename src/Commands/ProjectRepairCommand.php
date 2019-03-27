@@ -40,6 +40,8 @@ class ProjectRepairCommand extends BuildToolsBase
      */
     public function initOptionValues(InputInterface $input, AnnotationData $annotationData)
     {
+        $this->log()->notice('build:project:repair @hook init');
+
         // Get the site name argument. If there is none, skip init
         // and allow the command to fail with "not enough arguments"
         $site_name = $input->getArgument('site_name');
@@ -99,6 +101,8 @@ class ProjectRepairCommand extends BuildToolsBase
      */
     public function validateCreateProject(CommandData $commandData)
     {
+        $this->log()->notice('build:project:repair @hook validate');
+
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
     }

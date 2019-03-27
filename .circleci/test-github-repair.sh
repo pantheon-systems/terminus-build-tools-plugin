@@ -5,7 +5,7 @@ set -e
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
 # Repair the test project on github
-terminus build:project:repair -n "$TERMINUS_SITE" --email="$GIT_EMAIL"
+terminus build:project:repair -n -vvv "$TERMINUS_SITE" --email="$GIT_EMAIL"
 
 # Make a branch so that we can test a PR
 cd "$TARGET_REPO_WORKING_COPY"
