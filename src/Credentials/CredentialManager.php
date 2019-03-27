@@ -105,6 +105,7 @@ class CredentialManager implements CredentialProviderInterface
      */
     public function remove($id)
     {
+        $this->removeTransient($id);
         $key = $this->credentialKey($id);
         if (!empty($key)) {
             $this->cache->remove($key);
@@ -124,6 +125,16 @@ class CredentialManager implements CredentialProviderInterface
                     $this->store($request->id(), $value);
                 }
             }
+        }
+    }
+
+    /**
+     * Clear everything from the credential cache
+     */
+    public function clearAll()
+    {
+        foreach ($this->credentialRequests as $request) {
+            $this->remove($request->id());
         }
     }
 
@@ -188,6 +199,11 @@ class CredentialManager implements CredentialProviderInterface
     protected function storeTransient($id, $credential)
     {
         $this->transientCache[$id] = $credential;
+    }
+
+    protected function removeTransient($id)
+    {
+        unset($this->transientCache[$id]);
     }
 
     /**

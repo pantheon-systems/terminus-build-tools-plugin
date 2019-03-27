@@ -44,6 +44,9 @@ class ProjectRepairCommand extends BuildToolsBase
         // and allow the command to fail with "not enough arguments"
         $site_name = $input->getArgument('site_name');
         if (empty($site_name)) {
+            $site_name = $input->getOption('pantheon-site');
+        }
+        if (empty($site_name)) {
             return;
         }
 
@@ -62,6 +65,14 @@ class ProjectRepairCommand extends BuildToolsBase
 
         $this->createCIProvider($ci_provider_class_or_alias);
         $this->createSiteProvider('pantheon');
+
+        // Flush the cache so that when we ask, it will re-prompt for all
+        // credentials.
+        // n.b. credentials will stil be taken from environment variables, if set.
+        $this->providerManager()->credentialManager()->clearAll();
+
+        // Copy the site name into the 'pantheon-site' option.
+        $input->setOption('pantheon-site', $site_name);
 
         // Copy the options into the credentials cache as appropriate
         $this->providerManager()->setFromOptions($input);
@@ -101,6 +112,7 @@ class ProjectRepairCommand extends BuildToolsBase
         $site_name,
         $options = [
             'email' => '',
+            'pantheon-site' => '',
             'test-site-name' => '',
             'admin-password' => '',
             'admin-email' => '',
