@@ -2,7 +2,7 @@
 
 set -e
 
-SOURCE_COMPOSER_PROJECT="$1"
+TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
 # Repair the test project on github
 terminus build:project:repair -n "$TERMINUS_SITE" --email="$GIT_EMAIL"
