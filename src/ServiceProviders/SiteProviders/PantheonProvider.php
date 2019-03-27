@@ -115,7 +115,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
     public function setCredentials(CredentialProviderInterface $credentials_provider)
     {
         // The elements that `credentialRequests()` declared above will
-        // be available when this method is called via the `fecth()` method.
+        // be available when this method is called via the `fetch()` method.
         // The credential requests object will ensure these are taken
         // from environment variables or commandline options or user input
         // as appropriate.
