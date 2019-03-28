@@ -172,12 +172,16 @@ workflows:
             - test_drupal_7_github:
                 requires:
                    - unit
-            - test_drupal_8_bitbucket:
-                requires:
-                   - unit
             - test_wordpress:
                 requires:
                    - unit
             - test_wordpress_gitlab:
                 requires:
                    - unit
+            - test_drupal_8_bitbucket:
+                requires:
+                   - unit
+                   - test_drupal_8_github
+                   - test_drupal_7_github
+                   - test_wordpress
+                   - test_wordpress_gitlab
