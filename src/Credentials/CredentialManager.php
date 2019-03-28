@@ -4,6 +4,7 @@ namespace Pantheon\TerminusBuildTools\Credentials;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Pantheon\Terminus\DataStore\DataStoreInterface;
+use Symfony\Component\Console\Input\InputInterface;
 
 /**
  * The credential manager stores and fetches credentials from a cache.
@@ -87,7 +88,7 @@ class CredentialManager implements CredentialProviderInterface
     }
 
     /**
-     * Fetch a credential from the cache
+     * Store a credential in the cache
      */
     public function store($id, $credential)
     {
@@ -104,9 +105,38 @@ class CredentialManager implements CredentialProviderInterface
      */
     public function remove($id)
     {
+        $this->removeTransient($id);
         $key = $this->credentialKey($id);
         if (!empty($key)) {
             $this->cache->remove($key);
+        }
+    }
+
+    /**
+     * If any of the credenitals were provided via commandline options,
+     * insert their values into the cache.
+     */
+    public function setFromOptions(InputInterface $input)
+    {
+        foreach ($this->credentialRequests as $request) {
+            if ($input->hasOption($request->optionKey())) {
+                $value = $input->getOption($request->optionKey(), '');
+                if (!empty($value)) {
+                    $this->store($request->id(), $value);
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear everything from the credential cache. Re-apply environment
+     * variables.
+     */
+    public function clearAll()
+    {
+        foreach ($this->credentialRequests as $request) {
+            $this->remove($request->id());
+            $this->getEnvironmentVariableIfAvailable($request);
         }
     }
 
@@ -118,7 +148,7 @@ class CredentialManager implements CredentialProviderInterface
     public function ask(SymfonyStyle $io)
     {
         foreach ($this->credentialRequests as $request) {
-            if (!$this->has($request->id())) {
+            if (!$this->has($request->id()) && $request->required()) {
                 $this->askOne($request, $io);
             }
         }
@@ -171,6 +201,11 @@ class CredentialManager implements CredentialProviderInterface
     protected function storeTransient($id, $credential)
     {
         $this->transientCache[$id] = $credential;
+    }
+
+    protected function removeTransient($id)
+    {
+        unset($this->transientCache[$id]);
     }
 
     /**

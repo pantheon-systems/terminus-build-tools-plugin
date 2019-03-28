@@ -6,6 +6,7 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Robo\Config\Config;
+use Symfony\Component\Console\Input\InputInterface;
 
 class ProviderManager implements LoggerAwareInterface
 {
@@ -23,13 +24,13 @@ class ProviderManager implements LoggerAwareInterface
 
     protected function availableProviders()
     {
-        // TODO: create some way to register providers. Plugin plugins?
         return [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI\GitLabCIProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\PantheonProvider',
         ];
     }
 
@@ -49,7 +50,7 @@ class ProviderManager implements LoggerAwareInterface
         }
     }
 
-    protected function lookupProvider($alias)
+    protected function lookupProvider($alias, $expectedInterface)
     {
         $available_providers = $this->availableProviders();
 
@@ -64,9 +65,12 @@ class ProviderManager implements LoggerAwareInterface
 
         // Allow providers to be specified
         foreach ($available_providers as $provider) {
-            $provider_class = basename(strtr($provider, '\\', '/'));
-            if (stristr($provider_class, $test_alias) !== false) {
-                return $provider;
+            $reflectionClass = new \ReflectionClass($provider);
+            if ($reflectionClass->implementsInterface($expectedInterface)) {
+                $provider_class = basename(strtr($provider, '\\', '/'));
+                if (stristr($provider_class, $test_alias) !== false) {
+                    return $provider;
+                }
             }
         }
 
@@ -76,7 +80,7 @@ class ProviderManager implements LoggerAwareInterface
 
     public function createProvider($providerClass, $expectedInterface)
     {
-        $providerClass = $this->lookupProvider($providerClass);
+        $providerClass = $this->lookupProvider($providerClass, $expectedInterface);
         if (!class_exists($providerClass)) {
             throw new \Exception("Could not load class $providerClass");
         }
@@ -104,6 +108,14 @@ class ProviderManager implements LoggerAwareInterface
     public function credentialManager()
     {
         return $this->credential_manager;
+    }
+
+    /**
+     * Give objects an opportunity to initialize themselves from the cli options
+     */
+    public function setFromOptions(InputInterface $input)
+    {
+        $this->credentialManager()->setFromOptions($input);
     }
 
     public function validateCredentials()

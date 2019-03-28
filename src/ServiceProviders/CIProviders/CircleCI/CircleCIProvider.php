@@ -128,7 +128,11 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
             $data = ['name' => $key, 'value' => $value];
-            $this->circleCIAPI($data, "$circle_url/envvar");
+            if (empty($value)) {
+                $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
+            } else {
+                $this->circleCIAPI($data, "$circle_url/envvar");
+            }
         }
     }
 

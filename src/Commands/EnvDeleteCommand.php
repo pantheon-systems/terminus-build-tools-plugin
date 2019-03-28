@@ -114,8 +114,13 @@ class EnvDeleteCommand extends BuildToolsBase
         // Find the URL to the remote origin
         $remoteUrlFromGit = exec('git config --get remote.origin.url');
 
-        // Find the URL of the remote origin stored in the build metadata
+        // Find the URL of the remote origin stored in the build metadata.
+        // If there is no metadata, then there is nothing we can delete. Exit.
         $remoteUrl = $this->retrieveRemoteUrlFromBuildMetadata($site_id, $oldestEnvironments);
+        if (!$remoteUrl) {
+            $this->log()->notice('No environments have build metadata.');
+            return null;
+        }
 
         // Create a git repository service provider appropriate to the URL and ensure credentials are present
         $this->inferGitProviderFromUrl($remoteUrl);

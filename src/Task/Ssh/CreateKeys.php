@@ -93,6 +93,9 @@ class CreateKeys extends BaseTask
     public function run()
     {
         list($publicKey, $privateKey) = $this->create();
+        $keyPairReceivers = $this->all(KeyPairReciever::class);
+        $this->provide($keyPairReceivers, 'addKeyPair', $publicKey, $privateKey);
+
         $privateKeyReceivers = $this->all(PrivateKeyReciever::class);
         $this->provide($privateKeyReceivers, 'addPrivateKey', $privateKey);
 

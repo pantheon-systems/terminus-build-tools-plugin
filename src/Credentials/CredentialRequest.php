@@ -11,20 +11,24 @@ class CredentialRequest implements CredentialRequestInterface
     protected $instructions;
     protected $prompt;
     protected $validateRegEx;
+    protected $validateFn;
     protected $validationErrorMessage;
+    protected $optionKey;
 
     public function __construct(
         $id,
-        $instructions,
-        $prompt,
-        $validateRegEx,
-        $validationErrorMessage
+        $instructions = '',
+        $prompt = ': ',
+        $validateRegEx = '',
+        $validationErrorMessage = ''
     ) {
         $this->id = $id;
         $this->instructions = $instructions;
         $this->prompt = $prompt;
         $this->validateRegEx = $validateRegEx;
+        $this->validateFn = false;
         $this->validationErrorMessage = $validationErrorMessage;
+        $this->optionKey = false;
     }
 
     /**
@@ -33,6 +37,14 @@ class CredentialRequest implements CredentialRequestInterface
     public function id()
     {
         return $this->id;
+    }
+
+    public function optionKey()
+    {
+        if (!empty($this->optionKey)) {
+            return $this->optionKey;
+        }
+        return strtolower(strtr($this->id(), '_.', '--'));
     }
 
     /**
@@ -54,6 +66,15 @@ class CredentialRequest implements CredentialRequestInterface
     /**
      * @inheritdoc
      */
+    public function setInstructions($instructions)
+    {
+        $this->instructions = $instructions;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function prompt()
     {
         return $this->prompt;
@@ -62,9 +83,44 @@ class CredentialRequest implements CredentialRequestInterface
     /**
      * @inheritdoc
      */
+    public function setPrompt($prompt)
+    {
+        $this->prompt = $prompt;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function validate($credential)
     {
-        return preg_match($this->validateRegEx, $credential);
+        if ($this->validateFn) {
+            return call_user_func($this->validateFn, $credential);
+        }
+        if (!empty($this->validateRegEx)) {
+            return preg_match($this->validateRegEx, $credential);
+        }
+        return true;
+    }
+
+    public function setValidateRegEx($regex)
+    {
+        $this->validateRegEx = $regex;
+        return $this;
+    }
+
+    public function setValidateFn(callable $fn)
+    {
+        $this->validateFn = $fn;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function required()
+    {
+        return !empty($this->instructions);
     }
 
     /**
@@ -73,5 +129,23 @@ class CredentialRequest implements CredentialRequestInterface
     public function validationErrorMessage()
     {
         return $this->validationErrorMessage;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setValidationErrorMessage($validationErrorMessage)
+    {
+        $this->validationErrorMessage = $validationErrorMessage;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setOptionKey($key)
+    {
+        $this->optionKey = $key;
+        return $this;
     }
 }

@@ -20,6 +20,8 @@ class CIState
 {
     /** var ProviderEnvironment[] */
     protected $state = [];
+    /** var string [] */
+    protected $nonSecretVariales = [];
 
     public function get($owner, $key, $default)
     {
@@ -34,6 +36,17 @@ class CIState
         $this->state[$owner][$key] = $value;
     }
 
+    public function isVariableValueSecret($key)
+    {
+        return !in_array($key, $this->nonSecretVariales);
+    }
+
+    public function addPublicVariableKeys($keys)
+    {
+        $this->nonSecretVariales = array_merge($this->nonSecretVariales, $keys);
+        return $this;
+    }
+
     /**
      * Store state for some provider.
      *
@@ -42,6 +55,7 @@ class CIState
     public function storeState($owner, ProviderEnvironment $state)
     {
         $this->state[$owner] = $state;
+        $this->addPublicVariableKeys($state->getPublicVariableKeys());
     }
 
     /**
