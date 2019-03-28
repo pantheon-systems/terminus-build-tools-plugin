@@ -59,7 +59,7 @@ class GitHubAPI extends WebAPI
         return !empty($pager_headers);
     }
 
-    protected function getPagerInfo($links)
+    protected function getPagerInfo($headers)
     {
         $links = $headers['Link'];
         // Find a link header that contains a "rel" type set to "next" or "last".
