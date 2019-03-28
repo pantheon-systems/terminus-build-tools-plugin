@@ -3,7 +3,11 @@
 set -e
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
-TERMINUS_ENV=test-after-repair
+
+# We could go to some work to recover the environment name, but
+# since this is a brand-new repo, we expect the environment should
+# always be pr-1.
+TERMINUS_ENV=pr-1
 
 # Merge the PR branch into master and push it
 cd "$TARGET_REPO_WORKING_COPY"
