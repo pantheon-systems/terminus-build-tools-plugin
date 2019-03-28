@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# Do -not- fail on errors (yet)
+set +e
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
@@ -9,18 +10,8 @@ TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 # always be pr-1.
 TERMINUS_ENV=pr-1
 
-# Merge the PR branch into master and push it
-cd "$TARGET_REPO_WORKING_COPY"
-git checkout master
-git merge -m 'Merge to master' test-after-repair
-
-# Push the branch
-ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
-git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
-
 # Wait for our environment to show up
 # (Waiting / watching the Circle workflow is not reliable)
-set +e
 STATUS=1
 COUNT=0
 while [ $STATUS -ne 0 ] ; do
@@ -36,19 +27,31 @@ while [ $STATUS -ne 0 ] ; do
         sleep 60
     fi
 done
+
+# Fail on errors
 set -e
 
-# Merge the multidev for the PR into the dev environment
-terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
+# Merge the PR branch into master and push it
+cd "$TARGET_REPO_WORKING_COPY"
+git checkout master
+git merge -m 'Merge to master' test-after-repair
 
-# Run updatedb on the dev environment
-terminus -n drush $TERMINUS_SITE.dev -- updatedb --yes
+# Push the branch
+ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
+git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
-# If there are any exported configuration files, then import them
-if [ -f "config/system.site.yml" ] ; then
-  terminus -n drush "$TERMINUS_SITE.dev" -- config-import --yes
-fi
+# TODO: We cannot actually test the merge to master script
+# here. Our local copy hasn't been set up for this (it was not
+# used to push code to Pantheon, so it does not have the
+# 'pantheon' remote), and also, the job associated with the PR
+# that we just waited for above is also going to run `build:env:merge`.
+# If we had a reliable way to identify and watch the job that will
+# start on the 'master' branch, perhaps we can determine results that way.
+# Maybe we could check for new commits on the dev env of $TERMINUS_SITE,
+# and wait until they show up (per wait loop above)?
+# terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
-# Delete old multidev environments associated with a PR that has been
-# merged or closed.
+# Since we mreged our PR branch above, this should delete pr-1.
+# That will cause our test in progress to fail. If we wait above, then
+# the PR that is running should delete pr-1 before we get here.
 terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
