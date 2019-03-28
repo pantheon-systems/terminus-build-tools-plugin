@@ -58,6 +58,9 @@ jobs:
                 name: Test build:project:repair
                 command: ./.circleci/test-github-repair.sh
             - run:
+                name: Wait a tick (30s) for GitHub and Circle to spin up a test
+                commannd: sleep 30
+            - run:
                 name: Watch CircleCI tests after build:project:repair + PR
                 command: ./.circleci/watch-circle.sh
             - run:
