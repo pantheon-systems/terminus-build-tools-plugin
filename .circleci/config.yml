@@ -38,6 +38,9 @@ jobs:
         steps:
             - run: echo "No unit tests yet."
 
+    # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
+    # We test creating a PR and merging it to master here, but omit those tests
+    # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
         steps:
@@ -58,11 +61,11 @@ jobs:
                 name: Test build:project:repair
                 command: ./.circleci/test-github-repair.sh
             - run:
-                name: Wait a tick (30s) for GitHub and Circle to spin up a test
-                command: sleep 30
-            - run:
                 name: Watch CircleCI tests after build:project:repair + PR
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-circle.sh "$TARGET_REPO_WORKING_COPY"
+            - run:
+                name: Test merge to master
+                command: ./.circleci/test-merge-master.sh
             - run:
                 name: Clean up D8 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
