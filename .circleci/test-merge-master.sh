@@ -18,6 +18,26 @@ git merge -m 'Merge to master' test-after-repair
 ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
 git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
+# Wait for our environment to show up
+# (Waiting / watching the Circle workflow is not reliable)
+set +e
+STATUS=1
+COUNT=0
+while [ $STATUS -ne 0 ] ; do
+    terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
+    STATUS="$?"
+    if [ $STATUS -ne 0 ] ; then
+        COUNT=$(($COUNT+1))
+        if [ $COUNT -ge 10 ] ; then
+            echo "Timed out waiting for $TERMINUS_SITE.$TERMINUS_ENV"
+            exit 1
+        fi
+        echo "Waiting 1 minute for $TERMINUS_SITE.$TERMINUS_ENV"
+        sleep 60
+    fi
+done
+set -e
+
 # Merge the multidev for the PR into the dev environment
 terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
