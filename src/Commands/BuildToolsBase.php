@@ -809,7 +809,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function orgUserFromRemoteUrl($url)
     {
-        if (strpos($url, 'https://') !== false)
+        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
         {
             $parsed_url = parse_url($url);
             $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
@@ -824,7 +824,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function repositoryFromRemoteUrl($url)
     {
-        if (strpos($url, 'https://') !== false)
+        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
         {
             $parsed_url = parse_url($url);
             $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));

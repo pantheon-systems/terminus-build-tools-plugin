@@ -103,7 +103,8 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
      */
     public function deleteRepository($project)
     {
-        // TODO:
+        $this->logger->notice('Deleting repository {repo}', ['repo' => $project]);
+        $result = $this->api()->request("repositories/$project", [], 'DELETE');
     }
 
     /**
