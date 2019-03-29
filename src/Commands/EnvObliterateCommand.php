@@ -51,7 +51,7 @@ class EnvObliterateCommand extends BuildToolsBase
         $this->providerManager()->validateCredentials();
 
         // Do nothing without confirmation
-        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {url} and CI configuration?', ['site' => $site->getName(), 'url' => $url])) {
+        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding Git provider repository {url} and CI configuration?', ['site' => $site->getName(), 'url' => $url])) {
             return;
         }
 
