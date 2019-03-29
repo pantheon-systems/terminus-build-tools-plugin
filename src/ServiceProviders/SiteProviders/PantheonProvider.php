@@ -85,20 +85,25 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
     public function credentialRequests()
     {
         $siteNameRequest = (new CredentialRequest('SITE_NAME'))
-            ->setOptionKey('pantheon-site');
+            ->setOptionKey('pantheon-site')
+            ->setRequired(false);
 
-        $testSiteNameRequest = new CredentialRequest('TEST_SITE_NAME');
+        $testSiteNameRequest = (new CredentialRequest('TEST_SITE_NAME'))
+            ->setRequired(false);
 
         $gitEmailRequest = (new CredentialRequest('GIT_USER_EMAIL'))
-            ->setOptionKey('email');
+            ->setOptionKey('email')
+            ->setRequired(false);
 
-        $adminEmailRequest = new CredentialRequest('ADMIN_EMAIL');
+        $adminEmailRequest = (new CredentialRequest('ADMIN_EMAIL'))
+            ->setRequired(false);
 
         $adminPasswordRequest = (new CredentialRequest('ADMIN_PASSWORD'))
             ->setInstructions(self::PASSWORD_INSTRUCTIONS)
             ->setPrompt(self::PASSWORD_PROMPT)
             ->setValidateFn([$this, 'validAdminPassword'])
-            ->setValidationErrorMessage(self::PASSWORD_ERROR_MESSAGE);
+            ->setValidationErrorMessage(self::PASSWORD_ERROR_MESSAGE)
+            ->setRequired(true);
 
         return [
             $siteNameRequest,

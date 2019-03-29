@@ -52,7 +52,7 @@ class BitbucketPipelinesProvider implements CIProvider, LoggerAwareInterface, Ke
     {
         $repositoryAttributes = $ci_env->getState('repository');
         // TODO: Fix this url. Point to the Bitbucket pipelines UI
-        return "https://bitbucket.org/{$repositoryAttributes->projectId()}/addon/pipelines/home";
+        return "https://bitbucket.org/{$repositoryAttributes->projectId()}";
     }
 
     /**
@@ -61,7 +61,8 @@ class BitbucketPipelinesProvider implements CIProvider, LoggerAwareInterface, Ke
     public function badge(CIState $ci_env)
     {
         $url = $this->projectUrl($ci_env);
-        return "[![Bitbucket Pipelines]($url/badges/master/build.svg?style=shield)]($url)";
+        $projectId = $repositoryAttributes->projectId();
+        return "[![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/$projectId.svg]($url/addon/pipelines/home)";
     }
 
     /**

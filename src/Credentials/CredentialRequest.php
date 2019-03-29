@@ -14,6 +14,7 @@ class CredentialRequest implements CredentialRequestInterface
     protected $validateFn;
     protected $validationErrorMessage;
     protected $optionKey;
+    protected $required;
 
     public function __construct(
         $id,
@@ -29,6 +30,7 @@ class CredentialRequest implements CredentialRequestInterface
         $this->validateFn = false;
         $this->validationErrorMessage = $validationErrorMessage;
         $this->optionKey = false;
+        $this->required = null;
     }
 
     /**
@@ -120,7 +122,16 @@ class CredentialRequest implements CredentialRequestInterface
      */
     public function required()
     {
-        return !empty($this->instructions);
+        if (!isset($this->required)) {
+            return !empty($this->instructions) || !empty($this->prompt);
+        }
+        return $this->required;
+    }
+
+    public function setRequired($isRequired)
+    {
+        $this->required = $isRequired;
+        return $this;
     }
 
     /**

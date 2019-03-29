@@ -57,15 +57,20 @@ trait GitHubAPITrait
      */
     public function credentialRequests()
     {
+        $instructions = "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.";
+
+        $prompt = "Enter GitHub personal access token: ";
+
+        $validation_message = 'GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.';
+
         // Tell the credential manager that we require one credential: the
         // GITHUB_TOKEN that will be used to authenticate with the CircleCI server.
-        $githubTokenRequest = new CredentialRequest(
-            $this->tokenKey(),
-            "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.",
-            "Enter GitHub personal access token: ",
-            '#^[0-9a-fA-F]{40}$#',
-            'GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
-        );
+        $githubTokenRequest = (new CredentialRequest($this->tokenKey()))
+            ->setInstructions($instructions)
+            ->setPrompt($prompt)
+            ->setValidateRegEx('#^[0-9a-fA-F]{40}$#')
+            ->setValidationErrorMessage($validation_message)
+            ->setRequired(true);
 
         return [ $githubTokenRequest ];
     }

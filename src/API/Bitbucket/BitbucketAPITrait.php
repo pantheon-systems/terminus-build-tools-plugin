@@ -85,21 +85,15 @@ trait BitbucketAPITrait
     public function credentialRequests()
     {
         // Tell the credential manager that we require two credentials
-        $bitbucketUserRequest = new CredentialRequest(
-            BitbucketAPI::BITBUCKET_USER,
-            "",
-            "Enter your Bitbucket username",
-            '#^.+$#',
-            ""
-        );
+        $bitbucketUserRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_USER))
+            ->setInstructions('')
+            ->setPrompt("Enter your Bitbucket username: ")
+            ->setRequired(true);
 
-        $bitbucketPassRequest = new CredentialRequest(
-            BitbucketAPI::BITBUCKET_PASS,
-            "",
-            "Enter your Bitbucket account password or an app password",
-            '#^.+$#',
-            ""
-        );
+        $bitbucketPassRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_PASS))
+            ->setInstructions('')
+            ->setPrompt("Enter your Bitbucket account password or an app password: ")
+            ->setRequired(true);
 
         return [ $bitbucketUserRequest, $bitbucketPassRequest ];
     }
