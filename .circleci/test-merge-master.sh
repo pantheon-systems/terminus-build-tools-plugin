@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Note that there is a race condition here. The environment `pr-1` is going
+# to be created by the other test process that is running asynchronously.
+# Once it shows up, we want to merge the PR and run `build:env:merge`
+# ourselves. If we are successful in doing this quickly enough, then our
+# test will pass, but we will break the async test.
+
+# This capability is removed until we can figure out a deterministic way to do it.
+
 # Do -not- fail on errors (yet)
 set +e
 
@@ -12,7 +20,7 @@ TERMINUS_ENV=pr-1
 
 # Wait for our environment to show up
 # (Waiting / watching the Circle workflow is not reliable)
-STATUS=1
+STATUS=0 # TODO: Set to '1' to wait for `pr-1` to show up.
 COUNT=0
 while [ $STATUS -ne 0 ] ; do
     terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
@@ -46,7 +54,8 @@ git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 # be done as part of that process. Doing it now will likely cause
 # that test to fail, but we do not care, we're just going to charge
 # ahead anyway.
-terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
+# TODO: Disabled until we can figure out how to do this deterministicly
+# terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
 # Since we mreged our PR branch above, this should delete pr-1.
 # That will cause our test in progress to fail. If we wait above, then
