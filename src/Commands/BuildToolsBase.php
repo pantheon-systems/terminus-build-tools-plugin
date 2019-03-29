@@ -809,7 +809,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        // Set the GIT_SSH_COMMAND environment variable to avoid SSH Host Key prompt.
+        // This must be done here instead of putenv() for it to work.
+        $this->passthru("export GIT_SSH_COMMAND=\"ssh -o StrictHostKeyChecking=no\"; git -C $repositoryDir push --force -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
