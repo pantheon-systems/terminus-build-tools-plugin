@@ -82,11 +82,11 @@ class CreateKeys extends BaseTask
         return [$publicKey, $privateKey];
     }
 
-    public function provide($list, $functionName, $value)
+    public function provide($list, $functionName, $v1, $v2 = null)
     {
         foreach($list as $item) {
             $fn = [$item, $functionName];
-            $fn($this->ci_env, $value);
+            $fn($this->ci_env, $v1, $v2);
         }
     }
 

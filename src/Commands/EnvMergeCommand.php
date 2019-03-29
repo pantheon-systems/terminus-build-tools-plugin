@@ -64,17 +64,9 @@ class EnvMergeCommand extends BuildToolsBase
         // Add the 'pantheon' remote, in case it is not already there
         $this->addPantheonRemote($dev_env, getcwd());
 
-        // Branch name to use for temporary work when merging
-        $tmpWorkBranch = 'temp-work-' . $env_id;
-
         // Replace the entire contents of the master branch with the branch we just tested.
         $this->passthru('git fetch pantheon');
-        $this->passthru('git checkout pantheon/' . $env_id);
-        $this->passthru("git checkout -B $tmpWorkBranch");
-
-        // Push our changes back to the dev environment, replacing whatever was there before.
-        $this->passthru("git push --force -q pantheon $tmpWorkBranch:master");
-        passthru("git branch -D $tmpWorkBranch");
+        $this->passthru("git push --force -q pantheon pantheon/$env_id:master");
 
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');
