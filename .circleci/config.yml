@@ -43,6 +43,7 @@ jobs:
     # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
@@ -61,9 +62,6 @@ jobs:
                 name: Test build:project:repair
                 command: ./.circleci/test-github-repair.sh
             - run:
-                name: Watch CircleCI tests after build:project:repair + PR
-                command: ./.circleci/watch-circle.sh "$TARGET_REPO_WORKING_COPY"
-            - run:
                 name: Test merge to master
                 command: ./.circleci/test-merge-master.sh
             - run:
@@ -76,6 +74,7 @@ jobs:
 
     test_drupal_7_github:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
@@ -120,6 +119,7 @@ jobs:
 
     test_wordpress:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
@@ -141,6 +141,7 @@ jobs:
 
     test_wordpress_gitlab:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:

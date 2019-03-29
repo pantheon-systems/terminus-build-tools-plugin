@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Note that there is a race condition here. The environment `pr-1` is going
+# to be created by the other test process that is running asynchronously.
+# Once it shows up, we want to merge the PR and run `build:env:merge`
+# ourselves. If we are successful in doing this quickly enough, then our
+# test will pass, but we will break the async test.
+
+# This capability is removed until we can figure out a deterministic way to do it.
+
 # Do -not- fail on errors (yet)
 set +e
 
@@ -12,7 +20,7 @@ TERMINUS_ENV=pr-1
 
 # Wait for our environment to show up
 # (Waiting / watching the Circle workflow is not reliable)
-STATUS=1
+STATUS=0 # TODO: Set to '1' to wait for `pr-1` to show up.
 COUNT=0
 while [ $STATUS -ne 0 ] ; do
     terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
@@ -40,15 +48,13 @@ git merge -m 'Merge to master' test-after-repair
 ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
 git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
-# TODO: We cannot actually test the merge to master script
-# here. Our local copy hasn't been set up for this (it was not
-# used to push code to Pantheon, so it does not have the
-# 'pantheon' remote), and also, the job associated with the PR
-# that we just waited for above is also going to run `build:env:merge`.
-# If we had a reliable way to identify and watch the job that will
-# start on the 'master' branch, perhaps we can determine results that way.
-# Maybe we could check for new commits on the dev env of $TERMINUS_SITE,
-# and wait until they show up (per wait loop above)?
+# TODO: We cannot accurately wait for the PR tests to pass before
+# merging our PR above. If we waited for both the PR tests and the
+# merge tests to pass, then the 'build:env:merge' would already
+# be done as part of that process. Doing it now will likely cause
+# that test to fail, but we do not care, we're just going to charge
+# ahead anyway.
+# TODO: Disabled until we can figure out how to do this deterministicly
 # terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
 # Since we mreged our PR branch above, this should delete pr-1.

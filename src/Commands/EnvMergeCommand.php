@@ -61,6 +61,9 @@ class EnvMergeCommand extends BuildToolsBase
         $dev_env = $site->getEnvironments()->get('dev');
         $this->connectionSet($dev_env, 'git');
 
+        // Add the 'pantheon' remote, in case it is not already there
+        $this->addPantheonRemote($dev_env, getcwd());
+
         // Branch name to use for temporary work when merging
         $tmpWorkBranch = 'temp-work-' . $env_id;
 

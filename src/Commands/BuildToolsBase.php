@@ -1039,7 +1039,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         foreach ($oldestEnvironments as $env) {
             try {
                 $metadata = $this->retrieveBuildMetadata("{$site_id}.{$env}");
-                if (empty($metadata['url'])) {
+                if (!empty($metadata['url'])) {
                     return $metadata['url'];
                 }
             }
