@@ -26,7 +26,6 @@ terminus --version
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
 touch $HOME/.ssh/config
-echo -e "Host github.com gitlab.com bitbucket.com\n    StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 git config --global user.email "$GIT_EMAIL"
 git config --global user.name "Circle CI"
 # Ignore file permissions.
