@@ -701,7 +701,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $site_env_id,
         $multidev = '',
         $repositoryDir = '',
-        $label = '')
+        $label = '',
+        $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
@@ -710,6 +711,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $env_label = $multidev;
         if (!empty($label)) {
             $env_label = $label;
+        }
+
+        if (empty($message)) {
+            $message = "Build assets for $env_label.";
         }
 
         if (empty($repositoryDir)) {
@@ -778,7 +783,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->passthru("git -C $repositoryDir add --force -A .");
 
         // Now that everything is ready, commit the build artifacts.
-        $this->passthru("git -C $repositoryDir commit -q -m 'Build assets for $env_label.'");
+        $this->passthru("git -C $repositoryDir commit -q -m '$message'");
 
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
