@@ -7,6 +7,8 @@ TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 # Repair the test project on github
 terminus build:project:repair -n "$TERMINUS_SITE" --email="$GIT_EMAIL"
 
+cd "$TARGET_REPO_WORKING_COPY"
+
 # Remove the fixture cleanup script so that the pull requests et. al.
 # created in the test repo are not deleted. We'll remove them in this
 # process so that we can better test the results of the operations.
@@ -19,8 +21,8 @@ echo << __EOT__ > $FIXTURE_CLEANUP_SCRIPT
 echo "Script removed for testing"
 __EOT__
 chmod +x "$FIXTURE_CLEANUP_SCRIPT"
-git -C "$TARGET_REPO_WORKING_COPY" add "$FIXTURE_CLEANUP_SCRIPT"
-git -C "$TARGET_REPO_WORKING_COPY" commit -m "Script removed for testing"
+git add "$FIXTURE_CLEANUP_SCRIPT"
+git commit -m "Script removed for testing"
 
 # Create a test pull request
 function createTestPR()
@@ -29,22 +31,22 @@ function createTestPR()
     TEST_COMMENT="$2"
 
     # Make a branch so for our test commit
-    git -C "$TARGET_REPO_WORKING_COPY" checkout -b "$TEST_BRANCH_NAME" master
+    git checkout -b "$TEST_BRANCH_NAME" master
 
     # Add a comment to the README so that we know what this was made for
     echo "$TEST_COMMENT" >> "$TARGET_REPO_WORKING_COPY/README.md"
-    git -C "$TARGET_REPO_WORKING_COPY" add README.md
-    git -C "$TARGET_REPO_WORKING_COPY" commit -m "$TEST_COMMENT"
+    git add README.md
+    git commit -m "$TEST_COMMENT"
 
     # Push the branch
     ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
-    git push $ORIGIN "$TEST_BRANCH_NAME" | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
+    git push $ORIGIN "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Create the pull request
-    hub -C "$TARGET_REPO_WORKING_COPY" pull-request "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME" | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
+    hub pull-request "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Back to master
-    git -C "$TARGET_REPO_WORKING_COPY" checkout master
+    git checkout master
 }
 
 # Create a bunch of pull requests that will not run any tests.
