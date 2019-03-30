@@ -13,7 +13,7 @@ terminus build:project:repair -n "$TERMINUS_SITE" --email="$GIT_EMAIL"
 FIXTURE_CLEANUP_SCRIPT="$TARGET_REPO_WORKING_COPY/.ci/scripts/05-merge-master"
 
 # This presumes the test script layout of the example-drops-8-composer repo
-echo < __EOT__ > $FIXTURE_CLEANUP_SCRIPT
+echo << __EOT__ > $FIXTURE_CLEANUP_SCRIPT
 #!/bin/bash
 
 echo "Script removed for testing"
