@@ -43,7 +43,7 @@ function createTestPR()
     git push $ORIGIN "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Create the pull request
-    hub pull-request "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
+    hub pull-request -m "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Back to master
     git checkout master
