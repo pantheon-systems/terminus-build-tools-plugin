@@ -13,6 +13,7 @@ use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPI;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
+use Pantheon\TerminusBuildTools\API\PullRequestInfo;
 
 /**
  * Holds state information destined to be registered with the CI service.
@@ -33,6 +34,14 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     public function __construct()
     {
+    }
+
+    /**
+     * @return string
+     */
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
     }
 
     public function infer($url)
@@ -90,19 +99,6 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function pushRepository($dir, $target_project)
     {
         $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
-    }
-
-    /**
-     * Convert a nested array into a list of GitHubRepositoryInfo object.s
-     */
-    protected function createRepositoryInfo($repoList)
-    {
-        $result = [];
-        foreach ($repoList as $repo) {
-            $repoInfo = new GitHubRepositoryInfo($repo);
-            $result[$repoInfo->project()] = $repoInfo;
-        }
-        return $result;
     }
 
     /**

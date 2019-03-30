@@ -17,6 +17,8 @@ class ProviderEnvironment extends \ArrayObject implements ServiceTokenStorage
     protected $token_key = 'TOKEN';
     protected $tokens = [];
     protected $serviceName;
+    /** var string [] */
+    protected $nonSecretVariales = [];
 
     public function __construct(array $data = [])
     {
@@ -70,6 +72,17 @@ class ProviderEnvironment extends \ArrayObject implements ServiceTokenStorage
     public function setServiceName($serviceName)
     {
         $this->serviceName = $serviceName;
+        return $this;
+    }
+
+    public function getPublicVariableKeys()
+    {
+        return $this->nonSecretVariales;
+    }
+
+    public function makeVariableValuePublic($key)
+    {
+        $this->nonSecretVariales[] = $key;
         return $this;
     }
 

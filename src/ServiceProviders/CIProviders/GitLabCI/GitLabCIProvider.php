@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
@@ -23,12 +24,14 @@ use Robo\Config\Config;
  */
 class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
+    use GitLabAPITrait;
     use LoggerAwareTrait;
 
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
-    // Since GitLab and GitLabCI are so tightly coupled, use the Repository constants.
-    const GITLAB_TOKEN = GitLabProvider::GITLAB_TOKEN;
+    protected $providerEnvironment;
+
+    const SERVICE_NAME = 'gitlab-pipelines';
 
     protected $gitlab_token;
     protected $config;
@@ -37,6 +40,15 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->config = $config;
         $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
+    }
+
+    public function getEnvironment()
+    {
+        if (!$this->providerEnvironment) {
+            $this->providerEnvironment = (new ProviderEnvironment())
+            ->setServiceName(self::SERVICE_NAME);
+        }
+        return $this->providerEnvironment;
     }
 
     /**
@@ -58,75 +70,19 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         return strpos($url, $this->getGitLabUrl()) !== false;
     }
 
-    /**
-     * Return 'true' if our token has been set yet.
-     */
-    public function hasToken()
-    {
-        return isset($this->gitlab_token);
-    }
-
-    /**
-     * Set our token. This will be called via 'setCredentials()', which is
-     * called by the provider manager.
-     */
-    public function setToken($gitlab_token)
-    {
-        $this->gitlab_token = $gitlab_token;
-    }
-
-    public function token()
-    {
-        return $this->gitlab_token;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function credentialRequests()
-    {
-        // Tell the credential manager that we require one credential: the
-        // GITLAB_TOKEN that will be used to authenticate.
-        $gitlabTokenRequest = new CredentialRequest(
-            self::GITLAB_TOKEN,
-            "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.",
-            "Enter GitLab personal access token: ",
-            '#^[0-9a-zA-Z\-]{20}$#',
-            'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.'
-        );
-
-        return [ $gitlabTokenRequest ];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setCredentials(CredentialProviderInterface $credentials_provider)
-    {
-        // Since the `credentialRequests()` method declared that we need a
-        // GITLAB_TOKEN credential, it will be available for us to copy from
-        // the credentials provider when this method is called.
-        $tokenKey = self::GITLAB_TOKEN;
-        $token = $credentials_provider->fetch($tokenKey);
-        if (!$token) {
-            throw new \Exception('Could not determine authentication token for GitLab serivces. Please set ' . $tokenKey);
-        }
-        $this->setToken($token);
-    }
-
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
         return 'https://' . $this->getGitLabUrl() . '/' . $repositoryAttributes->projectId();
     }
 
-    protected function apiUrl(CIState $ci_env)
+    protected function apiUri(CIState $ci_env, $uri)
     {
         $repositoryAttributes = $ci_env->getState('repository');
         $apiRepositoryType = $repositoryAttributes->serviceName();
         $target_project = urlencode($repositoryAttributes->projectId());
 
-        return "https://" . $this->getGitLabUrl() . "/api/v4/projects/$target_project/variables";
+        return "/api/v4/projects/$target_project/$uri";
     }
 
     /**
@@ -135,7 +91,7 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function badge(CIState $ci_env)
     {
         $url = $this->projectUrl($ci_env);
-        return "[![GitLabCI]($url/bradges/master/build.svg?style=shield)]($url)";
+        return "[![GitLabCI]($url/badges/master/pipeline.svg)]($url/pipelines)";
     }
 
     /**
@@ -152,56 +108,69 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
     protected function setGitLabCIEnvironmentVars(CIState $ci_env)
     {
-        $gitlab_url = $this->apiUrl($ci_env);
-        $env = $ci_env->getAggregateState();
-        foreach ($env as $key => $value) {
-            $data = ['key' => $key, 'value' => $value];
-            $this->gitlabCIAPI($data, $gitlab_url);
-        }
+        // Get the aggregation of all state variables that should be set
+        // as environment variables. Also add the GitLab URL for future use.
+        // This will cause CircleCI to set this environment varables during
+        // test runs, which will automatically provide this value when we call:
+        //   $config->get('build-tools.provider.git.gitlab.url')
+        $vars = $ci_env->getAggregateState();
+        $vars['TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL'] = $this->getGitLabUrl();
 
-        // Also set the GitLab URL for future use. This will allow it to override the
-        // default GitLab URL when run during CI builds (such as retrieving Merge Requests).
-        $data = ['key' => 'TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL', 'value' => $this->getGitLabUrl()];
-        $this->gitlabCIAPI($data, $gitlab_url);
+        return $this->setGitLabEnvVars($ci_env, $vars);
     }
+
+    protected function setGitLabEnvVars(CIState $ci_env, $vars)
+    {
+        $this->deleteExistingVariables($ci_env, $vars);
+        $uri = $this->apiUri($ci_env, 'variables');
+        foreach ($vars as $key => $value) {
+            // GitLab always obscures the variable values regardless of whether
+            // they are protected or not. "Protected" variables are only
+            // applied to protected branches (e.g. master).
+            $protected = false;
+            $data = ['key' => $key, 'value' => $value, 'protected' => $protected];
+            if (empty($value)) {
+                $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
+            } else {
+                $this->api()->request($uri, $data);
+            }
+        }
+    }
+
+    protected function deleteExistingVariables(CIState $ci_env, $vars)
+    {
+        $uri = $this->apiUri($ci_env, 'variables');
+        $existing = $this->api()->request($uri);
+
+        $intersecting = $this->findIntersecting($existing, $vars);
+
+        foreach ($intersecting as $key) {
+            $this->api()->request($uri . '/' . $key, [], 'DELETE');
+        }
+    }
+
+    protected function findIntersecting($existing, $vars)
+    {
+        $intersecting = [];
+
+        foreach ($existing as $row) {
+            $key = $row['key'];
+            if (array_key_exists($key, $vars)) {
+                $intersecting[] = $key;
+            }
+        }
+        return $intersecting;
+    }
+
 
     public function startTesting(CIState $ci_env) {
         // Do nothing...it starts automatically.
     }
 
-  public function addPrivateKey(CIState $ci_env, $privateKey)
+    public function addPrivateKey(CIState $ci_env, $privateKey)
     {
-        // We need to set the SSH Key variable in GitLabCI
-        $gitlab_url = $this->apiUrl($ci_env);
-        $data = ['key' => 'SSH_PRIVATE_KEY', 'value' => file_get_contents($privateKey)];
-        $this->gitlabCIAPI($data, $gitlab_url);
-    }
-
-    protected function gitlabCIAPI($data, $url, $method = 'GET')
-    {
-        $headers = [
-            'Content-Type' => 'application/json',
-            'User-Agent' => ProviderEnvironment::USER_AGENT,
-        ];
-
-        if ($this->hasToken()) {
-            $headers['PRIVATE-TOKEN'] = $this->token();;
-        }
-
-        $guzzleParams = [
-            'headers' => $headers,
-        ];
-        if (!empty($data) && ($method == 'GET')) {
-            $method = 'POST';
-            $guzzleParams['json'] = $data;
-        }
-
-        $this->logger->notice('Call GitLab API: {method} {uri}', ['method' => $method, 'uri' => $url]);
-
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request($method, $url, $guzzleParams);
-        $resultData = json_decode($res->getBody(), true);
-
-        return $res->getStatusCode();
+        // In GitLabCI, we must save the private key as an environment variable.
+        $vars = ['SSH_PRIVATE_KEY' => file_get_contents($privateKey)];
+        $this->setGitLabEnvVars($ci_env, $vars);
     }
 }

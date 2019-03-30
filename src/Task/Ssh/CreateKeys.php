@@ -82,17 +82,20 @@ class CreateKeys extends BaseTask
         return [$publicKey, $privateKey];
     }
 
-    public function provide($list, $functionName, $value)
+    public function provide($list, $functionName, $v1, $v2 = null)
     {
         foreach($list as $item) {
             $fn = [$item, $functionName];
-            $fn($this->ci_env, $value);
+            $fn($this->ci_env, $v1, $v2);
         }
     }
 
     public function run()
     {
         list($publicKey, $privateKey) = $this->create();
+        $keyPairReceivers = $this->all(KeyPairReciever::class);
+        $this->provide($keyPairReceivers, 'addKeyPair', $publicKey, $privateKey);
+
         $privateKeyReceivers = $this->all(PrivateKeyReciever::class);
         $this->provide($privateKeyReceivers, 'addPrivateKey', $privateKey);
 

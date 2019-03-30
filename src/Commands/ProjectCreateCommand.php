@@ -27,43 +27,41 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
-use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Project Create Command
- *
- * TODO: We could create a SiteProvider that implements PublicKeyReciever
- * rather than using $this to server that purpose.
  */
-class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
+class ProjectCreateCommand extends BuildToolsBase
 {
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
 
-    const PASSWORD_ERROR_MESSAGE="Admin password cannot contain the characters ! ; ` or $ due to a Pantheon platform limitation. Please select a new password.";
-
     /**
+     * Initialize the default value for selected options.
      * Validate requested site name before prompting for additional information.
      *
      * @hook init build:project:create
      */
-    public function validateSiteName(InputInterface $input, AnnotationData $annotationData)
+    public function initOptionValues(InputInterface $input, AnnotationData $annotationData)
     {
-        $ci_provider_class_or_alias = $input->getOption('ci');
         $git_provider_class_or_alias = $input->getOption('git');
         $target_org = $input->getOption('org');
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
         $target = $input->getArgument('target');
 
-        // If using GitLab, override the CI choice as GitLabCI is the only option.
-        if ($git_provider_class_or_alias == 'gitlab') {
-            $ci_provider_class_or_alias = 'gitlabci';
-        }
+        $ci_provider_class_or_alias = $this->selectCIProvider($git_provider_class_or_alias, $input->getOption('ci'));
 
-        // Create the providers via the provider manager
-        $this->createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias);
+        // Create the providers via the provider manager.
+        // Each provider that is created is also registered, so
+        // when we call `credentialManager()->ask()` et. al.,
+        // each will be called in turn.
+        $this->createProviders(
+            $git_provider_class_or_alias,
+            $ci_provider_class_or_alias,
+            'pantheon'
+        );
 
         // If only one parameter was provided, then it is the TARGET
         if (empty($target)) {
@@ -105,6 +103,9 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         $input->setArgument('target', $target);
         $input->setOption('org', $target_org);
         $input->setOption('pantheon-site', $site_name);
+
+        // Copy the options into the credentials cache as appropriate
+        $this->providerManager()->setFromOptions($input);
     }
 
     /**
@@ -119,16 +120,6 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     {
         $io = new SymfonyStyle($input, $output);
         $this->providerManager()->credentialManager()->ask($io);
-
-        // If the user did not specify an admin password, then prompt for one.
-        $adminPassword = $input->getOption('admin-password');
-        if (empty($adminPassword)) {
-            $adminPassword = getenv('ADMIN_PASSWORD');
-        }
-        if (empty($adminPassword)) {
-            $adminPassword = $this->askAdminPassword();
-        }
-        $input->setOption('admin-password', $adminPassword);
 
         // Encourage the user to select a team
         $team = $input->getOption('team');
@@ -148,45 +139,14 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
     }
 
     /**
-     * Ask the user for a password. Keep asking until they enter something
-     * valid or empty.
-     */
-    protected function askAdminPassword()
-    {
-        while(true) {
-            $adminPassword = $this->io()->askHidden("Enter the password you would like to use to log in to your test site,\n or leave empty for a random password:", function ($value) { return $value; });
-
-            if (empty($adminPassword) || $this->validAdminPassword($adminPassword)) {
-                return $adminPassword;
-            }
-            $this->log()->warning(self::PASSWORD_ERROR_MESSAGE);
-        }
-    }
-
-    /**
      * Ensure that the user has not supplied any parameters with invalid values.
      *
      * @hook validate build:project:create
      */
     public function validateCreateProject(CommandData $commandData)
     {
-        $input = $commandData->input();
-        $adminPassword = $input->getOption('admin-password');
-
-        if (!$this->validAdminPassword($adminPassword)) {
-            throw new TerminusException(self::PASSWORD_ERROR_MESSAGE);
-        }
-
         // Ensure that all of our providers are given the credentials they requested.
         $this->providerManager()->validateCredentials();
-    }
-
-    /**
-     * Return whether or not the provided admin password is usable on Pantheon.
-     */
-    protected function validAdminPassword($adminPassword)
-    {
-       return strpbrk($adminPassword, '!;$`') === false;
     }
 
     /**
@@ -245,12 +205,11 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
-            'ci' => 'circleci',
+            'ci' => '',
             'git' => 'github',
         ])
     {
         $this->warnAboutOldPhp();
-        $options = $this->validateOptionsAndSetDefaults($options);
 
         // Copy options into ordinary variables
         $target_org = $options['org'];
@@ -270,15 +229,14 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
             $target_label = "$target_org/$target";
         }
 
-        // TODO: Maybe getCIEnvironment could be moved to a pantheonProvider,
-        // and we could build $ci_env in the provider manager by calling
-        // `getEnvironment()` on each provider.
-
         // Get the environment variables to be stored in the CI server.
-        $ci_env = $this->getCIEnvironment($site_name, $options);
+        $ci_env = $this->getCIEnvironment($options['env']);
 
         // Add the environment variables from the git provider to the CI environment.
         $ci_env->storeState('repository', $this->git_provider->getEnvironment());
+
+        // Add the environment variables from the site provider to the CI environment.
+        $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
@@ -375,7 +333,7 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
 
             ->progressMessage('Set up CI services')
 
-            // Set up CircleCI to test our project.
+            // Set up CI to test our project.
             // Note that this also modifies the README and commits it to the repository.
             ->taskCISetup()
                 ->provider($this->ci_provider)
@@ -384,12 +342,14 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
                 ->dir($siteDir)
 
             // Create public and private key pair and add them to any provider
-            // that requested them.
+            // that requested them. Providers that implement PrivateKeyReceiver,
+            // PublicKeyReceiver or KeyPairReceiver will be called with the
+            // private key, the public key, or both.
             ->taskCreateKeys()
                 ->environment($ci_env)
                 ->provider($this->ci_provider)
                 ->provider($this->git_provider)
-                ->provider($this) // TODO: replace with site provider
+                ->provider($this->site_provider)
 
             /*
             ->taskRepositoryPush()
@@ -496,23 +456,4 @@ class ProjectCreateCommand extends BuildToolsBase implements PublicKeyReciever
         return $this->getHeadCommit($repositoryDir);
     }
 
-    /**
-     * Determine whether or not this site can create multidev environments.
-     */
-    protected function siteHasMultidevCapability($site)
-    {
-        // Can our new site create multidevs?
-        $settings = $site->get('settings');
-        if (!$settings) {
-            return false;
-        }
-        return $settings->max_num_cdes > 0;
-    }
-
-    // TODO: This could move to a SiteProvider class. Would need a
-    // reference to $this->session().
-    public function addPublicKey(CIState $ci_env, $publicKey)
-    {
-        $this->session()->getUser()->getSSHKeys()->addKey($publicKey);
-    }
 }

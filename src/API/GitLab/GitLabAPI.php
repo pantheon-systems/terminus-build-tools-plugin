@@ -53,6 +53,15 @@ class GitLabAPI extends WebAPI
 
     public static function determineGitLabUrl(Config $config)
     {
+        // Robo's Config object in combination with Terminus does not properly expand
+        // environment variable configurations for nested items. This temporary env
+        // detection can be removed once resolved. This can be ovserved by using
+        // `terminus self:config:dump` from a local environment with the configuration
+        // set via config.yml and from a CI environment with the below env variable set.
+        if ($preservedGitLabUrl = getenv('TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL'))
+        {
+            return $preservedGitLabUrl;
+        }
         return $config->get(self::GITLAB_CONFIG_PATH, self::GITLAB_URL_DEFAULT);
     }
 
@@ -79,9 +88,9 @@ class GitLabAPI extends WebAPI
         return !empty($pager_headers);
     }
 
-    protected function getPagerInfo($links)
+    protected function getPagerInfo($headers)
     {
-        $links = $links['Link'];
+        $links = $headers['Link'];
         // Find a link header that contains a "rel" type set to "next" or "last".
         $pager_headers = array_filter($links, function ($link) {
             return strpos($link, 'rel="next"') !== FALSE || strpos($link, 'rel="last"') !== FALSE;

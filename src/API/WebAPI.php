@@ -28,7 +28,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
     abstract protected function isPagedResponse($headers);
 
-    abstract protected function getPagerInfo($links);
+    abstract protected function getPagerInfo($headers);
 
     abstract protected function isLastPage($page_link, $pager_info);
 
