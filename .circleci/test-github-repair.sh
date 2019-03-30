@@ -38,10 +38,10 @@ function createTestPR()
 
     # Push the branch
     ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
-    git push $ORIGIN test-after-repair | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
+    git push $ORIGIN "$TEST_BRANCH_NAME" | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Create the pull request
-    hub -C "$TARGET_REPO_WORKING_COPY" pull-request "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME"
+    hub -C "$TARGET_REPO_WORKING_COPY" pull-request "$TEST_COMMENT" -b master -h "$TEST_BRANCH_NAME" | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
     # Back to master
     git -C "$TARGET_REPO_WORKING_COPY" checkout master
