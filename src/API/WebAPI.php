@@ -63,20 +63,24 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
             $isDone = false;
             while (($httpCode == 200) && !$isDone && $this->checkPagedCallback($resultData, $callback)) {
                 $isDone = $this->isLastPage($uri, $pager_info);
-                $uri = $this->getNextPageUri($pager_info);
-
-                $res = $this->sendRequest($uri);
-                $httpCode = $res->getStatusCode();
-                $resultData = json_decode($res->getBody(), true);
-
-                if (!is_null($resultData))
-                {
-                    $accumulatedData = array_merge_recursive(
-                        $accumulatedData,
-                        $resultData
-                    );
+                $next = $this->getNextPageUri($pager_info);
+                if ($next == $uri) {
+                    $isDone = true;
                 }
+                $uri = $next;
+                if (!$isDone) {
+                    $res = $this->sendRequest($uri);
+                    $httpCode = $res->getStatusCode();
+                    $resultData = json_decode($res->getBody(), true);
 
+                    if (!is_null($resultData))
+                    {
+                        $accumulatedData = array_merge_recursive(
+                            $accumulatedData,
+                            $resultData
+                        );
+                    }
+                }
             }
         }
 
