@@ -16,10 +16,10 @@ TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 # We could go to some work to recover the environment name for
 # the branch 'test-after-repair'. Instead, though, we will assume
 # that since our test creates a brand-new-repo, and the test-github-repair
-# script always created 59 "[ci skip]" PRs before creating the
+# script always created 10 "[ci skip]" PRs before creating the
 # test-after-repair PR, the pull request we are expecting should
-# always be "pr-60".
-TERMINUS_ENV=pr-60
+# always be "pr-11".
+TERMINUS_ENV=pr-11
 
 # Wait for our environment to show up, because Waiting / watching
 # the Circle workflow is not reliable. If the 'wait for Circle' step

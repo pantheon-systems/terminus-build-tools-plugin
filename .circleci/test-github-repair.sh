@@ -52,7 +52,7 @@ function createTestPR()
 # Create a bunch of pull requests that will not run any tests.
 # We do this so that we'll have to make more than one API request
 # to find our test PR.
-for n in $(seq 1 59) ; do
+for n in $(seq 1 10) ; do
     createTestPR "no-op-$n" "[ci skip] Pull request that is not tested (#$n)"
 done
 

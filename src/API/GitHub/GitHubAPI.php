@@ -46,6 +46,15 @@ class GitHubAPI extends WebAPI
         );
     }
 
+    protected function alterPagedRequestQueryParams($queryParams)
+    {
+        // TODO: Only override if not already set. Check an environment variable
+        // for page size.
+        $queryParams['per_page'] = 10;
+
+        return $queryParams;
+    }
+
     protected function isPagedResponse($headers)
     {
         if (empty($headers['Link'])) {

@@ -34,7 +34,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
     abstract protected function getNextPageUri($pager_info);
 
-    public function request($uri, $data = [], $method = 'GET')
+    public function request($uri, $data = [], $method = '')
     {
         $res = $this->sendRequest($uri, $data, $method);
 
@@ -44,9 +44,10 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return $this->processResponse($resultData, $httpCode);
     }
 
-    public function pagedRequest($uri, $callback = null)
+    public function pagedRequest($uri, $callback = null, $queryParams = [])
     {
-        $res = $this->sendRequest($uri);
+        $queryParams = $this->alterPagedRequestQueryParams($queryParams);
+        $res = $this->sendRequest($uri, $queryParams, 'GET');
 
         $resultData = json_decode($res->getBody(), true);
         $httpCode = $res->getStatusCode();
@@ -69,7 +70,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                 }
                 $uri = $next;
                 if (!$isDone) {
-                    $res = $this->sendRequest($uri);
+                    $res = $this->sendRequest($uri, $queryParams, 'GET');
                     $httpCode = $res->getStatusCode();
                     $resultData = json_decode($res->getBody(), true);
 
@@ -87,14 +88,23 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return $this->processResponse($accumulatedData, $httpCode);
     }
 
-    protected function sendRequest($uri, $data = [], $method = 'GET')
+    protected function alterPagedRequestQueryParams($queryParams)
+    {
+        return $queryParams;
+    }
+
+    protected function sendRequest($uri, $data = [], $method = '')
     {
         $guzzleParams = [];
         if (!empty($data)) {
-            if  ($method == 'GET') {
+            if  (empty($method)) {
                 $method = 'POST';
             }
-            $guzzleParams['json'] = $data;
+            if ($method == 'GET') {
+                $uri .= '?' . http_build_query($data);
+            } else {
+                $guzzleParams['json'] = $data;
+            }
         }
 
         $this->logger->notice('Call {service} API: {method} {uri}', ['service' => $this->serviceHumanReadableName(), 'method' => $method, 'uri' => $uri]);
