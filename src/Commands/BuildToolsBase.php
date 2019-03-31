@@ -783,7 +783,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->passthru("git -C $repositoryDir add --force -A .");
 
         // Now that everything is ready, commit the build artifacts.
-        $this->passthru("git -C $repositoryDir commit -q -m '$message'");
+        $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
 
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
