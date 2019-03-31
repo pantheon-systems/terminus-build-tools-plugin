@@ -15,6 +15,11 @@ interface CIProvider extends ProviderInterface
     public function projectUrl(CIState $ci_env);
 
     /**
+     * Return the service name of the CI provider.
+     */
+    public function getServiceName();
+
+    /**
      * Return the text for the badge for this CI service.
      */
     public function badge(CIState $ci_env);

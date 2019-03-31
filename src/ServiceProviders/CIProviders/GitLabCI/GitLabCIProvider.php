@@ -70,6 +70,11 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         return strpos($url, $this->getGitLabUrl()) !== false;
     }
 
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
+    }
+
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');

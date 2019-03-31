@@ -23,6 +23,8 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
 
     const CIRCLE_TOKEN = 'CIRCLE_TOKEN';
 
+    const SERVICE_NAME = 'circleci';
+
     protected $circle_token;
 
     public function __construct()
@@ -32,6 +34,11 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     public function infer($url)
     {
         return strpos($url, 'circleci.com') !== false;
+    }
+
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
     }
 
     /**

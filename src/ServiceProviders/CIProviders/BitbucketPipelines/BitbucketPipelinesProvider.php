@@ -48,6 +48,11 @@ class BitbucketPipelinesProvider implements CIProvider, LoggerAwareInterface, Ke
         return strpos($url, 'bitbucket.org') !== false;
     }
 
+    public function getServiceName()
+    {
+        return self::SERVICE_NAME;
+    }
+
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');

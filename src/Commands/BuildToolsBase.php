@@ -1003,12 +1003,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     public function getBuildMetadata($repositoryDir)
     {
         return [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
-          'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
-          'sha'         => $this->getHeadCommit($repositoryDir),
-          'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
-          'commit-date' => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
-          'build-date'  => date("Y-m-d H:i:s O"),
+          'url'           => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'ref'           => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
+          'sha'           => $this->getHeadCommit($repositoryDir),
+          'comment'       => exec("git -C $repositoryDir log --pretty=format:%s -1"),
+          'commit-date'   => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
+          'build-date'    => date("Y-m-d H:i:s O"),
+          'git-provider'  => $this->git_provider->getServiceName(),
+          'ci-provider'   => $this->ci_provider->getServiceName(),
+          'api-host-host' => $this->git_provider->api()->getApiHost(),
         ];
     }
 

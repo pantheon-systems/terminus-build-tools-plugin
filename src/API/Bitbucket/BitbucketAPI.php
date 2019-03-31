@@ -29,6 +29,11 @@ class BitbucketAPI extends WebAPI
         return self::SERVICE_NAME;
     }
 
+    public function getApiHost()
+    {
+        return 'https://api.bitbucket.org/2.0/';
+    }
+
     protected function apiClient()
     {
         $headers = [
@@ -37,7 +42,7 @@ class BitbucketAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
-                'base_uri' => 'https://api.bitbucket.org/2.0/',
+                'base_uri' => $this->getApiHost(),
                 'auth' => [ $this->serviceTokenStorage->token(self::BITBUCKET_USER), $this->serviceTokenStorage->token(self::BITBUCKET_PASS) ],
                 'headers' => $headers,
             ]

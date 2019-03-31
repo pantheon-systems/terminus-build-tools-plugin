@@ -32,6 +32,11 @@ class GitLabAPI extends WebAPI
         return self::SERVICE_NAME;
     }
 
+    public function getApiHost()
+    {
+        return 'https://' . $this->getGitLabUrl();
+    }
+
     protected function apiClient()
     {
         $headers = [
@@ -45,7 +50,7 @@ class GitLabAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
-                'base_uri' => 'https://' . $this->getGitLabUrl(),
+                'base_uri' => $this->getApiHost(),
                 'headers' => $headers,
             ]
         );

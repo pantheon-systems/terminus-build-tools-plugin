@@ -27,6 +27,11 @@ class GitHubAPI extends WebAPI
         return self::SERVICE_NAME;
     }
 
+    public function getApiHost()
+    {
+        return 'https://api.github.com';
+    }
+
     protected function apiClient()
     {
         $headers = [
@@ -40,7 +45,7 @@ class GitHubAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
-                'base_uri' => 'https://api.github.com',
+                'base_uri' => $this->getApiHost(),
                 'headers' => $headers,
             ]
         );
