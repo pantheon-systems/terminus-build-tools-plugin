@@ -16,10 +16,9 @@ TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 # We could go to some work to recover the environment name for
 # the branch 'test-after-repair'. Instead, though, we will assume
 # that since our test creates a brand-new-repo, and the test-github-repair
-# script always created 10 "[ci skip]" PRs before creating the
-# test-after-repair PR, the pull request we are expecting should
-# always be "pr-11".
-TERMINUS_ENV=pr-11
+# script always the 'test-after-repair' PR first, then the pull request
+# we are expecting should always be "pr-1".
+TERMINUS_ENV=pr-1
 
 # Wait for our environment to show up, because Waiting / watching
 # the Circle workflow is not reliable. If the 'wait for Circle' step
@@ -65,12 +64,13 @@ terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 # request to be marked as merged, which will make our environment
 # $TERMINUS_ENV eligible for deletion. We therefore expect build:env:delete:pr
 # to delete it.
-terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
+TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE=10 terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
 
 # Do -not- fail on errors any more
 set +e
 
 # Confirm that our test environment no longer exists.
+echo "Check to see if $TERMINUS_SITE.$TERMINUS_ENV still exists."
 terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
 STATUS="$?"
 

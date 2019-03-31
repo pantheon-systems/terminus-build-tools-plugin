@@ -48,9 +48,11 @@ class GitHubAPI extends WebAPI
 
     protected function alterPagedRequestQueryParams($queryParams)
     {
-        // TODO: Only override if not already set. Check an environment variable
-        // for page size.
-        $queryParams['per_page'] = 10;
+        // For debugging only: set the per-page down so the GitHub API pages sooner
+        $per_page = getenv('TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE');
+        if ($per_page) {
+            $queryParams['per_page'] = $per_page;
+        }
 
         return $queryParams;
     }
