@@ -96,10 +96,10 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
     protected function sendRequest($uri, $data = [], $method = '')
     {
         $guzzleParams = [];
+        if (empty($method)) {
+            $method = empty($data) ? 'GET' : 'POST';
+        }
         if (!empty($data)) {
-            if  (empty($method)) {
-                $method = 'POST';
-            }
             if ($method == 'GET') {
                 $uri .= '?' . http_build_query($data);
             } else {
