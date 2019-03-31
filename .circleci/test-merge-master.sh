@@ -74,5 +74,9 @@ set +e
 terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
 STATUS="$?"
 
-# TODO: assert that status is non-zero
-echo "Status is $STATUS"
+# Assert that status is non-zero
+if [ $STATUS -eq 0 ] ; then
+    echo "Environment $TERMINUS_SITE.$TERMINUS_ENV should have been deleted, but was not."
+    exit 1
+fi
+echo "Environment $TERMINUS_SITE.$TERMINUS_ENV deleted as expected."
