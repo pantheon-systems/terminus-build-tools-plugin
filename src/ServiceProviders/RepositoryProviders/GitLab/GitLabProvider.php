@@ -146,7 +146,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     public function commentOnCommit($target_project, $commit_hash, $message) {
         // We need to check and see if a MR exists for this commit.
         $mrs = $this->api()
-            ->request("api/v4/projects/" . urlencode($target_project) . "/merge_requests?state=opened");
+            ->request("api/v4/projects/" . urlencode($target_project) . "/merge_requests", ['state' => 'opened'], 'GET');
         $url = NULL;
         $data = [];
         foreach ($mrs as $mr) {
@@ -192,7 +192,7 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         $projectID = $this->getProjectID($target_project);
 
         $data = $this->api()
-            ->pagedRequest("api/v4/projects/$projectID/merge_requests?scope=all&state=" . implode('', $stateParameters[$state]), $callback);
+            ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['iid'];

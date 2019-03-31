@@ -120,6 +120,14 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->logger->notice('Configure Circle CI');
         $this->setCircleEnvironmentVars($ci_env);
+        $this->onlyBuildPullRequests($ci_env);
+    }
+
+    protected function onlyBuildPullRequests($ci_env)
+    {
+        $circle_url = $this->apiUrl($ci_env);
+        $data = ['feature_flags' => ['build-prs-only' => true]];
+        $this->circleCIAPI($data, "$circle_url/settings", 'PUT');
     }
 
     protected function setCircleEnvironmentVars(CIState $ci_env)
@@ -153,7 +161,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $this->circleCIAPI($data, "$circle_url/ssh-key");
     }
 
-    protected function circleCIAPI($data, $url)
+    protected function circleCIAPI($data, $url, $method = 'POST')
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 
@@ -164,7 +172,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         ];
 
         $client = new \GuzzleHttp\Client();
-        $res = $client->request('POST', $url, [
+        $res = $client->request($method, $url, [
             'headers' => $headers,
             'auth' => [$this->circle_token, ''],
             'json' => $data,
