@@ -120,6 +120,14 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->logger->notice('Configure Circle CI');
         $this->setCircleEnvironmentVars($ci_env);
+        $this->onlyBuildPullRequests($ci_env);
+    }
+
+    protected function onlyBuildPullRequests($ci_env)
+    {
+        $circle_url = $this->apiUrl($ci_env);
+        $data = ['feature_flags' => ['build-prs-only' => true]];
+        $this->circleCIAPI($data, "$circle_url/settings");
     }
 
     protected function setCircleEnvironmentVars(CIState $ci_env)
