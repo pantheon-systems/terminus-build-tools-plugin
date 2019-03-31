@@ -46,6 +46,17 @@ class GitHubAPI extends WebAPI
         );
     }
 
+    protected function alterPagedRequestQueryParams($queryParams)
+    {
+        // For debugging only: set the per-page down so the GitHub API pages sooner
+        $per_page = getenv('TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE');
+        if ($per_page) {
+            $queryParams['per_page'] = $per_page;
+        }
+
+        return $queryParams;
+    }
+
     protected function isPagedResponse($headers)
     {
         if (empty($headers['Link'])) {

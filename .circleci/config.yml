@@ -62,6 +62,9 @@ jobs:
                 name: Test build:project:repair
                 command: ./.circleci/test-github-repair.sh
             - run:
+                name: Watch CircleCI tests after build:project:repair
+                command: ./.circleci/watch-circle.sh
+            - run:
                 name: Test merge to master
                 command: ./.circleci/test-merge-master.sh
             - run:

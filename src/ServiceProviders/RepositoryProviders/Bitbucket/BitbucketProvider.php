@@ -142,8 +142,7 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
         if (!isset($stateParameters[$state]))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
 
-        $data = $this->api()->pagedRequest("repositories/$target_project/pullrequests?state="
-            .implode('&state=', $stateParameters[$state]), $callback);
+        $data = $this->api()->pagedRequest("repositories/$target_project/pullrequests", $callback, ['state' => implode('&state=', $stateParameters[$state])]);
 
         $branchList = array_column(array_map(
             function ($item) {
