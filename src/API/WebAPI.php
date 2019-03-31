@@ -70,7 +70,8 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                 }
                 $uri = $next;
                 if (!$isDone) {
-                    $res = $this->sendRequest($uri, $queryParams, 'GET');
+                    // $uri already has $queryParams, as altered in the $pager_info
+                    $res = $this->sendRequest($uri, [], 'GET');
                     $httpCode = $res->getStatusCode();
                     $resultData = json_decode($res->getBody(), true);
                     $isDone = !$this->checkPagedCallback($resultData, $callback);
