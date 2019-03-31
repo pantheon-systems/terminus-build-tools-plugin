@@ -1160,7 +1160,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = preg_replace('/^:/', $siteAddress, $dest);
 
         $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
-        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1", $status);
+        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1", $status);
 
         return $status;
     }
