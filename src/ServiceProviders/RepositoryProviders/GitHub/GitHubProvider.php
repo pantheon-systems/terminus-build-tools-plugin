@@ -136,7 +136,7 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
 
-        $data = $this->api()->pagedRequest("repos/$target_project/pulls?state=$state", $callback);
+        $data = $this->api()->pagedRequest("repos/$target_project/pulls", $callback, ['state' => $state]);
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['number'];
