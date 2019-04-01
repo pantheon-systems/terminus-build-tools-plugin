@@ -36,6 +36,7 @@ class ProjectCreateCommand extends BuildToolsBase
 {
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
+    use \Pantheon\TerminusBuildTools\Task\Quicksilver\Tasks;
 
     /**
      * Initialize the default value for selected options.
@@ -396,6 +397,11 @@ class ProjectCreateCommand extends BuildToolsBase
                     // configuration set up by the installer.
                     $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
                 })
+
+            ->progressMessage('Initialize build-providers.json')
+            ->taskPushbackSetup()
+                ->dir($siteDir)
+                ->provider($this->git_provider, $this->ci_provider)
 
             // Push the local working repository to the server
             ->progressMessage('Push initial code to {target}', ['target' => $target_label])

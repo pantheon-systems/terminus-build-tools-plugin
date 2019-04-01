@@ -3,6 +3,7 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
@@ -14,48 +15,25 @@ use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryE
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPI;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
+use Robo\Config\Config;
 
 /**
  * Holds state information destined to be registered with the CI service.
  */
-class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
-    use LoggerAwareTrait;
-    use ExecWithRedactionTrait;
     use GitHubAPITrait;
 
-    const SERVICE_NAME = 'github';
+    protected $serviceName = 'github';
     const GITHUB_URL = 'https://github.com';
-
-    protected $repositoryEnvironment;
 
     /** @var WebAPIInterface */
     protected $api;
 
-    public function __construct()
-    {
-    }
-
-    /**
-     * @return string
-     */
-    public function getServiceName()
-    {
-        return self::SERVICE_NAME;
-    }
 
     public function infer($url)
     {
         return strpos($url, 'github.com') !== false;
-    }
-
-    public function getEnvironment()
-    {
-        if (!$this->repositoryEnvironment) {
-            $this->repositoryEnvironment = (new RepositoryEnvironment())
-            ->setServiceName(self::SERVICE_NAME);
-        }
-        return $this->repositoryEnvironment;
     }
 
     /**
@@ -153,10 +131,5 @@ class GitHubProvider implements GitProvider, LoggerAwareInterface, CredentialCli
     {
         $isClosed = ($data['state'] == 'closed');
         return new PullRequestInfo($data['number'], $isClosed, $data['head']['ref']);
-    }
-
-    protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
-    {
-        return $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
     }
 }

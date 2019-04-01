@@ -3,6 +3,7 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -19,42 +20,18 @@ use GuzzleHttp\Client;
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
  */
-class BitbucketProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
 {
-    use LoggerAwareTrait;
-    use ExecWithRedactionTrait;
     use BitbucketAPITrait;
 
-    const SERVICE_NAME = 'bitbucket';
+    protected $serviceName = 'bitbucket';
     const BITBUCKET_URL = 'https://bitbucket.org';
 
     private $bitbucketClient;
-    protected $repositoryEnvironment;
-
-    public function __construct()
-    {
-    }
-
-    /**
-     * @return string
-     */
-    public function getServiceName()
-    {
-        return self::SERVICE_NAME;
-    }
 
     public function infer($url)
     {
         return strpos($url, 'bitbucket.org') !== false;
-    }
-
-    public function getEnvironment()
-    {
-        if (!$this->repositoryEnvironment) {
-            $this->repositoryEnvironment = (new RepositoryEnvironment())
-            ->setServiceName(self::SERVICE_NAME);
-        }
-        return $this->repositoryEnvironment;
     }
 
     /**
@@ -160,10 +137,5 @@ class BitbucketProvider implements GitProvider, LoggerAwareInterface, Credential
     {
         $isClosed = ($data['state'] != 'OPEN');
         return new PullRequestInfo($data['id'], $isClosed, $data['source']['branch']['name']);
-    }
-
-    protected function execGit($dir, $cmd, $replacements = [], $redacted = [])
-    {
-        return $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
@@ -17,17 +18,13 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 /**
  * Manages the configuration of a project to be tested on Circle CI.
  */
-class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
+class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
-    use LoggerAwareTrait;
 
     const CIRCLE_TOKEN = 'CIRCLE_TOKEN';
 
     protected $circle_token;
-
-    public function __construct()
-    {
-    }
+    protected $serviceName = 'circleci';
 
     public function infer($url)
     {

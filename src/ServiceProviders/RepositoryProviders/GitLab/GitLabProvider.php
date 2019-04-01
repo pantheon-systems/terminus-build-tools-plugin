@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLa
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
@@ -21,30 +22,17 @@ use Robo\Config\Config;
 /**
  * Encapsulates access to GitLab through git and the GitLab API.
  */
-class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface {
-    use LoggerAwareTrait;
-    use ExecWithRedactionTrait;
+class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface {
     use GitLabAPITrait;
 
-    const SERVICE_NAME = 'gitlab';
+    protected $serviceName = 'gitlab';
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
-    protected $config;
-
-    protected $repositoryEnvironment;
 
     public function __construct(Config $config) {
-        $this->config = $config;
+        parent::__construct($config);
         $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
-    }
-
-    /**
-     * @return string
-     */
-    public function getServiceName()
-    {
-        return self::SERVICE_NAME;
     }
 
     /**
@@ -63,14 +51,6 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
 
     public function infer($url) {
         return strpos($url, $this->getGitLabUrl()) !== FALSE;
-    }
-
-    public function getEnvironment() {
-        if (!$this->repositoryEnvironment) {
-            $this->repositoryEnvironment = (new RepositoryEnvironment())
-                ->setServiceName(self::SERVICE_NAME);
-        }
-        return $this->repositoryEnvironment;
     }
 
     /**
@@ -210,7 +190,11 @@ class GitLabProvider implements GitProvider, LoggerAwareInterface, CredentialCli
         return new PullRequestInfo($data['iid'], $isClosed, $data['sha']);
     }
 
-    protected function execGit($dir, $cmd, $replacements = [], $redacted = []) {
-        return $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
+    public function generateBuildProvidersData($git_service_name, $ci_service_name)
+    {
+        $metadata = parent::generateBuildProvidersData($git_service_name, $ci_service_name);
+        $metadata['api-host'] = $this->getGitLabUrl();
+        return $metadata;
     }
+
 }
