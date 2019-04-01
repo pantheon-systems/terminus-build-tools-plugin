@@ -996,14 +996,41 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
+     * Sets build info from a project created by build:env:create.
+     */
+    public function setProjectInfo($url, $ci='')
+    {
+        // Create a git repository service provider appropriate to the URL
+        $this->git_provider = $this->inferGitProviderFromUrl($url);
+
+        // Extract just the project id from the URL
+        $target_project = $this->projectFromRemoteUrl($url);
+        $this->git_provider->getEnvironment()->setProjectId($target_project);
+
+        $ci_provider_class_or_alias = $this->selectCIProvider($this->git_provider->getServiceName());
+
+        $this->ci_provider = $this->createCIProvider($ci_provider_class_or_alias, $ci);
+
+        return $target_project;
+    }
+
+    /**
      * Return the metadata for this build.
      *
      * @return string[]
      */
     public function getBuildMetadata($repositoryDir)
     {
+        $url = exec("git -C $repositoryDir config --get remote.origin.url");
+        if (is_null($this->git_provider) || is_null($this->ci_provider))
+        {
+            // TODO: This doesn't account for people who specify a different CI provider (bitbucket).
+            // Should we try and retrieve build metadata from the dev site and use it?
+            $this->setProjectInfo($url);
+        }
+
         return [
-          'url'          => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'          => $url,
           'ref'          => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'          => $this->getHeadCommit($repositoryDir),
           'comment'      => exec("git -C $repositoryDir log --pretty=format:%s -1"),
