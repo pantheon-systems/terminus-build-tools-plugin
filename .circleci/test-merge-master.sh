@@ -13,31 +13,40 @@ set +e
 
 TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 
-# We could go to some work to recover the environment name, but
-# since this is a brand-new repo, we expect the environment should
-# always be pr-1.
+# We could go to some work to recover the environment name for
+# the branch 'test-after-repair'. Instead, though, we will assume
+# that since our test creates a brand-new-repo, and the test-github-repair
+# script always the 'test-after-repair' PR first, then the pull request
+# we are expecting should always be "pr-1".
 TERMINUS_ENV=pr-1
 
-# Wait for our environment to show up
-# (Waiting / watching the Circle workflow is not reliable)
-STATUS=0 # TODO: Set to '1' to wait for `pr-1` to show up.
+# Wait for our environment to show up, because Waiting / watching
+# the Circle workflow is not reliable. If the 'wait for Circle' step
+# worked perfectly, then this loop should pass through without sleeping.
+STATUS=1
 COUNT=0
 while [ $STATUS -ne 0 ] ; do
     terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
     STATUS="$?"
     if [ $STATUS -ne 0 ] ; then
         COUNT=$(($COUNT+1))
-        if [ $COUNT -ge 10 ] ; then
+        if [ $COUNT -ge 20 ] ; then
             echo "Timed out waiting for $TERMINUS_SITE.$TERMINUS_ENV"
             exit 1
         fi
-        echo "Waiting 1 minute for $TERMINUS_SITE.$TERMINUS_ENV"
-        sleep 60
+        echo "Waiting half a minute for $TERMINUS_SITE.$TERMINUS_ENV"
+        sleep 30
     fi
 done
 
 # Fail on errors
 set -e
+
+# We expect that `build:env:delete:pr` should not delete any environments
+terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
+
+# Confirm that our test environment still exists.
+terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
 
 # Merge the PR branch into master and push it
 cd "$TARGET_REPO_WORKING_COPY"
@@ -48,16 +57,26 @@ git merge -m 'Merge to master' test-after-repair
 ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
 git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
-# TODO: We cannot accurately wait for the PR tests to pass before
-# merging our PR above. If we waited for both the PR tests and the
-# merge tests to pass, then the 'build:env:merge' would already
-# be done as part of that process. Doing it now will likely cause
-# that test to fail, but we do not care, we're just going to charge
-# ahead anyway.
-# TODO: Disabled until we can figure out how to do this deterministicly
-# terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
+# Run `build:env:merge` to see if it works.
+terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
-# Since we mreged our PR branch above, this should delete pr-1.
-# That will cause our test in progress to fail. If we wait above, then
-# the PR that is running should delete pr-1 before we get here.
-terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
+# Since we mereged our PR branch above, this should cause our pull
+# request to be marked as merged, which will make our environment
+# $TERMINUS_ENV eligible for deletion. We therefore expect build:env:delete:pr
+# to delete it.
+TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE=10 terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
+
+# Do -not- fail on errors any more
+set +e
+
+# Confirm that our test environment no longer exists.
+echo "Check to see if $TERMINUS_SITE.$TERMINUS_ENV still exists."
+terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
+STATUS="$?"
+
+# Assert that status is non-zero
+if [ $STATUS -eq 0 ] ; then
+    echo "Environment $TERMINUS_SITE.$TERMINUS_ENV should have been deleted, but was not."
+    exit 1
+fi
+echo "Environment $TERMINUS_SITE.$TERMINUS_ENV deleted as expected."
