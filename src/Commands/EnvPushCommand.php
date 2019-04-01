@@ -43,8 +43,9 @@ class EnvPushCommand extends BuildToolsBase
         $repositoryDir = '',
         $options = [
           'label' => '',
+          'message' => '',
         ])
     {
-        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label']);
+        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message']);
     }
 }
