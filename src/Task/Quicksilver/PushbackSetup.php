@@ -18,6 +18,7 @@ class PushbackSetup
     {
         //$target_project = $this->provider->createRepository($this->dir, $this->target, $this->target_org);
         $this->git_provider->writeBuildProvidersFile($this->git_provider->getServiceName(), $this->ci_provider->getServiceName(), $this->dir);
+        $this->git_provider->commitCode($this->dir, "Initialize build-providers.json file.");
         $this->logger()->notice('Created build-providers.json');
 
         return Result::success($this);

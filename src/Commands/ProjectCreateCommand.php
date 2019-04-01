@@ -352,6 +352,11 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->provider($this->git_provider)
                 ->provider($this->site_provider)
 
+            ->progressMessage('Initialize build-providers.json')
+            ->taskPushbackSetup()
+                ->dir($siteDir)
+                ->provider($this->git_provider, $this->ci_provider)
+
             /*
             ->taskRepositoryPush()
                 ->provider($this->git_provider)
@@ -397,11 +402,6 @@ class ProjectCreateCommand extends BuildToolsBase
                     // configuration set up by the installer.
                     $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
                 })
-
-            ->progressMessage('Initialize build-providers.json')
-            ->taskPushbackSetup()
-                ->dir($siteDir)
-                ->provider($this->git_provider, $this->ci_provider)
 
             // Push the local working repository to the server
             ->progressMessage('Push initial code to {target}', ['target' => $target_label])

@@ -46,6 +46,11 @@ abstract class BaseGitProvider
         $this->execWithRedaction('git {dir}' . $cmd, ['dir' => "-C $dir "] + $replacements, ['dir' => ''] + $redacted);
     }
 
+    protected function commitCode($dir, $comment)
+    {
+        $this->execGit($dir, 'git {dir} commit -m [[message]]', ['dir' => "-C $dir ", '[[message]]' => $comment]);
+    }
+
     public function generateBuildProvidersData($git_service_name, $ci_service_name)
     {
         return [
