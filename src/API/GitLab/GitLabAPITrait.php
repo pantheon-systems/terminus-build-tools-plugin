@@ -2,12 +2,13 @@
 
 namespace Pantheon\TerminusBuildTools\API\GitLab;
 
+use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -24,11 +25,17 @@ trait GitLabAPITrait
   public function api()
   {
     if (!$this->api) {
-      $this->api = new GitLabAPI($this->getEnvironment());
-      $this->api->setLogger($this->logger);
-      $this->api->setGitLabUrl($this->GITLAB_URL);
+      $this->api = $this->createApi($this->getEnvironment());
     }
     return $this->api;
+  }
+
+  protected function createApi($environment)
+  {
+    $api = new GitLabAPI($environment);
+    $api->setLogger($this->logger);
+    $api->setGitLabUrl($this->GITLAB_URL);
+    return $api;
   }
 
   public function tokenKey()
@@ -68,6 +75,8 @@ trait GitLabAPITrait
 
     $validation_message = 'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.';
 
+    $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the GitLab service. Please re-enter your credential.';
+
     // Tell the credential manager that we require one credential: the
     // GITLAB_TOKEN that will be used to authenticate with the GitLab server.
     $gitlabTokenRequest = (new CredentialRequest($this->tokenKey()))
@@ -75,6 +84,17 @@ trait GitLabAPITrait
         ->setPrompt("Enter GitLab personal access token: ")
         ->setValidateRegEx('#^[0-9a-zA-Z\-]{20}$#')
         ->setValidationErrorMessage($validation_message)
+        ->setValidationCallbackErrorMessage($could_not_authorize)
+        ->setValidateFn(
+            function ($token) {
+                $tmpEnvironment = new RepositoryEnvironment();
+                $tmpEnvironment->setToken(GitLabAPI::GITLAB_TOKEN, $token);
+                $api = $this->createApi($tmpEnvironment);
+                $userinfo = $api->request('api/v4/user');
+
+                return true;
+            }
+        )
         ->setRequired(true);
 
     return [ $gitlabTokenRequest ];

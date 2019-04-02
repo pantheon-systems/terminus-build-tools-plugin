@@ -48,7 +48,7 @@ interface CredentialRequestInterface
     /**
      * Determine whether a credential entered by the user is valid.
      */
-    public function validate($credential);
+    public function validate($credential, $otherCredentials = []);
 
     /**
      * Set a regex to use to validate the credential.
@@ -81,4 +81,15 @@ interface CredentialRequestInterface
      * on the commandline or some other means in noniteractive mode.
      */
     public function setValidationErrorMessage($validationErrorMessage);
+
+    /**
+     * Return any dependent request. For example, the "username" request
+     * is a dependent request of the "password" request.
+     */
+    public function dependentRequests();
+
+    /**
+     * Add a dependent request.
+     */
+    public function addDependentRequest(CredentialRequestInterface $dependentRequest);
 }
