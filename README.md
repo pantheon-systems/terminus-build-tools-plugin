@@ -15,7 +15,7 @@ PHP 7.2 is recommended.
 ### Installing Build Tools 2.x:
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta6
+composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta12
 ```
 
 ### Installing Build Tools 1.x:
