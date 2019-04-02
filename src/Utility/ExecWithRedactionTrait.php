@@ -1,6 +1,8 @@
 <?php
 namespace Pantheon\TerminusBuildTools\Utility;
 
+use Symfony\Component\Process\ProcessUtils;
+
 trait ExecWithRedactionTrait
 {
     protected function execWithRedaction($cmd, $replacements = [], $redacted = [])
@@ -79,6 +81,7 @@ trait ExecWithRedactionTrait
         foreach ($context as $key => $val) {
             if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
                 $replace[sprintf('{%s}', $key)] = $val;
+                $replace[sprintf('[[%s]]', $key)] = ProcessUtils::escapeArgument($val);
             }
         }
 
