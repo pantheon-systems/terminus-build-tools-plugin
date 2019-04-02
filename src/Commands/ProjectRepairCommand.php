@@ -158,7 +158,16 @@ class ProjectRepairCommand extends BuildToolsBase
             // Tell the CI service to start testing
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
-                ->environment($ci_env);
+                ->environment($ci_env)
+
+            ->addCode(
+                function ($state) use ($site_name) {
+                    $secretValues = [
+                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
+                    ];
+                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'buildtools-secrets.json');
+                }
+            );
 
         return $builder;
     }

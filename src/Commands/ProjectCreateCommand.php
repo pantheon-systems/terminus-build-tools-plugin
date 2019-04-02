@@ -356,6 +356,15 @@ class ProjectCreateCommand extends BuildToolsBase
             ->taskPushbackSetup()
                 ->dir($siteDir)
                 ->provider($this->git_provider, $this->ci_provider)
+            ->progressmessage('Set build secrets')
+            ->addCode(
+                function ($state) use ($site_name) {
+                    $secretValues = [
+                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
+                    ];
+                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'buildtools-secrets.json');
+                }
+            )
 
             /*
             ->taskRepositoryPush()

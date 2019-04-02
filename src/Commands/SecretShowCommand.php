@@ -25,9 +25,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Semver\Comparator;
 
 /**
- * Secret Delete Command
+ * Secret Show Command
  */
-class SecretDeleteCommand extends BuildToolsBase
+class SecretShowCommand extends BuildToolsBase
 {
 
     /**
