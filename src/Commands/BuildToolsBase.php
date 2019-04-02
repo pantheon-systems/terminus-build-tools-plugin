@@ -67,6 +67,25 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->provider_manager = $provider_manager;
     }
 
+    /**
+     * Set GIT_SSH_COMMAND so we can disable strict host key checking. This allows builds to run without pauses
+     * for user input.
+     *
+     * By not specifying a command in the hook below it will apply to any command from this class (or class that
+     * extends this class, such as all of Build Tools).
+     *
+     * @hook init
+     */
+    public function noStrictHostKeyChecking()
+    {
+        // Set the GIT_SSH_COMMAND environment variable to avoid SSH Host Key prompt.
+        // By using putenv, the environment variable won't persist past this PHP run.
+        // Setting the Known Hosts File to /dev/null and the LogLevel to quiet prevents
+        // this from persisting for a user regularly as well as the warning about adding
+        // the SSH key to the known hosts file.
+        putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
+    }
+
     public function providerManager()
     {
         if (!$this->provider_manager) {
@@ -1146,7 +1165,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = preg_replace('/^:/', $siteAddress, $dest);
 
         $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
-        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1", $status);
+        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1", $status);
 
         return $status;
     }
