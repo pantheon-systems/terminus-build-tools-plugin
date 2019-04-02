@@ -71,6 +71,20 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             'Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
         );
 
+        $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the CircleCI service. Please re-enter your credential.';
+
+        $circleTokenRequest
+            ->setValidationCallbackErrorMessage($could_not_authorize)
+            ->setValidateFn(
+                function ($token) {
+                    $this->setToken($token);
+                    $url = "https://circleci.com/api/v1.1/me";
+                    $httpStatus = $this->circleCIAPI([], $url, 'GET');
+
+                    return ($httpStatus == 200);
+                }
+            );
+
         return [ $circleTokenRequest ];
     }
 

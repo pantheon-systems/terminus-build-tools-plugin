@@ -21,6 +21,14 @@ class CredentialManager implements CredentialProviderInterface
         $this->cache = $storage;
     }
 
+    public function clearCache()
+    {
+        $this->transientCache = [];
+        foreach ($this->cache->keys() as $key) {
+            $this->cache->remove($key);
+        }
+    }
+
     /**
      * Identify the user that owns the cache. We segregate cached
      * credentials, so that the credential manager will never use
@@ -52,7 +60,7 @@ class CredentialManager implements CredentialProviderInterface
      */
     public function addRequest(CredentialRequestInterface $request)
     {
-        $this->credentialRequests[] = $request;
+        $this->credentialRequests[$request->id()] = $request;
         $this->getEnvironmentVariableIfAvailable($request);
     }
 
@@ -66,6 +74,42 @@ class CredentialManager implements CredentialProviderInterface
         }
         $key = $this->credentialKey($id);
         return $this->cache->has($key);
+    }
+
+    /**
+     * Determine whether we should ask for a credential.
+     *
+     * If we DO NOT HAVE the credential cached and it is required,
+     * then ask for it.
+     *
+     * If we DO HAVE the credential cached, but it is not valid,
+     * then ask for it (regardless of whether it is required).
+     */
+    public function shouldAsk($request)
+    {
+        $id = $request->id();
+        if (!$this->has($id)) {
+            return $request->required();
+        }
+        $credential = $this->fetch($id);
+        return !$request->validate($credential, $this->dependentCredentials($request));
+    }
+
+    /**
+     * If a credential has dependent requests, then fetch the
+     * cached credential value for each and provide it as
+     * auxiliary data for the validate function.
+     */
+    public function dependentCredentials($request)
+    {
+        $credentials = [];
+
+        foreach ($request->dependentRequests() as $dependentRequest) {
+            $id = $dependentRequest->id();
+            $credentials[$id] = $this->fetch($id);
+        }
+
+        return $credentials;
     }
 
     /**
@@ -148,7 +192,9 @@ class CredentialManager implements CredentialProviderInterface
     public function ask(SymfonyStyle $io)
     {
         foreach ($this->credentialRequests as $request) {
-            if (!$this->has($request->id()) && $request->required()) {
+            if ($this->shouldAsk($request)) {
+                $instructions = $request->instructions();
+                $io->write($instructions);
                 $this->askOne($request, $io);
             }
         }
@@ -156,22 +202,49 @@ class CredentialManager implements CredentialProviderInterface
 
     protected function askOne(CredentialRequestInterface $request, SymfonyStyle $io)
     {
-        $instructions = $request->instructions();
         $prompt = $request->prompt();
-
-        $io->write($instructions);
 
         while (true) {
             $io->write("\n\n");
             $credential = $io->askHidden($prompt);
             $credential = trim($credential);
 
-            if ($request->validate($credential)) {
+            // If the credential validates, set it and return. Otherwise
+            // we'll ask again.
+            if ($this->validateOne($request, $io, $credential)) {
                 $this->store($request->id(), $credential);
                 return;
             }
-            $io->write($request->validationErrorMessage());
+
+            // If this request has any dependent requests, re-ask
+            // each dependent request on validation failure. For
+            // example, a username / password credential pair will
+            // not validate when the username is prompted, but will
+            // validate once the password is entered. If the
+            // username/password pair does not validate, then the
+            // username will be re-prompted here so that it may be
+            // corrected if necessary.
+            foreach ($request->dependentRequests() as $dependentRequest) {
+                $this->askOne($dependentRequest, $io);
+            }
         }
+    }
+
+    /**
+     * Validate a credential request. If it validates, return true;
+     * otherwise, print the validation error message and return false.
+     */
+    protected function validateOne(CredentialRequestInterface $request, SymfonyStyle $io, $credential)
+    {
+        if (!$request->validateViaRegEx($credential)) {
+            $io->write($request->validationErrorMessage());
+            return false;
+        }
+        if (!$request->validateViaCallback($credential, $this->dependentCredentials($request))) {
+            $io->write($request->validationCallbackErrorMessage());
+            return false;
+        }
+        return true;
     }
 
     protected function getEnvironmentVariableIfAvailable(CredentialRequestInterface $request)

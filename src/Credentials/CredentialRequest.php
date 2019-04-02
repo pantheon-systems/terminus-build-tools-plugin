@@ -13,8 +13,10 @@ class CredentialRequest implements CredentialRequestInterface
     protected $validateRegEx;
     protected $validateFn;
     protected $validationErrorMessage;
+    protected $validationCallbackErrorMessage;
     protected $optionKey;
     protected $required;
+    protected $dependentRequests;
 
     public function __construct(
         $id,
@@ -31,6 +33,7 @@ class CredentialRequest implements CredentialRequestInterface
         $this->validationErrorMessage = $validationErrorMessage;
         $this->optionKey = false;
         $this->required = null;
+        $this->dependentRequests = [];
     }
 
     /**
@@ -94,13 +97,30 @@ class CredentialRequest implements CredentialRequestInterface
     /**
      * @inheritdoc
      */
-    public function validate($credential)
+    public function validate($credential, $otherCredentials = [])
+    {
+        return $this->validateViaRegEx($credential) && $this->validateViaCallback($credential, $otherCredentials);
+    }
+
+    public function validateViaRegEx($credential)
+    {
+        if (!empty($this->validateRegEx)) {
+            if (!preg_match($this->validateRegEx, $credential)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public function validateViaCallback($credential, $otherCredentials)
     {
         if ($this->validateFn) {
-            return call_user_func($this->validateFn, $credential);
-        }
-        if (!empty($this->validateRegEx)) {
-            return preg_match($this->validateRegEx, $credential);
+            try
+            {
+                return call_user_func($this->validateFn, $credential, $otherCredentials);
+            } catch (\Exception $e) {
+                return false;
+            }
         }
         return true;
     }
@@ -154,9 +174,43 @@ class CredentialRequest implements CredentialRequestInterface
     /**
      * @inheritdoc
      */
+    public function validationCallbackErrorMessage()
+    {
+        return $this->validationCallbackErrorMessage;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setValidationCallbackErrorMessage($validationErrorMessage)
+    {
+        $this->validationCallbackErrorMessage = $validationErrorMessage;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function setOptionKey($key)
     {
         $this->optionKey = $key;
+        return $this;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function dependentRequests()
+    {
+        return $this->dependentRequests;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function addDependentRequest(CredentialRequestInterface $dependentRequest)
+    {
+        $this->dependentRequests[] = $dependentRequest;
         return $this;
     }
 }
