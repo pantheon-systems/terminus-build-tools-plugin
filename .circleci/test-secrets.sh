@@ -15,7 +15,7 @@ test singlevalue = "rvtraveller"
 terminus build:secrets:delete $TERMINUS_SITE key --file=build-testing.json
 terminus build:secrets:delete $TERMINUS_SITE author --file=build-testing.json
 
-emptyvalues=$(terminus biold:secrets:list $TERMINUS_SITE --file=build-testing.json)
+emptyvalues=$(terminus build:secrets:list $TERMINUS_SITE --file=build-testing.json)
 
 test emptyvalues = ""
 
