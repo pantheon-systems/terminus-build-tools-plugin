@@ -7,6 +7,7 @@ use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -31,10 +32,17 @@ trait BitbucketAPITrait
     public function api()
     {
         if (!$this->api) {
-            $this->api = new BitbucketAPI($this->getEnvironment());
-            $this->api->setLogger($this->logger);
+            $this->api = $this->createApi($this->getEnvironment());
         }
         return $this->api;
+    }
+
+    protected function createApi($environment)
+    {
+        $api = new BitbucketAPI($environment);
+        $api->setLogger($this->logger);
+
+        return $api;
     }
 
     public function hasToken($key = false)
@@ -84,7 +92,10 @@ trait BitbucketAPITrait
      */
     public function credentialRequests()
     {
-        // Tell the credential manager that we require two credentials
+        // Tell the credential manager that we require two credentials.
+        // Note that the user request is a dependent request of the password
+        // request. We validate the password against the BitBucktet API; if
+        // we cannot use it to log in, then we re-prompt for both.
         $bitbucketUserRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_USER))
             ->setInstructions('')
             ->setPrompt("Enter your Bitbucket username: ")
@@ -93,7 +104,22 @@ trait BitbucketAPITrait
         $bitbucketPassRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_PASS))
             ->setInstructions('')
             ->setPrompt("Enter your Bitbucket account password or an app password: ")
-            ->setRequired(true);
+            ->setRequired(true)
+            ->setValidationCallbackErrorMessage("Your provided username and password or app password could not be used to authenticate with the BitBucket service. Please re-enter your credentials.")
+            ->setValidateFn(
+                function ($password, $otherCredentials) {
+                    $username = $otherCredentials[BitbucketAPI::BITBUCKET_USER];
+
+                    $tmpEnvironment = new RepositoryEnvironment();
+                    $tmpEnvironment->setToken(BitbucketAPI::BITBUCKET_USER, $username);
+                    $tmpEnvironment->setToken(BitbucketAPI::BITBUCKET_PASS, $password);
+                    $api = $this->createApi($tmpEnvironment);
+                    $userinfo = $api->request('user');
+
+                    return true;
+                }
+            )
+            ->addDependentRequest($bitbucketUserRequest);
 
         return [ $bitbucketUserRequest, $bitbucketPassRequest ];
     }
