@@ -10,13 +10,13 @@ terminus build:secrets:set "$TERMINUS_SITE.$TERMINUS_ENV" author rvtraveller --f
 
 # Confirm that we can retrieve a value
 singlevalue=$(terminus build:secrets:show "$TERMINUS_SITE.$TERMINUS_ENV" author --file=build-testing.json)
-
-test singlevalue = "rvtraveller"
+printf "%s\n" "Testing single value secret"
+test $singlevalue = "rvtraveller"
 
 terminus build:secrets:delete "$TERMINUS_SITE.$TERMINUS_ENV" key --file=build-testing.json
 terminus build:secrets:delete "$TERMINUS_SITE.$TERMINUS_ENV" author --file=build-testing.json
 
 emptyvalues=$(terminus build:secrets:list "$TERMINUS_SITE.$TERMINUS_ENV" --file=build-testing.json)
-
-test emptyvalues = ""
+printf "%s\n" "Testing secret deletion"
+test $emptyvalues = ""
 
