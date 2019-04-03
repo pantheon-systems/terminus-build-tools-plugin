@@ -18,5 +18,5 @@ terminus build:secrets:delete "$TERMINUS_SITE.$TERMINUS_ENV" author --file=build
 
 emptyvalues=$(terminus build:secrets:list "$TERMINUS_SITE.$TERMINUS_ENV" --file=build-testing.json)
 printf "%s\n" "Testing secret deletion"
-test $emptyvalues = ""
+test -z $emptyvalues
 
