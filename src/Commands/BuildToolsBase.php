@@ -67,6 +67,25 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->provider_manager = $provider_manager;
     }
 
+    /**
+     * Set GIT_SSH_COMMAND so we can disable strict host key checking. This allows builds to run without pauses
+     * for user input.
+     *
+     * By not specifying a command in the hook below it will apply to any command from this class (or class that
+     * extends this class, such as all of Build Tools).
+     *
+     * @hook init
+     */
+    public function noStrictHostKeyChecking()
+    {
+        // Set the GIT_SSH_COMMAND environment variable to avoid SSH Host Key prompt.
+        // By using putenv, the environment variable won't persist past this PHP run.
+        // Setting the Known Hosts File to /dev/null and the LogLevel to quiet prevents
+        // this from persisting for a user regularly as well as the warning about adding
+        // the SSH key to the known hosts file.
+        putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
+    }
+
     public function providerManager()
     {
         if (!$this->provider_manager) {
@@ -701,7 +720,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $site_env_id,
         $multidev = '',
         $repositoryDir = '',
-        $label = '')
+        $label = '',
+        $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
@@ -710,6 +730,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $env_label = $multidev;
         if (!empty($label)) {
             $env_label = $label;
+        }
+
+        if (empty($message)) {
+            $message = "Build assets for $env_label.";
         }
 
         if (empty($repositoryDir)) {
@@ -778,7 +802,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->passthru("git -C $repositoryDir add --force -A .");
 
         // Now that everything is ready, commit the build artifacts.
-        $this->passthru("git -C $repositoryDir commit -q -m 'Build assets for $env_label.'");
+        $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
 
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
@@ -1143,7 +1167,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
         $status = 0;
-        $command = "rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1";
+        $command = "rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1";
         passthru($command, $status);
         if (!$ignoreIfNotExists && in_array($status, [0, 23]))
         {

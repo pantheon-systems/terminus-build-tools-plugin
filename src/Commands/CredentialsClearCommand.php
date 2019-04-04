@@ -25,27 +25,27 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Semver\Comparator;
 
 /**
- * Env Push Command
+ * Credential Clear Command
+ *
+ * Erase all cached credentials
  */
-class EnvPushCommand extends BuildToolsBase
+class CredentialsClearCommand extends BuildToolsBase
 {
+    use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
+    use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
+
     /**
-     * Push code to a specific Pantheon site and environment that already exists.
+     * Delete cached credentials.
      *
-     * @command build:env:push
-     * @aliases build-env:push-code
-     *
-     * @param string $site_env_id Site and environment to push to. May be any dev or multidev environment.
-     * @param string $repositoryDir Code to push. Defaults to cwd.
+     * @command build:credentials:clear
+     * @aliases build:cc
      */
-    public function pushCode(
-        $site_env_id,
-        $repositoryDir = '',
+    public function credentialsClear(
         $options = [
-          'label' => '',
-          'message' => '',
+            'ci' => '',
         ])
     {
-        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message']);
+        $this->providerManager()->credentialManager()->clearCache();
+        $this->log()->notice('Credential cache cleared');
     }
 }

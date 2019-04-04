@@ -7,6 +7,7 @@ use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -23,10 +24,16 @@ trait GitHubAPITrait
     public function api()
     {
         if (!$this->api) {
-            $this->api = new GitHubAPI($this->getEnvironment());
-            $this->api->setLogger($this->logger);
+            $this->api = $this->createApi($this->getEnvironment());
         }
         return $this->api;
+    }
+
+    protected function createApi($environment)
+    {
+        $api = new GitHubAPI($environment);
+        $api->setLogger($this->logger);
+        return $api;
     }
 
     public function tokenKey()
@@ -63,6 +70,8 @@ trait GitHubAPITrait
 
         $validation_message = 'GitHub authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.';
 
+        $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the GitHub service. Please re-enter your credential.';
+
         // Tell the credential manager that we require one credential: the
         // GITHUB_TOKEN that will be used to authenticate with the CircleCI server.
         $githubTokenRequest = (new CredentialRequest($this->tokenKey()))
@@ -70,6 +79,17 @@ trait GitHubAPITrait
             ->setPrompt($prompt)
             ->setValidateRegEx('#^[0-9a-fA-F]{40}$#')
             ->setValidationErrorMessage($validation_message)
+            ->setValidationCallbackErrorMessage($could_not_authorize)
+            ->setValidateFn(
+                function ($token) {
+                    $tmpEnvironment = new RepositoryEnvironment();
+                    $tmpEnvironment->setToken(GitHubAPI::GITHUB_TOKEN, $token);
+                    $api = $this->createApi($tmpEnvironment);
+                    $userinfo = $api->request('user');
+
+                    return true;
+                }
+            )
             ->setRequired(true);
 
         return [ $githubTokenRequest ];
