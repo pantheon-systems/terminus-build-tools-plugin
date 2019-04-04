@@ -1221,7 +1221,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (file_exists("$workdir/$filename"))
         {
             $secrets = file_get_contents("$workdir/$filename");
-            $secretValues = (array)json_decode($secrets);
+            $secretValues = json_decode($secrets, true);
             return $secretValues;
         }
 
@@ -1242,6 +1242,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function writeSecrets($site_env_id, $secretValues, $clear, $file)
     {
+        $values = [];
         if (!$clear)
         {
             $values = $this->downloadSecrets($site_env_id, $file);
