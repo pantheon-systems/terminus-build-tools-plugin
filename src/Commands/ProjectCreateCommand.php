@@ -36,6 +36,7 @@ class ProjectCreateCommand extends BuildToolsBase
 {
     use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
     use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
+    use \Pantheon\TerminusBuildTools\Task\Quicksilver\Tasks;
 
     /**
      * Initialize the default value for selected options.
@@ -350,6 +351,20 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->provider($this->ci_provider)
                 ->provider($this->git_provider)
                 ->provider($this->site_provider)
+
+            ->progressMessage('Initialize build-providers.json')
+            ->taskPushbackSetup()
+                ->dir($siteDir)
+                ->provider($this->git_provider, $this->ci_provider)
+            ->progressmessage('Set build secrets')
+            ->addCode(
+                function ($state) use ($site_name) {
+                    $secretValues = [
+                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
+                    ];
+                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                }
+            )
 
             /*
             ->taskRepositoryPush()

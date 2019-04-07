@@ -59,6 +59,9 @@ jobs:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
             - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
                 name: Test build:project:repair
                 command: ./.circleci/test-github-repair.sh
             - run:

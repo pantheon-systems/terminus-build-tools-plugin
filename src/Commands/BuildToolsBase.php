@@ -48,6 +48,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const SECRETS_DIRECTORY = '.build-secrets';
+    const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
     protected $tmpDirs = [];
 
@@ -1150,8 +1152,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * @param string $site_env_id Remote site
      * @param string $src Source path to copy from. Start with ":" for remote.
      * @param string $dest Destination path to copy to. Start with ":" for remote.
+     * @param boolean $ignoreIfNotExists Silently fail and do not return error if remote source does not exist.
      */
-    protected function rsync($site_env_id, $src, $dest)
+    protected function rsync($site_env_id, $src, $dest, $ignoreIfNotExists = true)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
@@ -1165,7 +1168,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = preg_replace('/^:/', $siteAddress, $dest);
 
         $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
-        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1", $status);
+        $status = 0;
+        $command = "rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1";
+        passthru($command, $status);
+        if (!$ignoreIfNotExists && in_array($status, [0, 23]))
+        {
+            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $status]);
+        }
 
         return $status;
     }
@@ -1225,6 +1234,60 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
         }
         return $outputLines;
+    }
+
+    /**
+     * Download a copy of the secrets.json file from the appropriate site.
+     */
+    protected function downloadSecrets($site_env_id, $filename)
+    {
+        $workdir = $this->tempdir();
+        $this->rsync($site_env_id, ":files/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", $workdir, true);
+
+        if (file_exists("$workdir/$filename"))
+        {
+            $secrets = file_get_contents("$workdir/$filename");
+            $secretValues = json_decode($secrets, true);
+            return $secretValues;
+        }
+
+        return [];
+    }
+
+    /**
+     * Upload a modified secrets.json to the target Pantheon site.
+     */
+    protected function uploadSecrets($site_env_id, $secretValues, $filename)
+    {
+        $workdir = $this->tempdir();
+        mkdir("$workdir/" . self::SECRETS_REMOTE_DIRECTORY, 0777, true);
+
+        file_put_contents("$workdir/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", json_encode($secretValues));
+        $this->rsync($site_env_id, "$workdir/private", ':files/');
+    }
+
+    protected function writeSecrets($site_env_id, $secretValues, $clear, $file)
+    {
+        $values = [];
+        if (!$clear)
+        {
+            $values = $this->downloadSecrets($site_env_id, $file);
+        }
+
+        $values = array_replace($values, $secretValues);
+
+        $this->uploadSecrets($site_env_id, $values, $file);
+    }
+
+    protected function deleteSecrets($site_env_id, $key, $file)
+    {
+        $secretValues = [];
+        if (!empty($key))
+        {
+            $secretValues = $this->downloadSecrets($site_env_id, $file);
+            unset($secretValues[$key]);
+        }
+        $this->uploadSecrets($site_env_id, $secretValues, $file);
     }
 
     // Create a temporary directory

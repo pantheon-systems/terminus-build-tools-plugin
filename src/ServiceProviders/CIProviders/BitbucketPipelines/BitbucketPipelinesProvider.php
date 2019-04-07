@@ -6,6 +6,7 @@ use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
@@ -19,29 +20,11 @@ use Robo\Config\Config;
 /**
  * Manages the configuration of a project to be tested on BitbucketPipelines.
  */
-class BitbucketPipelinesProvider implements CIProvider, LoggerAwareInterface, KeyPairReciever, CredentialClientInterface
+class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, KeyPairReciever, CredentialClientInterface
 {
-    use LoggerAwareTrait;
     use BitbucketAPITrait;
 
-    const SERVICE_NAME = 'bitbucket-pipelines';
-
-    protected $providerEnvironment;
-    protected $config;
-
-    public function __construct(Config $config)
-    {
-        $this->config = $config;
-    }
-
-    public function getEnvironment()
-    {
-        if (!$this->providerEnvironment) {
-            $this->providerEnvironment = (new ProviderEnvironment())
-            ->setServiceName(self::SERVICE_NAME);
-        }
-        return $this->providerEnvironment;
-    }
+    protected $serviceName = 'bitbucket-pipelines';
 
     public function infer($url)
     {
@@ -61,6 +44,7 @@ class BitbucketPipelinesProvider implements CIProvider, LoggerAwareInterface, Ke
     public function badge(CIState $ci_env)
     {
         $url = $this->projectUrl($ci_env);
+        $repositoryAttributes = $ci_env->getState('repository');
         $projectId = $repositoryAttributes->projectId();
         return "[![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/$projectId.svg]($url/addon/pipelines/home)";
     }

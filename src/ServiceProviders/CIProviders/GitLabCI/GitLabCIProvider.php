@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
@@ -22,33 +23,21 @@ use Robo\Config\Config;
 /**
  * Manages the configuration of a project to be tested on GitLabCI.
  */
-class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
+class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
     use GitLabAPITrait;
-    use LoggerAwareTrait;
 
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
-    protected $providerEnvironment;
 
-    const SERVICE_NAME = 'gitlab-pipelines';
+    protected $serviceName = 'gitlab-pipelines';
 
     protected $gitlab_token;
-    protected $config;
 
     public function __construct(Config $config)
     {
-        $this->config = $config;
+        parent::__construct($config);
         $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
-    }
-
-    public function getEnvironment()
-    {
-        if (!$this->providerEnvironment) {
-            $this->providerEnvironment = (new ProviderEnvironment())
-            ->setServiceName(self::SERVICE_NAME);
-        }
-        return $this->providerEnvironment;
     }
 
     /**
@@ -148,20 +137,6 @@ class GitLabCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             $this->api()->request($uri . '/' . $key, [], 'DELETE');
         }
     }
-
-    protected function findIntersecting($existing, $vars)
-    {
-        $intersecting = [];
-
-        foreach ($existing as $row) {
-            $key = $row['key'];
-            if (array_key_exists($key, $vars)) {
-                $intersecting[] = $key;
-            }
-        }
-        return $intersecting;
-    }
-
 
     public function startTesting(CIState $ci_env) {
         // Do nothing...it starts automatically.
