@@ -70,7 +70,6 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 
 #### Limitations
 
-- Neither Drupal 8 nor Drupal 7 projects available yet
 - Commits to the Pantheon site are not pushed back to the GitLab repository
 
 ### Starting a new BitBucket Project
