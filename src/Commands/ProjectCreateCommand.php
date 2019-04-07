@@ -362,7 +362,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     $secretValues = [
                         'token' => $this->git_provider->token($this->git_provider->tokenKey())
                     ];
-                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, '.build-secrets/tokens.json');
+                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
                 }
             )
 

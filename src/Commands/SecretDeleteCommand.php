@@ -43,7 +43,7 @@ class SecretDeleteCommand extends BuildToolsBase
         $site_env_id,
         $key,
         $options = [
-            'file' => 'secrets.json',
+            'file' => 'tokens.json',
         ])
     {
         $this->deleteSecrets($site_env_id, $key, $options['file']);

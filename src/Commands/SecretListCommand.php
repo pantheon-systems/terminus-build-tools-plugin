@@ -41,7 +41,7 @@ class SecretListCommand extends BuildToolsBase
     public function delete(
         $site_env_id,
         $options = [
-            'file' => 'secrets.json',
+            'file' => 'tokens.json',
         ])
     {
         $secretValues = $this->downloadSecrets($site_env_id, $options['file']);

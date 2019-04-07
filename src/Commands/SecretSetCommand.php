@@ -47,7 +47,7 @@ class SecretSetCommand extends BuildToolsBase
         $key,
         $value,
         $options = [
-            'file' => 'secrets.json',
+            'file' => 'tokens.json',
             'clear' => false,
             'skip-if-empty' => false,
         ])

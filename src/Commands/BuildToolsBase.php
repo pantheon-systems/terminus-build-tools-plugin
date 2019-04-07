@@ -48,6 +48,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const SECRETS_DIRECTORY = '.build-secrets';
+    const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
     protected $tmpDirs = [];
 
@@ -1240,7 +1242,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function downloadSecrets($site_env_id, $filename)
     {
         $workdir = $this->tempdir();
-        $this->rsync($site_env_id, ":files/private/$filename", $workdir, true);
+        $this->rsync($site_env_id, ":files/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", $workdir, true);
 
         if (file_exists("$workdir/$filename"))
         {
@@ -1258,9 +1260,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function uploadSecrets($site_env_id, $secretValues, $filename)
     {
         $workdir = $this->tempdir();
-        mkdir("$workdir/private");
+        mkdir("$workdir/" . self::SECRETS_REMOTE_DIRECTORY, 0777, true);
 
-        file_put_contents("$workdir/private/$filename", json_encode($secretValues));
+        file_put_contents("$workdir/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", json_encode($secretValues));
         $this->rsync($site_env_id, "$workdir/private", ':files/');
     }
 

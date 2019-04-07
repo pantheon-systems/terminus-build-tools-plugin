@@ -44,7 +44,7 @@ class SecretShowCommand extends BuildToolsBase
         $site_env_id,
         $key,
         $options = [
-            'file' => 'secrets.json',
+            'file' => 'tokens.json',
         ])
     {
         $secretValues = $this->downloadSecrets($site_env_id, $options['file']);
