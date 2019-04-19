@@ -57,10 +57,9 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         $accumulatedData = $resultData;
         $isDone = !$this->checkPagedCallback($resultData, $callback);
 
-        // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
-        // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
-        // Check if the array is numeric. Otherwise we can't consider this a collection.
-        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($res)) {
+        // The request may be against a paged collection. If that is the case,
+        // traverse the "next" links sequentially.
+        if ($this->isPagedResponse($res)) {
             $pager_info = $this->getPagerInfo($res);
             while (($httpCode == 200) && !$isDone) {
                 $isDone = $this->isLastPage($uri, $pager_info);
@@ -145,21 +144,4 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return $resultData;
     }
 
-    protected function isSequentialArray($input)
-    {
-        if (!is_array($input)) {
-            return FALSE;
-        }
-        if (empty($input)) {
-            return TRUE;
-        }
-        $keys = array_keys($input);
-        $keys_of_keys = array_keys($keys);
-        for ($i = 0; $i < count($keys); $i++) {
-            if ($keys[$i] !== $keys_of_keys[$i]) {
-                return FALSE;
-            }
-        }
-        return TRUE;
-    }
 }
