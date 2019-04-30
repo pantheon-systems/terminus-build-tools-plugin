@@ -81,7 +81,7 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 #### Limitations
 
 - Automatic multidev deletion not working; test multidevs must be deleted manually
-- Commits to the Pantheon site are not pushed back to the GitLab repository
+- Commits to the Pantheon site are not pushed back to the BitBucket repository
 - Comments are not added to pull requests when multidevs are created
 
 ## Customization
