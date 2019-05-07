@@ -801,7 +801,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        $this->passthru("git -C $repositoryDir add --force -A .");
+        $this->passthru("git -C $repositoryDir add -A .");
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
@@ -815,7 +815,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $this->passthru("git -C $repositoryDir push -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
