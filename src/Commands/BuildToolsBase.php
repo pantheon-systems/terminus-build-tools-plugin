@@ -815,7 +815,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $this->passthru("git -C $repositoryDir push -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
