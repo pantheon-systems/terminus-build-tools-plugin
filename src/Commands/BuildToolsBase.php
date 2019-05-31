@@ -762,7 +762,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
-        $this->addPantheonRemote($env, $repositoryDir);
+        $dev_env = $site->getEnvironments()->get('dev');
+        $this->addPantheonRemote($dev_env, $repositoryDir);
         // $this->passthru("git -C $repositoryDir fetch pantheon");
 
         // Record the metadata for this build
@@ -801,7 +802,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        $this->passthru("git -C $repositoryDir add --force -A .");
+        $this->passthru("git -C $repositoryDir add -A .");
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
@@ -815,7 +816,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $this->passthru("git -C $repositoryDir push -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
