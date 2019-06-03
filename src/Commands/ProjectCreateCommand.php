@@ -247,25 +247,6 @@ class ProjectCreateCommand extends BuildToolsBase
 
         // $builder->setStateValue('ci-env', $ci_env)
 
-        $this->log()->notice('Determine whether build-assets exists for {project}', ['project' => $target_label]);
-
-/*
-        // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
-        exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
-        if (!$status) {
-            $this->log()->notice('build-assets command exists for {project}', ['project' => $target_label]);
-            $builder
-                // Run build assets
-                ->progressMessage('Run build assets for project')
-                ->addCode(
-                    function ($state) use ($siteDir) {
-                            $this->log()->notice('Building assets for project');
-                            $this->passthru("composer --working-dir=$siteDir build-assets");
-                        }
-                );
-        }
-*/
-
         $builder
 
             // Create a repository
@@ -358,11 +339,13 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->provider($this->git_provider, $this->ci_provider)
             ->progressmessage('Set build secrets')
             ->addCode(
-                function ($state) use ($site_name) {
+                function ($state) use ($site_name, $siteDir) {
                     $secretValues = [
                         'token' => $this->git_provider->token($this->git_provider->tokenKey())
                     ];
                     $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                   // Remember the initial commit sha
+                    $state['initial_commit'] = $this->getHeadCommit($siteDir);
                 }
             )
 
@@ -372,20 +355,27 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->target($this->target_project)
                 ->dir($siteDir)
             */
+            // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
+            ->progressMessage('Build assets for {site}', ['site' => $site_name])
+            ->addCode(
+                function ($state) use ($siteDir, $source, $site_name) {
+                  $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
+                  exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
+                  if (!$status) {
+                    $this->log()->notice('Building assets for {site}', ['site' => $site_name]);
+                    $this->passthru("composer --working-dir=$siteDir build-assets");
+                  }
+                }
+            )
 
             // Push code to newly-created project.
             // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($site_name, $siteDir) {
-                    // Remember the initial commit sha
-                    $initial_commit = $this->getHeadCommit($siteDir);
-
-                    // TODO: build assets should happen here
-
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
-                    $this->resetToCommit($siteDir, $initial_commit);
+                    $this->resetToCommit($siteDir, $state['initial_commit']);
                 })
 
             // Install our site and export configuration.
