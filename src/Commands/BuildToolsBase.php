@@ -1028,11 +1028,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function getBuildMetadata($repositoryDir)
     {
-        $gitProviderMetadata = [];
-        if (isset($this->git_provider)) {
-            $gitProviderMetadata = $this->git_provider->getBuildMetadata($repositoryDir);
-        }
-        $defaultBuildMetadata = [
+        $buildMetadata = [
           'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
@@ -1041,7 +1037,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'build-date'  => date("Y-m-d H:i:s O"),
         ];
 
-        return array_merge($defaultBuildMetadata, $gitProviderMetadata);
+        if (isset($this->git_provider) && method_exists($this->git_provider, 'alterBuildMetadata')) {
+            $this->git_provider->alterBuildMetadata($repositoryDir);
+        }
+
+        return $buildMetadata;
     }
 
     /**
