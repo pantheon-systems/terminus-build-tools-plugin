@@ -3,72 +3,94 @@
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
 [![Terminus v1.x Compatible](https://img.shields.io/badge/terminus-v1.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x)
 
-Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a GitHub PR workflow with Behat tests run via Circle CI (or some other testing service).
+Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a GitHub PR workflow with Behat tests run via Circle CI (or some other testing service). For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). There is also a startup command that will set up and configure a new Composer-managed test site with scripts.
 
-An [example circle.yml file](example.circle.yml) has been provided to show how this tool should be used with CircleCI. When a test runs against a "canonical" repository on GitHub, the following things will happen:
+## Requirements
 
-- Git is configured for making clones and commits.
-- Terminus 1.x is installed.
-- The oldest multidev testing environments are deleted.
-- A build step is fired off via `composer build-assets`.
-- A new multidev environment is created for testing.
-- The build artifacts are pushed up to the test environment.
+- If you are using Terminus 2, you must use the development Build Tools 2.x release
+- If you are using Terminus 1, you must use the stable Build Tools 1.x release
 
-The multidev environment created to test the pull request persists until the pull request is merged. Pantheon on-server development (SFTP) mode may be used as usual on these environments; any commits made on the Pantheon dashboard will be pushed back to the GitHub repository on the PR branch. Once the PR is merged to the master branch, then the corresponding multidev environment is also merged into the Pantheon dev environment. When using this workflow, all work is done in pull requests; the dev environment is never used for development.
+PHP 7.2 is recommended.
 
-See below for the list of supported commands. This plugin is only available for Terminus 1.x.
+### Installing Build Tools 2.x:
+```
+mkdir -p ~/.terminus/plugins
+composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta12
+```
+
+### Installing Build Tools 1.x:
+```
+mkdir -p ~/.terminus/plugins
+composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^1
+```
 
 ## Setup
 
-In order to use this plugin, you will need to set up a GitHub repository and a CircleCI project for the site you wish to build. Credentials also need to be set up. Most of the work can be done for you automatically using the New Project Quickstart below, or you may set everything up manually.
+It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects have been update to use Terminus 2 and the unstable Build Tools 2.x release.
 
-### Credentials
+The standard example repositories are each assigned an abbreviation, as shown below:
 
-In order to use the build:project:create command, the first thing that you need to do is set up credentials to access GitHub and Circle CI. Instructions on creating these credentials can be found on the pages listed below:
+- [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): wp
+- [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): d8
+- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): d7
 
-- GitHub: https://help.github.com/articles/creating-an-access-token-for-command-line-use/
-- Circle CI: https://circleci.com/account/api
-
-The GitHub token needs the "repo" and "delete repo" scopes.
-
-These credentials may be exported as environment variables. For example:
+You can get started with one of these examples by using the `build:project:create` command:
 ```
-#!/bin/bash
-export GITHUB_TOKEN=[REDACTED]
-export CIRCLE_TOKEN=[REDACTED]
+$ terminus build:project:create --team='My Agency Name' wp my-site
 ```
-If you do not export these environment variables, you will be prompted to enter them when you run the build:project:create command. Credentials that you enter will be cached in the ~/.terminus/cache folder; `terminus self:cc` will erase cached credentials.
+This command will create:
 
-### New Project Quickstart
+- A Pantheon site
+- A GitHub repository
+- A CircleCI test configuration
 
-EXPERIMENTAL: The build:project:create is in beta. Backwards compatibility not guaranteed.
+It will prompt you for the credentials it needs to create these assets.
 
-To create a new project consisting of a GitHub project, a Pantheon site, and Circle CI tests, first set up credentials as shown in the previous section, and then run the `build:project:create` command as shown below:
+Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
+
+Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will not have the capability to create multidev environments.
+
+## Available Services
+
+At the moment, the build:project:create command only supports services in the following combination: 
+
+| Git Host  | CI Service |
+| --------- | ---------- |
+| GitHub    | CircleCI   |
+| GitLab    | GitLabCI   |
+| BitBucket | CircleCI   |
+
+Of these, only GitHub with CircleCI is complete and stable. The GitLab and BitBucket services are incomplete; see the sections below for details.
+
+### Starting a new GitLab Project
+
 ```
-terminus build:project:create --team="Agency Org Name" d8 example-site
+$ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 ```
 
-This single command will:
+#### Limitations
 
-- Create a new GitHub repository named `example-site`, cloned from the started site repository.
-- Create a new Pantheon site built from the GitHub repository.
-- Install the specified CMS and commit the exported configuration to the GitHub repository.
-- Configure CircleCI to run Behat tests on the site on every pull request.
-- Configure credentials on all of these services to allow the test scripts to run.
+- Commits to the Pantheon site are not pushed back to the GitLab repository
 
-Note that it is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will not have the capability to create multidev environments. In this instance, all of your tests will run on the dev environment. See [Running Tests without Multidevs](#running-tests-without-multidevs), below, for more information.
+### Starting a new BitBucket Project
 
-In the example above, the parameter `d8` is shorthand for the project `pantheon-systems/example-drops-8-composer`, the canonical Composer-managed Drupal 8 site for Pantheon. You may replace this parameter with the GitHub organization and project name for any other canonical starter site that you would like to use.
+```
+$ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
+```
 
-| Starter Site | Shortcut  | Packagist Project Name                    |
-| ------------ | --------- | ----------------------------------------- |
-| Drupal 8     | d8        | [pantheon-systems/example-drops-8-composer](https://github.com/pantheon-systems/example-drops-8-composer) |
-| Drupal 7     | d7        | [pantheon-systems/example-drops-7-composer](https://github.com/pantheon-systems/example-drops-7-composer) |
-| WordPress    | wp        | [pantheon-systems/example-wordpress-composer](https://github.com/pantheon-systems/example-wordpress-composer) |
+#### Limitations
 
-**Note:** At the moment, the Drupal 7 and WordPress starter sites have only alpha releases. To use one of these starter sites, you must also add `--stability=alpha` to the command line options.
+- Automatic multidev deletion not working; test multidevs must be deleted manually
+- Commits to the Pantheon site are not pushed back to the GitLab repository
+- Comments are not added to pull requests when multidevs are created
 
-More starter sites will be available in the future. You may easily create your own by following the example of the existing starter site, and publishing your customized version on Packagist. See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts.
+## Customization
+
+More starter sites will be available in the future. You may easily create your own by forking one of the standard starter sites and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the build:project:create command:
+```
+$ terminus build:project:create --team='My Agency Name' my-project/my-starter my-site
+```
+See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts for your starter projects.
 
 Additional options are available to further customize the build:project:create command:
 
@@ -81,8 +103,8 @@ Additional options are available to further customize the build:project:create c
 | --test-site-name | The name to use when installing the test site |
 | --admin-password | The password to use for the admin when installing the test site |
 | --admin-email    | The email address to use for the admin |
-| --ci             | The CI provider to use. Defaults to "circle" |
-| --git            | The git repository provider to use. Not yet implemented. Will default to "github" |
+| --ci             | The CI provider to use. Defaults to "circleci" |
+| --git            | The git repository provider to use. Defaults to "github" |
 
 See `terminus help build:project:create` for more information.
 
@@ -143,37 +165,9 @@ To use this tool on a Pantheon site that does not have multidev environments sup
 ```
 ** IMPORTANT NOTE: ** If you initially set up your site using `terminus build:project:create`, and you do **not** use the `--team` option, or the team you specify is not an Agency organization, then your Circle configuration will automatically be set up to use only the dev environment. If you later add multidev capabilities to your site, you will need to [visit the Circle CI environment variables configuration page](https://circleci.com/docs/api/#authentication) and **delete** the entry for TERMINUS_ENV.
 
-## Adding More Providers
+## Other Build Tools Commands
 
-At the moment, the build:project:create command only supports GitHub and Circle CI. It is possible to add other providers.
-
-There is no plugin mechanism for providers; additional implementations must be added to the Terminus Build Tools plugin. Pull requests are welcome.
-
-### Declare the Provider Class
-
-In the [ProviderManager](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/ProviderManager.php) class, add the classname to the list in the `findProvider` method.
-
-### Impementing a New CI Provider
-
-Follow the example provided by the [CircleCIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CircleCIProvider.php) class. A number of interfaces should be implemented:
-
-- [CredentialClientInterface](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Credentials/CredentialClientInterface.php): declare the credentials (e.g. OAuth tokens) the CredentialManager shoud look up or prompt for on behalf of your CI Provider.
-- [CIProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/CIProviders/CIProvider.php): set environment variables and configure the CI service to begin running tests.
-- [PrivateKeyReceiver](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Task/Ssh/PrivateKeyReciever.php): receive the private key that will be generated for your CI Provider. The corresponding public key is added to Pantheon.
-- [LoggerAwareInterface](https://github.com/php-fig/log/blob/master/Psr/Log/LoggerAwareInterface.php): A logger will be injected into your class.
-
-### Implement a New Git Repository Provider
-
-Follow the example provided by the [GithubProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/RepositoryProviders/GithubProvider.php) class. A number of interfaces should be implemented:
-
-- [CredentialClientInterface](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/Credentials/CredentialClientInterface.php): declare the credentials (e.g. OAuth tokens) the CredentialManager shoud look up or prompt for on behalf of your CI Provider.
-- [GitProvider](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/master/src/ServiceProviders/RepositoryProviders/GitProvider.php): create a repository on the remote Git service, and push a local repository to the remote service.
-- [LoggerAwareInterface](https://github.com/php-fig/log/blob/master/Psr/Log/LoggerAwareInterface.php): A logger will be injected into your class.
-
-
-## Examples
-
-The examples below show how some of the other build:env: commands are used within test scripts. It is not usually necessary to run any of these commands directly.
+The examples below show how some of the other build:env: commands are used within test scripts. It is not usually necessary to run any of these commands directly; they may be of interest if you are customizing or building your own test scripts.
 
 ### Create Testing Multidev
 
@@ -198,13 +192,6 @@ This command will commit the generated artifacts to an existing multidev environ
 ### List Testing Multidevs
 
 `terminus build:env:list`
-
-## Installation
-For help installing, see [Manage Plugins](https://pantheon.io/docs/terminus/plugins/)
-```
-mkdir -p ~/.terminus/plugins
-composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:~1
-```
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.

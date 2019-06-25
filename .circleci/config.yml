@@ -1,117 +1,193 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:latest
+    - image: quay.io/pantheon-public/php-ci:2.x
   working_directory: ~/terminus_build_tools_plugin
   environment:
-    BASH_ENV: ~/.bashrc
+
+    #=========================================================================
+    # In addition to the environment variables defined in this file, also
+    # add the following variables in the Circle CI UI.
+    #
+    # See: https://circleci.com/docs/2.0/env-vars/
+    #
+    # TERMINUS_SITE:  Name of the Pantheon site to run tests on, e.g. my_site
+    # TERMINUS_TOKEN: The Pantheon machine token
+    # TERMINUS_ORG:   Name of Pantheon Agency / Team
+    # CIRCLE_TOKEN:   Circle CI Token
+    # GITHUB_TOKEN:   The GitHub personal access token
+    # GITHUB_USER:    The GitHub username
+    # GIT_EMAIL:      The email address to use when making commits
+    # BITBUCKET_USER: The Bitbucket Username
+    # BITBUCKET_PASS: The Bitbucket app specific password
+    #
+    # TEST_SITE_NAME: The name of the test site to provide when installing.
+    # ADMIN_PASSWORD: The admin password to use when installing.
+    # ADMIN_EMAIL:    The email address to give the admin when installing.
+    #=========================================================================
+
     TZ: "/usr/share/zoneinfo/America/Los_Angeles"
-    # @todo, consider changing now that WordPress is tested here too.
-    TERMINUS_ORG: CI for Drupal 8 + Composer
-    GITHUB_USERNAME: pantheon-ci-bot
-    BITBUCKET_USERNAME: pantheon-ci-bot
     TERM: dumb
+    TERMINUS_HIDE_UPDATE_MESSAGE: 1
 
 version: 2
 jobs:
     # @todo: common initialization, maybe
-    build:
+    unit:
         <<: *defaults
         steps:
-            - run: echo "Nothing in the build step for now."
+            - run: echo "No unit tests yet."
 
+    # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
+    # We test creating a PR and merging it to master here, but omit those tests
+    # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" github
+                name: Check Terminus version
+                command: terminus --version
             - run:
-                name: D8 with GitHub Build Failed
+                name: Test D8 with GitHub
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests after build:project:create
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test build:project:repair
+                command: ./.circleci/test-github-repair.sh
+            - run:
+                name: Watch CircleCI tests after build:project:repair
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Test merge to master
+                command: ./.circleci/test-merge-master.sh
+            - run:
+                name: Clean up D8 GitHub fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up D8 GitHub fixtures after failure
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_drupal_7_github:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D7 with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-7-composer:dev-master" github
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
             - run:
-                name: D7 with GitHub Build Failed
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Clean up D7 GitHub fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up D7 GitHub fixtures after failure
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_drupal_8_bitbucket:
         <<: *defaults
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with BitBucket (unfinished)
-                command: echo "Disabling this test until it is passing."
-                # command: ./.circleci/test-example-repo.sh "pantheon-systems/example-drops-8-composer:dev-test-2.x" bitbucket
+                name: Test D8 with BitBucket
+                command: echo "BitBucket test skipped"
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
             - run:
-                name: D8 with Bitbucket Build Failed
+                name: Watch CircleCI tests
+                command: echo "Skipping the watch-cicle step too"
+                #command: ./.circleci/watch-circle.sh
+            - run:
+                name: Clean up D8 Bitbucket fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up D8 Bitbucket fixtures after failure
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_wordpress:
         <<: *defaults
+        resource_class: large
+        steps:
+            - checkout
+            - run:
+                name: Configure globals
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test WordPress with GitHub
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Clean up WordPress GitHub fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up WordPress GitHub fixtures after failure
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh fail
+
+    test_wordpress_gitlab:
+        <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with GitHub
-                command: ./.circleci/test-example-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" github
+                name: Test WordPress with GitLab
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
-                name: WordPress with GitHub Build Failed
+                name: Watch GitLab CI tests
+                command: ./.circleci/watch-gitlabci.sh
+            - run:
+                name: Clean up WordPress GitLab fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up WordPress GitLab fixtures after failure
                 when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh
-
-    # @todo: anything to do once everything is complete?
-    # There is probably a way to check the results on the other jobs.
-    completion:
-        <<: *defaults
-        steps:
-            - run:
-                name: Clean up old keys
-                command: |
-                    echo "All tests passed."
-                    for key in $(terminus ssh-key:list --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sort -r | sed -e '1,12d' | sed -e 's/ *[^ ]* *//') ; do terminus ssh-key:remove $key ; done
+                command: ./.circleci/cleanup-fixtures.sh fail
 
 workflows:
-  version: 2
-  build_test:
-    jobs:
-      - build
-      - test_drupal_8_github:
-          requires:
-            - build
-      - test_drupal_7_github:
-          requires:
-            - build
-      - test_drupal_8_bitbucket:
-          requires:
-            - build
-      - test_wordpress:
-          requires:
-            - build
-      - completion:
-          requires:
-            - test_drupal_8_github
-            - test_drupal_7_github
-            - test_drupal_8_bitbucket
-            - test_wordpress
+    version: 2
+    build_test:
+        jobs:
+            - unit
+            - test_drupal_8_github:
+                requires:
+                   - unit
+            - test_drupal_7_github:
+                requires:
+                   - unit
+            - test_wordpress:
+                requires:
+                   - unit
+            - test_wordpress_gitlab:
+                requires:
+                   - unit
+            - test_drupal_8_bitbucket:
+                requires:
+                   - unit
+                   - test_drupal_8_github
+                   - test_drupal_7_github
+                   - test_wordpress
+                   - test_wordpress_gitlab

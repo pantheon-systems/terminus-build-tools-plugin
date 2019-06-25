@@ -5,26 +5,33 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Robo\Config\Config;
+use Symfony\Component\Console\Input\InputInterface;
 
 class ProviderManager implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
     protected $credential_manager;
+    protected $config;
     protected $providers = [];
 
-    public function __construct(CredentialManager $credential_manager)
+    public function __construct(CredentialManager $credential_manager, Config $config)
     {
         $this->credential_manager = $credential_manager;
+        $this->config = $config;
     }
 
     protected function availableProviders()
     {
-        // TODO: create some way to register providers. Plugin plugins?
         return [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BitbucketPipelines\BitbucketPipelinesProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GitLabCI\GitLabCIProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\PantheonProvider',
         ];
     }
 
@@ -35,7 +42,7 @@ class ProviderManager implements LoggerAwareInterface
         foreach ($available_providers as $provider) {
             $providerClass = new \ReflectionClass($provider);
             if ($providerClass->implementsInterface($expectedInterface)) {
-                $providerInstance = new $provider();
+                $providerInstance = new $provider($this->config);
                 if ($providerInstance->infer($url)) {
                     $this->initializeProvider($providerInstance);
                     return $providerInstance;
@@ -44,7 +51,7 @@ class ProviderManager implements LoggerAwareInterface
         }
     }
 
-    protected function lookupProvider($alias)
+    protected function lookupProvider($alias, $expectedInterface)
     {
         $available_providers = $this->availableProviders();
 
@@ -52,11 +59,19 @@ class ProviderManager implements LoggerAwareInterface
         // i.e. --ci=circle-ci is the same as --ci=circleci
         $test_alias = preg_replace('#[^a-z0-9]#', '', $alias);
 
+        // Bail early on invalid input
+        if (empty($test_alias)) {
+            return $alias;
+        }
+
         // Allow providers to be specified
         foreach ($available_providers as $provider) {
-            $provider_class = basename(strtr($provider, '\\', '/'));
-            if (stristr($provider_class, $test_alias) !== false) {
-                return $provider;
+            $reflectionClass = new \ReflectionClass($provider);
+            if ($reflectionClass->implementsInterface($expectedInterface)) {
+                $provider_class = basename(strtr($provider, '\\', '/'));
+                if (stristr($provider_class, $test_alias) !== false) {
+                    return $provider;
+                }
             }
         }
 
@@ -66,11 +81,11 @@ class ProviderManager implements LoggerAwareInterface
 
     public function createProvider($providerClass, $expectedInterface)
     {
-        $providerClass = $this->lookupProvider($providerClass);
+        $providerClass = $this->lookupProvider($providerClass, $expectedInterface);
         if (!class_exists($providerClass)) {
             throw new \Exception("Could not load class $providerClass");
         }
-        $provider = new $providerClass();
+        $provider = new $providerClass($this->config);
         if (!$provider instanceof $expectedInterface) {
             throw new \Exception("Requested provider $providerClass does not implement required interface $expectedInterface");
         }
@@ -94,6 +109,14 @@ class ProviderManager implements LoggerAwareInterface
     public function credentialManager()
     {
         return $this->credential_manager;
+    }
+
+    /**
+     * Give objects an opportunity to initialize themselves from the cli options
+     */
+    public function setFromOptions(InputInterface $input)
+    {
+        $this->credentialManager()->setFromOptions($input);
     }
 
     public function validateCredentials()

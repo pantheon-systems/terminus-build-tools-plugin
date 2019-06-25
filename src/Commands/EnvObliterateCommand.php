@@ -51,24 +51,58 @@ class EnvObliterateCommand extends BuildToolsBase
         $this->providerManager()->validateCredentials();
 
         // Do nothing without confirmation
-        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding GitHub repository {url} and CircleCI configuration?', ['site' => $site->getName(), 'url' => $url])) {
+        if (!$this->confirm('Are you sure you want to delete {site} AND its corresponding Git provider repository {url} and CI configuration?', ['site' => $site->getName(), 'url' => $url])) {
             return;
         }
 
         $this->log()->notice('About to delete {site} and its corresponding remote repository {url} and CI configuration.', ['site' => $site->getName(), 'url' => $url]);
 
-        // CircleCI configuration is automatically deleted when the GitHub
-        // repository is deleted. Do we need to clean up for other CI providers?
+        // CI configuration is automatically deleted when the repository is deleted.
+        // Is this true for all CI providers? GitLab / Bitbucket probably work this way.
 
         // Use the GitHub API to delete the GitHub project.
         $project = $this->projectFromRemoteUrl($url);
 
         // Delete the remote git repository.
         $gitProvider->deleteRepository($project);
-        $this->log()->notice('Deleted {project} from GitHub', ['project' => $project,]);
+        $this->log()->notice('Deleted {project}', ['project' => $project]);
 
         // Use the Terminus API to delete the Pantheon site.
         $site->delete();
         $this->log()->notice('Deleted {site} from Pantheon', ['site' => $site_name,]);
+    }
+
+    /**
+     * @command build:repo:delete
+     *
+     * EXPERIMENTAL COMMAND
+     *
+     * build:env:obliterate only works when the Pantheon site and git repo
+     * have been linked up, e.g. if build:project:create gets most of the
+     * way through. If build:project:create does not finish, this command
+     * is useful in getting rid of leftover repos. Not sure if we should
+     * continue to support this or not.
+     */
+    public function deleteRepo($url)
+    {
+        $this->log()->notice('Look up provider from {url}', ['url' => $url]);
+        // Create a git repository service provider appropriate to the URL
+        $gitProvider = $this->inferGitProviderFromUrl($url);
+
+        $this->log()->notice('About to validate credentials');
+
+        // Ensure that all of our providers are given the credentials they need.
+        // Providers are not usable until this is done.
+        $this->providerManager()->validateCredentials();
+
+        $this->log()->notice('Look up project');
+
+        $project = $this->projectFromRemoteUrl($url);
+
+        $this->log()->notice('Project is {project}', ['project' => $project]);
+
+        // Delete the remote git repository.
+        $gitProvider->deleteRepository($project);
+        $this->log()->notice('Deleted {project}', ['project' => $project]);
     }
 }

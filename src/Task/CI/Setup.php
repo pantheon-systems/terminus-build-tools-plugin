@@ -29,7 +29,7 @@ class Setup extends Base
 
         $circleBadge = $this->provider->badge($this->ci_env);
 
-        // Replace the 'ci | none' badge with the Circle bagde. If
+        // Replace the 'ci | none' badge with the Circle badge. If
         // there is no badge placeholder, then put the Circle badge
         // near the front of the README, ideally after the '# Project Title'.
         if (preg_match('#!\[CI none\]\([^)]*\)#', $readme)) {
@@ -56,6 +56,11 @@ class Setup extends Base
             }
         }
 
+        // Print a message listing the variables we're about to set
+        $env = $this->ci_env->getAggregateState();
+        $this->logger()->notice('Define CI environment variables: {keys}', ['keys' => implode(',', array_keys($env))]);
+
+        // Tell the provider to set the variables
         $this->provider->configureServer($this->ci_env);
 
         return Result::success($this);

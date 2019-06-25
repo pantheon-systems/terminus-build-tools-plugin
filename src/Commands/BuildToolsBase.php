@@ -29,6 +29,9 @@ use Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteEnvironment;
 use Pantheon\Terminus\DataStore\FileStore;
 use Pantheon\TerminusBuildTools\Credentials\CredentialManager;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
+use Pantheon\Terminus\Helpers\LocalMachineHelper;
+use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
+use Pantheon\Terminus\Models\Environment;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -40,16 +43,20 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 {
     use LoadAllTasks; // uses TaskAccessor, which uses BuilderAwareTrait
     use SiteAwareTrait;
+    use WorkflowProcessingTrait;
 
-    const TRANSIENT_CI_DELETE_PATTERN = '^ci-';
-    const PR_BRANCH_DELETE_PATTERN = '^pr-';
+    const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
+    const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const SECRETS_DIRECTORY = '.build-secrets';
+    const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
     protected $tmpDirs = [];
 
     protected $provider_manager;
     protected $ci_provider;
     protected $git_provider;
+    protected $site_provider;
 
     /**
      * Constructor
@@ -62,6 +69,25 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->provider_manager = $provider_manager;
     }
 
+    /**
+     * Set GIT_SSH_COMMAND so we can disable strict host key checking. This allows builds to run without pauses
+     * for user input.
+     *
+     * By not specifying a command in the hook below it will apply to any command from this class (or class that
+     * extends this class, such as all of Build Tools).
+     *
+     * @hook init
+     */
+    public function noStrictHostKeyChecking()
+    {
+        // Set the GIT_SSH_COMMAND environment variable to avoid SSH Host Key prompt.
+        // By using putenv, the environment variable won't persist past this PHP run.
+        // Setting the Known Hosts File to /dev/null and the LogLevel to quiet prevents
+        // this from persisting for a user regularly as well as the warning about adding
+        // the SSH key to the known hosts file.
+        putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
+    }
+
     public function providerManager()
     {
         if (!$this->provider_manager) {
@@ -70,10 +96,37 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $credential_store = new FileStore($this->getConfig()->get('cache_dir') . '/build-tools');
             $credentialManager = new CredentialManager($credential_store);
             $credentialManager->setUserId($this->loggedInUserEmail());
-            $this->provider_manager = new ProviderManager($credentialManager);
+            $this->provider_manager = new ProviderManager($credentialManager, $this->getConfig());
             $this->provider_manager->setLogger($this->logger);
         }
         return $this->provider_manager;
+    }
+
+    /**
+     * Given a git provider and (optionally) a ci provider, return the
+     *
+     */
+    public function selectCIProvider($git_provider_class_or_alias, $ci_provider_class_or_alias = '')
+    {
+        // If using GitLab, override the CI choice as GitLabCI is the only option.
+        // CircleCI theoretically works with GitLab, but its API will not start
+        // up testing on new projects seamlessly, so we can't really use it here.
+        if ($git_provider_class_or_alias == 'gitlab') {
+            $ci_provider_class_or_alias = 'gitlabci';
+        }
+
+        // If using bitbucket and ci is not explicitly provided,
+        // assume bitbucket pipelines
+        if (($git_provider_class_or_alias == 'bitbucket') && (!$ci_provider_class_or_alias)) {
+            $ci_provider_class_or_alias = 'pipelines';
+        }
+
+        // If nothing was provided and no default was inferred, use Circle.
+        if (!$ci_provider_class_or_alias) {
+            $ci_provider_class_or_alias = 'circleci';
+        }
+
+        return $ci_provider_class_or_alias;
     }
 
     protected function createGitProvider($git_provider_class_or_alias)
@@ -86,23 +139,40 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->ci_provider = $this->providerManager()->createProvider($ci_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider::class);
     }
 
-    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias)
+    protected function createSiteProvider($site_provider_class_or_alias)
     {
-        if (isset($ci_provider_class_or_alias)) {
+        $this->site_provider = $this->providerManager()->createProvider($site_provider_class_or_alias, \Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders\SiteProvider::class);
+        $this->site_provider->setMachineToken($this->recoverSessionMachineToken());
+        $this->site_provider->setSession($this->session());
+    }
+
+    protected function createProviders($git_provider_class_or_alias, $ci_provider_class_or_alias, $site_provider_class_or_alias = 'pantheon')
+    {
+        if (!empty($ci_provider_class_or_alias)) {
             $this->createCIProvider($ci_provider_class_or_alias);
         }
-        if (isset($git_provider_class_or_alias)) {
+        if (!empty($git_provider_class_or_alias)) {
             $this->createGitProvider($git_provider_class_or_alias);
+        }
+        if (!empty($site_provider_class_or_alias)) {
+            $this->createSiteProvider($site_provider_class_or_alias);
         }
     }
 
     protected function getUrlFromBuildMetadata($site_name_and_env)
     {
+        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env);
+        return $this->getMetadataUrl($buildMetadata);
+    }
+
+    protected function getMetadataUrl($buildMetadata)
+    {
+        $site_name_and_env = $buildMetadata['site'];
         // Get the build metadata from the Pantheon site. Fail if there is
         // no build metadata on the master branch of the Pantheon site.
-        $buildMetadata = $this->retrieveBuildMetadata($site_name_and_env) + ['url' => ''];
+        $buildMetadata = $buildMetadata + ['url' => ''];
         if (empty($buildMetadata['url'])) {
-            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name]);
+            throw new TerminusException('The site {site} was not created with the build-env:create-project command; it therefore cannot be used with this command.', ['site' => $site_name_and_env]);
         }
         return $buildMetadata['url'];
     }
@@ -178,6 +248,19 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
+     * Determine whether or not this site can create multidev environments.
+     */
+    protected function siteHasMultidevCapability($site)
+    {
+        // Can our site create multidevs?
+        $settings = $site->get('settings');
+        if (!$settings) {
+            return false;
+        }
+        return $settings->max_num_cdes > 0;
+    }
+
+    /**
      * Return the list of available Pantheon organizations
      */
     protected function availableOrgs()
@@ -189,19 +272,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->session()->getUser()->getOrganizations()
         );
         return $orgs;
-    }
-
-    /**
-     * Fetch the environment variable 'GITHUB_TOKEN', or throw an exception if it is not set.
-     * @return string
-     */
-    protected function getRequiredGithubToken()
-    {
-        $github_token = getenv('GITHUB_TOKEN');
-        if (empty($github_token)) {
-            throw new TerminusException("Please generate a GitHub personal access token token, as described in https://help.github.com/articles/creating-an-access-token-for-command-line-use/. Then run: \n\nexport GITHUB_TOKEN=my_personal_access_token_value");
-        }
-        return $github_token;
     }
 
     /**
@@ -224,44 +294,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * @param array $options
      * @return CIState
      */
-    public function getCIEnvironment($site_name, $options)
+    public function getCIEnvironment($extra_env)
     {
-        $options += [
-            'test-site-name' => '',
-            'email' => '',
-            'admin-password' => '',
-            'admin-email' => '',
-            'env' => [],
-        ];
-
-        $test_site_name = $options['test-site-name'];
-        $git_email = $options['email'];
-        $admin_password = $options['admin-password'];
-        $admin_email = $options['admin-email'];
-        $extra_env = $options['env'];
-
-        if (empty($test_site_name)) {
-            $test_site_name = $site_name;
-        }
-
-        // We should always be authenticated by the time we get here, but
-        // we will test just to be sure.
-        $terminus_token = $this->recoverSessionMachineToken();
-        if (empty($terminus_token)) {
-            throw new TerminusException("Please generate a Pantheon machine token, as described in https://pantheon.io/docs/machine-tokens/. Then log in via: \n\nterminus auth:login --machine-token=my_machine_token_value");
-        }
-
         $ci_env = new CIState();
-
-        $siteAttributes = (new SiteEnvironment())
-            ->setSiteName($site_name)
-            ->setSiteToken($terminus_token)
-            ->setTestSiteName($test_site_name)
-            ->setAdminPassword($admin_password)
-            ->setAdminEmail($admin_email)
-            ->setGitEmail($git_email);
-
-        $ci_env->storeState('site', $siteAttributes);
 
         // Add in extra environment provided on command line via
         // --env='key=value' --env='another=v2'
@@ -275,44 +310,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $ci_env->storeState('env', $envState);
 
         return $ci_env;
-    }
-
-    /**
-     * Check to see if common options are valid. Provide sensible defaults
-     * where values are unspecified.
-     */
-    protected function validateOptionsAndSetDefaults($options)
-    {
-        if (empty($options['admin-password'])) {
-            $options['admin-password'] = mt_rand();
-        }
-
-        if (empty($options['email'])) {
-            $options['email'] = exec('git config user.email');
-        }
-
-        if (empty($options['admin-email'])) {
-            $options['admin-email'] = $options['email'];
-        }
-
-        // Catch errors in email address syntax
-        $this->validateEmail('email', $options['email']);
-        $this->validateEmail('admin-email', $options['admin-email']);
-
-        return $options;
-    }
-
-    /**
-     * Check to see if the provided email address is valid.
-     */
-    protected function validateEmail($emailOptionName, $emailValue)
-    {
-        // http://www.regular-expressions.info/email.html
-        if (preg_match('/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}$/i', $emailValue)) {
-            return;
-        }
-
-        throw new TerminusException("The email address '{email}'' is not valid. Please set a valid email address via 'git config --global user.email <address>', or override this setting with the --{option} option.", ['email' => $emailValue, 'option' => $emailOptionName]);
     }
 
     /**
@@ -386,7 +383,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Use composer create-project to create a new local copy of the source project.
+     * Create our project from source, either via composer create-project,
+     * or from an existing source directory. Record the build metadata.
      */
     protected function createFromSource($source, $target, $stability = '', $options = [])
     {
@@ -413,6 +411,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $source;
     }
 
+    /**
+     * Use composer create-project to create a new local copy of the source project.
+     */
     protected function createFromSourceProject($source, $target, $stability = '')
     {
         $source_project = $this->sourceProjectFromSource($source);
@@ -508,16 +509,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     /**
      * Run an env:clone-content operation
-     * @param Pantheon\Terminus\Models\Environment $target
-     * @param string $from_name
+     * @param Environment $target
+     * @param Environment $from_env
      * @param bool $db_only
      * @param bool $files_only
      */
-    public function cloneContent($target, $from_name, $db_only = false, $files_only = false)
+    public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
+        $from_name = $from_env->getName();
+
         // Clone files if we're only doing files, or if "only do db" is not set.
         if ($files_only || !$db_only) {
-            $workflow = $target->cloneFiles($from_name);
+            $workflow = $target->cloneFiles($from_env);
             $this->log()->notice(
                 "Cloning files from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
@@ -530,7 +533,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Clone database if we're only doing the database, or if "only do files" is not set.
         if ($db_only || !$files_only) {
-            $workflow = $target->cloneDatabase($from_name);
+            $workflow = $target->cloneDatabase($from_env);
             $this->log()->notice(
                 "Cloning database from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
@@ -576,7 +579,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
 
             $this->log()->notice(' - {cmd}', ['cmd' => $redacted_command_line]);
-            $result = $env->sendCommandViaSsh(
+            $result = $this->sendCommandViaSsh(
+                $env,
                 $command_line,
                 function ($type, $buffer) {
                 }
@@ -586,6 +590,37 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 throw new TerminusException('{op} failed with exit code {status}', ['op' => $operation_label, 'status' => $result['exit_code']]);
             }
         }
+    }
+
+    /**
+     * Sends a command to an environment via SSH.
+     * We would rather not duplicate this method from Terminus.
+     *
+     * @param string $command The command to be run on the platform
+     */
+    protected function sendCommandViaSsh($env, $command)
+    {
+        $ssh_command = $this->getConnectionString($env) . ' ' . ProcessUtils::escapeArgument($command);
+        return $this->getContainer()->get(LocalMachineHelper::class)->execute(
+            $ssh_command,
+            function ($type, $buffer) {
+                },
+            false
+        );
+    }
+
+    /**
+     * We would rather not duplicate this method from Terminus.
+     *
+     * @return string SSH connection string
+     */
+    private function getConnectionString($env)
+    {
+        $sftp = $env->sftpConnectionInfo();
+        return vsprintf(
+            'ssh -T %s@%s -p %s -o "StrictHostKeyChecking=no" -o "AddressFamily inet"',
+            [$sftp['username'], $sftp['host'], $sftp['port'],]
+        );
     }
 
     protected function exportInitialConfiguration($site_env_id, $repositoryDir, $composer_json, $options)
@@ -687,7 +722,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $site_env_id,
         $multidev = '',
         $repositoryDir = '',
-        $label = '')
+        $label = '',
+        $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
@@ -696,6 +732,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $env_label = $multidev;
         if (!empty($label)) {
             $env_label = $label;
+        }
+
+        if (empty($message)) {
+            $message = "Build assets for $env_label.";
         }
 
         if (empty($repositoryDir)) {
@@ -764,7 +804,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->passthru("git -C $repositoryDir add --force -A .");
 
         // Now that everything is ready, commit the build artifacts.
-        $this->passthru("git -C $repositoryDir commit -q -m 'Build assets for $env_label.'");
+        $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
 
         // If the environment does exist, then we need to be in git mode
         // to push the branch up to the existing multidev site.
@@ -789,112 +829,45 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $metadata;
     }
 
+    /**
+     * orgUserFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "org" portion of the provided url.
+     */
+    protected function orgUserFromRemoteUrl($url)
+    {
+        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[0];
+        }
+        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
+    }
+
+    /**
+     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "repo" portion of the provided url.
+     */
+    protected function repositoryFromRemoteUrl($url)
+    {
+        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
+        {
+            $parsed_url = parse_url($url);
+            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
+            return $path_components[1];
+        }
+        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
+    }
+
+    /**
+     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * to the "org/repo" portion of the provided url.
+     */
     protected function projectFromRemoteUrl($url)
     {
-        return preg_replace('#[^:/]*[:/]([^/:]*/[^.]*)\.git#', '\1', str_replace('https://', '', $url));
-    }
-
-    protected function preserveEnvsWithOpenPRs($remoteUrl, $oldestEnvironments, $multidev_delete_pattern)
-    {
-        $project = $this->projectFromRemoteUrl($remoteUrl);
-        // Get back a pr-number => branch-name list
-
-        $closedBranchList = $this->git_provider->branchesForPullRequests($project, 'closed');
-
-        // Find any that match "pr-NNN", for some NNN in pr-number.
-        $result = $this->findBranches($oldestEnvironments, array_keys($closedBranchList), $multidev_delete_pattern);
-        // Add any that match "pr-BRANCH", for some BRANCH in branch-name.
-        $result = array_merge($result, $this->findBranches($oldestEnvironments, array_values($closedBranchList), $multidev_delete_pattern));
-
-        // If there are no open pull requests, then no envs need to be 
-        // preserved.
-        if (empty($result)) {
-            return $oldestEnvironments;
-        }
-
-        $openBranchList = $this->git_provider->branchesForPullRequests($project, 'open');
-
-        // Remove any that match "pr-NNN" and have an open pull request
-        $result = $this->filterBranches($result, array_keys($openBranchList), $multidev_delete_pattern);
-        // Remove any that match "pr-BRANCH", and have an open pull request
-        $result = $this->filterBranches($result, array_values($openBranchList), $multidev_delete_pattern);
-
-        return $result;
-    }
-
-    // TODO: At the moment, this takes multidev environment names,
-    // e.g.:
-    //   pr-dc-worka
-    // And compares them against a list of branches, e.g.:
-    //   dc-workaround
-    //   lightning-fist-2
-    //   composer-merge-pantheon
-    // In its current form, the 'pr-' is stripped from the beginning of
-    // the environment name, and then a 'begins-with' test is done. This
-    // is not perfect, but if it goes wrong, the result will be that a
-    // multidev environment that should have been eligible for deletion will
-    // not be deleted.
-    //
-    // This could be made better if we could fetch the build-metadata.json
-    // file from the repository root of each multidev environment, which would
-    // give us the correct branch name for every environment. We could do
-    // this without too much trouble via rsync; this might be a little slow, though.
-    protected function preserveEnvsWithBranches($oldestEnvironments, $multidev_delete_pattern)
-    {
-        $remoteBranch = 'origin';
-
-        // Update the local repository -- prune / add remote branches.
-        // We could use `git remote prune origin` to only prune remote branches.
-        $this->passthru('git remote update --prune origin');
-
-        // List all of the remote branches
-        $outputLines = $this->exec('git branch -ar');
-
-        // Remove branch lines that do not begin with 'origin/'
-        $outputLines = array_filter(
-            $outputLines,
-            function ($item) use ($remoteBranch) {
-                return preg_match("%^ *$remoteBranch/%", $item);
-            }
-        );
-
-        // Strip the 'origin/' from the beginning of each branch line
-        $outputLines = array_map(
-            function ($item) use ($remoteBranch) {
-                return preg_replace("%^ *$remoteBranch/%", '', $item);
-            },
-            $outputLines
-        );
-
-        return $this->filterBranches($oldestEnvironments, $outputLines, $multidev_delete_pattern);
-    }
-
-    protected function filterBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
-    {
-        // Filter environments that have matching remote branches in origin
-        return array_filter(
-            $oldestEnvironments,
-            function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
-                return empty($matches);
-            }
-        );
-    }
-
-    protected function findBranches($oldestEnvironments, $branchList, $multidev_delete_pattern)
-    {
-        // Filter environments that have matching remote branches in origin
-        return array_filter(
-            $oldestEnvironments,
-            function ($item) use ($branchList, $multidev_delete_pattern) {
-                $match = $this->getMatchRegex($item, $multidev_delete_pattern);
-                // Find items in $branchList that match $match.
-                $matches = preg_grep ("%$match%i", $branchList);
-                return !empty($matches);
-            }
-        );
+        $org_user = $this->orgUserFromRemoteUrl($url);
+        $repository = $this->repositoryFromRemoteUrl($url);
+        return "$org_user/$repository";
     }
 
     protected function getMatchRegex($item, $multidev_delete_pattern)
@@ -918,13 +891,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
     protected function deleteEnv($env, $deleteBranch = false)
     {
-        $workflow = $env->delete(['delete_branch' => $deleteBranch,]);
-        $workflow->wait();
-        if ($workflow->isSuccessful()) {
-            $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
-        } else {
-            throw new TerminusException($workflow->getMessage());
-        }
+        $workflow = $env->delete(
+            ['delete_branch' => true,]
+        );
+        $this->processWorkflow($workflow);
+        $this->log()->notice('Deleted the multidev environment {env}.', ['env' => $env->id,]);
     }
 
     /**
@@ -987,6 +958,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        if ($mode === $env->get('connection_mode')) {
+            return;
+        }
         $workflow = $env->changeConnectionMode($mode);
         if (is_string($workflow)) {
             $this->log()->notice($workflow);
@@ -1091,7 +1065,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         foreach ($oldestEnvironments as $env) {
             try {
                 $metadata = $this->retrieveBuildMetadata("{$site_id}.{$env}");
-                if (isset($metadata['url'])) {
+                if (!empty($metadata['url'])) {
                     return $metadata['url'];
                 }
             }
@@ -1113,14 +1087,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = '/tmp/build-metadata.json';
 
         $status = $this->rsync($site_env_id, $src, $dest);
-        if ($status != 0) {
-            return [];
+        if ($status == 0) {
+            $metadataContents = file_get_contents($dest);
+            $metadata = json_decode($metadataContents, true);
         }
 
-        $metadataContents = file_get_contents($dest);
-        $metadata = json_decode($metadataContents, true);
+        $metadata['site'] = $site_env_id;
 
-        unlink($dest);
+        @unlink($dest);
 
         return $metadata;
     }
@@ -1178,8 +1152,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * @param string $site_env_id Remote site
      * @param string $src Source path to copy from. Start with ":" for remote.
      * @param string $dest Destination path to copy to. Start with ":" for remote.
+     * @param boolean $ignoreIfNotExists Silently fail and do not return error if remote source does not exist.
      */
-    protected function rsync($site_env_id, $src, $dest)
+    protected function rsync($site_env_id, $src, $dest, $ignoreIfNotExists = true)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $env_id = $env->getName();
@@ -1193,7 +1168,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $dest = preg_replace('/^:/', $siteAddress, $dest);
 
         $this->log()->notice('Rsync {src} => {dest}', ['src' => $src, 'dest' => $dest]);
-        passthru("rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222' $src $dest >/dev/null 2>&1", $status);
+        $status = 0;
+        $command = "rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1";
+        passthru($command, $status);
+        if (!$ignoreIfNotExists && in_array($status, [0, 23]))
+        {
+            throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $status]);
+        }
 
         return $status;
     }
@@ -1253,6 +1234,60 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $result]);
         }
         return $outputLines;
+    }
+
+    /**
+     * Download a copy of the secrets.json file from the appropriate site.
+     */
+    protected function downloadSecrets($site_env_id, $filename)
+    {
+        $workdir = $this->tempdir();
+        $this->rsync($site_env_id, ":files/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", $workdir, true);
+
+        if (file_exists("$workdir/$filename"))
+        {
+            $secrets = file_get_contents("$workdir/$filename");
+            $secretValues = json_decode($secrets, true);
+            return $secretValues;
+        }
+
+        return [];
+    }
+
+    /**
+     * Upload a modified secrets.json to the target Pantheon site.
+     */
+    protected function uploadSecrets($site_env_id, $secretValues, $filename)
+    {
+        $workdir = $this->tempdir();
+        mkdir("$workdir/" . self::SECRETS_REMOTE_DIRECTORY, 0777, true);
+
+        file_put_contents("$workdir/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", json_encode($secretValues));
+        $this->rsync($site_env_id, "$workdir/private", ':files/');
+    }
+
+    protected function writeSecrets($site_env_id, $secretValues, $clear, $file)
+    {
+        $values = [];
+        if (!$clear)
+        {
+            $values = $this->downloadSecrets($site_env_id, $file);
+        }
+
+        $values = array_replace($values, $secretValues);
+
+        $this->uploadSecrets($site_env_id, $values, $file);
+    }
+
+    protected function deleteSecrets($site_env_id, $key, $file)
+    {
+        $secretValues = [];
+        if (!empty($key))
+        {
+            $secretValues = $this->downloadSecrets($site_env_id, $file);
+            unset($secretValues[$key]);
+        }
+        $this->uploadSecrets($site_env_id, $secretValues, $file);
     }
 
     // Create a temporary directory

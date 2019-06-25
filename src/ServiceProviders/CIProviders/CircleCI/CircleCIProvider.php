@@ -2,9 +2,11 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -16,17 +18,13 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 /**
  * Manages the configuration of a project to be tested on Circle CI.
  */
-class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
+class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
-    use LoggerAwareTrait;
 
     const CIRCLE_TOKEN = 'CIRCLE_TOKEN';
 
     protected $circle_token;
-
-    public function __construct()
-    {
-    }
+    protected $serviceName = 'circleci';
 
     public function infer($url)
     {
@@ -69,6 +67,20 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
             '#^[0-9a-fA-F]{40}$#',
             'Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
         );
+
+        $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the CircleCI service. Please re-enter your credential.';
+
+        $circleTokenRequest
+            ->setValidationCallbackErrorMessage($could_not_authorize)
+            ->setValidateFn(
+                function ($token) {
+                    $this->setToken($token);
+                    $url = "https://circleci.com/api/v1.1/me";
+                    $httpStatus = $this->circleCIAPI([], $url, 'GET');
+
+                    return ($httpStatus == 200);
+                }
+            );
 
         return [ $circleTokenRequest ];
     }
@@ -119,6 +131,14 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $this->logger->notice('Configure Circle CI');
         $this->setCircleEnvironmentVars($ci_env);
+        $this->onlyBuildPullRequests($ci_env);
+    }
+
+    protected function onlyBuildPullRequests($ci_env)
+    {
+        $circle_url = $this->apiUrl($ci_env);
+        $data = ['feature_flags' => ['build-prs-only' => true]];
+        $this->circleCIAPI($data, "$circle_url/settings", 'PUT');
     }
 
     protected function setCircleEnvironmentVars(CIState $ci_env)
@@ -127,7 +147,11 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
             $data = ['name' => $key, 'value' => $value];
-            $this->circleCIAPI($data, "$circle_url/envvar");
+            if (empty($value)) {
+                $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
+            } else {
+                $this->circleCIAPI($data, "$circle_url/envvar");
+            }
         }
     }
 
@@ -148,14 +172,21 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
         $this->circleCIAPI($data, "$circle_url/ssh-key");
     }
 
-    protected function circleCIAPI($data, $url)
+    protected function circleCIAPI($data, $url, $method = 'POST')
     {
         $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
 
+        $headers = [
+            'Content-Type' => 'application/json',
+            'User-Agent' => ProviderEnvironment::USER_AGENT,
+            'Accept' => 'application/json',
+        ];
+
         $client = new \GuzzleHttp\Client();
-        $res = $client->request('POST', $url, [
+        $res = $client->request($method, $url, [
+            'headers' => $headers,
             'auth' => [$this->circle_token, ''],
-            'form_params' => $data,
+            'json' => $data,
         ]);
         return $res->getStatusCode();
     }
@@ -168,6 +199,7 @@ class CircleCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyRe
     {
         $serviceMap = [
             'github' => 'gh',
+            'bitbucket' => 'bb',
         ];
 
         if (isset($serviceMap[$serviceName])) {

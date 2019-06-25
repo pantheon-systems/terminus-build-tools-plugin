@@ -42,6 +42,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option clone-content Run terminus env:clone-content if the environment is re-used
      * @option db-only Only clone the database when runing env:clone-content
      * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
+     * @option message Commit message to include when committing assets to Pantheon
      */
     public function createBuildEnv(
         $site_env_id,
@@ -50,7 +51,8 @@ class EnvCreateCommand extends BuildToolsBase
             'label' => '',
             'clone-content' => false,
             'notify' => '',
-            'db-only' => false
+            'db-only' => false,
+            'message' => '',
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -70,7 +72,7 @@ class EnvCreateCommand extends BuildToolsBase
         $environmentExists = $site->getEnvironments()->has($multidev);
 
         // Check to see if we should create before pushing or after
-        $createBeforePush = $this->commitChangesFile('HEAD', 'pantheon.yml');
+        $createBeforePush = $this->commitChangesFile('HEAD', 'pantheon.yml') || $this->commitChangesFile('HEAD', 'pantheon.upstream.yml');
 
         if (!$environmentExists && $createBeforePush) {
             // If pantheon.yml exists, then we need to create the environment
@@ -120,7 +122,7 @@ class EnvCreateCommand extends BuildToolsBase
         // instead -- but only if requested. No point in running 'clone'
         // if the user plans on re-installing Drupal.
         if ($environmentExists && $options['clone-content']) {
-            $this->cloneContent($target, $env_id, $options['db-only']);
+            $this->cloneContent($target, $env, $options['db-only']);
         }
 
         // Set the target environment to sftp mode

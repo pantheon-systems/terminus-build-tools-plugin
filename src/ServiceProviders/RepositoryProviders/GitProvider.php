@@ -9,6 +9,9 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderInterface;
  */
 interface GitProvider extends ProviderInterface
 {
+    // TODO: Perhaps this should be part of the ProviderInterface
+    public function getServiceName();
+
     // TODO: Perhaps there should be a base interface shared by GitProvider
     // and CIProvider. getEnvironment would then move there. The CIProvider
     // environment would just be empty at the moment, though.
