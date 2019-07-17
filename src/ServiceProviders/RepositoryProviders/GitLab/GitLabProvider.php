@@ -56,7 +56,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $gitlab_org = '') {
+    public function createRepository($local_site_path, $target, $gitlab_org = '', $private = false) {
         $createRepoUrl = "api/v4/projects";
         $target_org = $gitlab_org;
         if (empty($gitlab_org)) {
