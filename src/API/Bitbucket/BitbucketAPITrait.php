@@ -45,6 +45,11 @@ trait BitbucketAPITrait
         return $api;
     }
 
+    public function tokenKey()
+    {
+        return BitbucketAPI::BITBUCKET_PASS;
+    }
+
     public function hasToken($key = false)
     {
         $repositoryEnvironment = $this->getEnvironment();
