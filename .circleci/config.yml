@@ -182,28 +182,16 @@ jobs:
                   name: Check Terminus version
                   command: terminus --version
               - run:
-                  name: Test D8 with GitHub
-                  command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                  name: Test D8 with GitLab
+                  command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
               - run:
-                  name: Watch CircleCI tests after build:project:create
-                  command: ./.circleci/watch-circle.sh
+                    name: Watch GitLab CI tests
+                    command: ./.circleci/watch-gitlabci.sh
               - run:
-                  name: Test secrets can be set and removed
-                  command: ./.circleci/test-secrets.sh
-              - run:
-                  name: Test build:project:repair
-                  command: ./.circleci/test-github-repair.sh
-              - run:
-                  name: Watch CircleCI tests after build:project:repair
-                  command: ./.circleci/watch-circle.sh
-              - run:
-                  name: Test merge to master
-                  command: ./.circleci/test-merge-master.sh
-              - run:
-                  name: Clean up D8 GitHub fixtures after pass
+                  name: Clean up D8 GitLab fixtures after pass
                   command: ./.circleci/cleanup-fixtures.sh ok
               - run:
-                  name: Clean up D8 GitHub fixtures after failure
+                  name: Clean up D8 GitLab fixtures after failure
                   when: on_fail
                   command: ./.circleci/cleanup-fixtures.sh fail
 
