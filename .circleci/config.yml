@@ -172,7 +172,7 @@ jobs:
         docker:
             - image: quay.io/pantheon-public/php-ci:2.x
             - image: gitlab/gitlab-ce:latest
-                name: gitlab
+              name: gitlab
         resource_class: large
         steps:
               - checkout
