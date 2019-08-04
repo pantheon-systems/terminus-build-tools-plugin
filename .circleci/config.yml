@@ -178,6 +178,13 @@ jobs:
                   SSL_SELF_SIGNED: true
             - image: sameersbn/redis
               name: redisio
+            - image: sameersbn/postgresql
+              name: postgresql
+              environment:
+                  DB_NAME: gitlab
+                  DB_USER: gitlab
+                  DB_PASS: gitlab
+                  DB_EXTENSION: pg_trgm
         resource_class: large
         steps:
               - checkout
