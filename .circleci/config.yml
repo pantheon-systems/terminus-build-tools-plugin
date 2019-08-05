@@ -190,8 +190,8 @@ jobs:
               - run:
                   name: Wait for GitLab
                   command: dockerize -wait tcp://gitlab:80 -timeout 1m
-              - run:
-                  name: Set up GitLab
+#              - run:
+#                  name: Set up GitLab
 
               - run:
                   name: Configure globals
