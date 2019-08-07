@@ -190,9 +190,9 @@ jobs:
               - run:
                   name: Wait for GitLab
                   command: dockerize -wait tcp://gitlab:80 -timeout 5m
-#              - run:
-#                  name: Set up GitLab
-
+              - run:
+                  name: Set up GitLab
+                  command: ./.circleci/configure-selfhosted-gitlab.sh
               - run:
                   name: Configure globals
                   command: ./.circleci/set-up-globals.sh
