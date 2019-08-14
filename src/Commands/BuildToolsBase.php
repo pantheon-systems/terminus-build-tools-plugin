@@ -731,6 +731,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+        $dev_env = $site->getEnvironments()->get('dev');
         $env_id = $env->getName();
         $multidev = empty($multidev) ? $env_id : $multidev;
         $branch = ($multidev == 'dev') ? 'master' : $multidev;
@@ -767,7 +768,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
-        $this->addPantheonRemote($env, $repositoryDir);
+        $this->addPantheonRemote($dev_env, $repositoryDir);
         // $this->passthru("git -C $repositoryDir fetch pantheon");
 
         // Record the metadata for this build
