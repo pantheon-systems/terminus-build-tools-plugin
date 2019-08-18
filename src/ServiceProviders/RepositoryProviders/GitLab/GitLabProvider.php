@@ -56,7 +56,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $gitlab_org = '', $private = false) {
+    public function createRepository($local_site_path, $target, $gitlab_org = '', $visibility = 'public') {
         $createRepoUrl = "api/v4/projects";
         $target_org = $gitlab_org;
         if (empty($gitlab_org)) {
@@ -74,6 +74,10 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
                 $postData = ['name' => $target];
             }
         }
+
+        // Set project visibility as specified.
+        $postData['visibility'] = $visibility;
+
         $target_project = "$target_org/$target";
 
         // Create a GitLab repository

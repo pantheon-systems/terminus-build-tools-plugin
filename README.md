@@ -105,6 +105,7 @@ Additional options are available to further customize the build:project:create c
 | --admin-email    | The email address to use for the admin |
 | --ci             | The CI provider to use. Defaults to "circleci" |
 | --git            | The git repository provider to use. Defaults to "github" |
+| --visibility     | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
 
 See `terminus help build:project:create` for more information.
 
