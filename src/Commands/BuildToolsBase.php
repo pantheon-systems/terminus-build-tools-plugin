@@ -466,7 +466,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     // TODO: if we could look up the commandfile for
     // Pantheon\Terminus\Commands\Site\CreateCommand,
     // then we could just call its 'create' method
-    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null,])
+    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null, 'region' => null,])
     {
         if ($this->sites()->nameIsTaken($site_name)) {
             throw new TerminusException('The site name {site_name} is already taken.', compact('site_name'));
@@ -485,6 +485,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (!empty($org_id = $options['org'])) {
             $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
             $workflow_options['organization_id'] = $org->id;
+        }
+
+        // Add the site region.
+        if (!empty($region = $options['region'])) {
+            $workflow_options['preferred_zone'] = $region;
         }
 
         // Create the site
