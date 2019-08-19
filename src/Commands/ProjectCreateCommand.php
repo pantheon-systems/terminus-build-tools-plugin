@@ -208,6 +208,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'keep' => false,
             'ci' => '',
             'git' => 'github',
+            'region' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -218,6 +219,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
+        $region = $options['region'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -295,13 +297,13 @@ class ProjectCreateCommand extends BuildToolsBase
             // Create a Pantheon site
             ->progressMessage('Create Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $label, $team, $target, $siteDir) {
+                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region) {
                     // Look up our upstream.
                     $upstream = $this->autodetectUpstream($siteDir);
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
-                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
+                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team, 'region' => $region]);
 
                     $siteInfo = $site->serialize();
                     $site_uuid = $siteInfo['id'];
