@@ -189,6 +189,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
+     * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
      */
     public function createProject(
         $source,
@@ -208,6 +209,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'keep' => false,
             'ci' => '',
             'git' => 'github',
+            'visibility' => 'public',
         ])
     {
         $this->warnAboutOldPhp();
@@ -218,6 +220,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
+        $visibility = $options['visibility'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -278,9 +281,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $target, $target_org, $siteDir) {
+                function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility) {
 
-                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
+                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org, $visibility);
 
                     $repositoryAttributes = $ci_env->getState('repository');
                     // $github_token = $repositoryAttributes->token();
