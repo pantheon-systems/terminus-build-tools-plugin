@@ -105,6 +105,7 @@ Additional options are available to further customize the build:project:create c
 | --admin-email    | The email address to use for the admin |
 | --ci             | The CI provider to use. Defaults to "circleci" |
 | --git            | The git repository provider to use. Defaults to "github" |
+| --region         | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
 
 See `terminus help build:project:create` for more information.
 
