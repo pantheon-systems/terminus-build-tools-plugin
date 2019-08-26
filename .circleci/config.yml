@@ -44,7 +44,7 @@ jobs:
                     - composer-v1-
             - run: composer install -n
             - save_cache:
-                keys: composer-v1-{{ checksum "composer.lock" }}
+                key: composer-v1-{{ checksum "composer.lock" }}
                 paths:
                     - vendor
             - run:
