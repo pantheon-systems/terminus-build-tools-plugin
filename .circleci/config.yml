@@ -42,7 +42,7 @@ jobs:
                     - composer-v1-{{ checksum "composer.lock" }}
                     # fallback if no exact match is found
                     - composer-v1-
-            - composer install -n
+            - run: composer install -n
             - save_cache:
                 keys: composer-v1-{{ checksum "composer.lock" }}
                 paths:
