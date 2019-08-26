@@ -10,5 +10,11 @@
         "terminus": {
             "compatible-version": "^2"
         }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.3"
+    },
+    "scripts": {
+        "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
     }
 }

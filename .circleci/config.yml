@@ -36,7 +36,10 @@ jobs:
     unit:
         <<: *defaults
         steps:
-            - run: echo "No unit tests yet."
+            - checkout
+            - run:
+                name: Run unit tests
+                command: composer run unit-test
 
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
     # We test creating a PR and merging it to master here, but omit those tests
