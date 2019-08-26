@@ -39,7 +39,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $github_org = '')
+    public function createRepository($local_site_path, $target, $github_org = '', $visibility = 'public')
     {
         // We need a different URL here if $github_org is an org; if no
         // org is provided, then we use a simpler URL to create a repository
@@ -56,6 +56,12 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
         // Create a GitHub repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
         $postData = ['name' => $target];
+
+        // Add parameter to the post request if repository was requested to be
+        // private
+        if($visibility != 'public') {
+            $postData['private'] = 'true';
+        }
         $result = $this->api()->request($createRepoUrl, $postData);
 
         // Create a git repository. Add an origin just to have the data there

@@ -71,7 +71,7 @@ trait GitLabAPITrait
    */
   public function credentialRequests()
   {
-    $instructions = "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.";
+    $instructions = "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api', 'read_repository', and 'write_repository' (required) scopes.";
 
     $validation_message = 'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.';
 
