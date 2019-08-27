@@ -26,7 +26,7 @@ composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-t
 
 ## Setup
 
-It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects have been update to use Terminus 2 and the unstable Build Tools 2.x release.
+It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects have been updated to use Terminus 2 and the unstable Build Tools 2.x release.
 
 The standard example repositories are each assigned an abbreviation, as shown below:
 
@@ -52,7 +52,7 @@ Note: It is important to specify the name of your agency organization via the `-
 
 ## Available Services
 
-At the moment, the build:project:create command only supports services in the following combination: 
+At the moment, the `build:project:create` command only supports services in the following combination: 
 
 | Git Host  | CI Service |
 | --------- | ---------- |
@@ -81,18 +81,18 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 #### Limitations
 
 - Automatic multidev deletion not working; test multidevs must be deleted manually
-- Commits to the Pantheon site are not pushed back to the GitLab repository
+- Commits to the Pantheon site are not pushed back to the BitBucket repository
 - Comments are not added to pull requests when multidevs are created
 
 ## Customization
 
-More starter sites will be available in the future. You may easily create your own by forking one of the standard starter sites and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the build:project:create command:
+More starter sites will be available in the future. You may easily create your own by forking one of the standard starter sites and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the `build:project:create` command:
 ```
 $ terminus build:project:create --team='My Agency Name' my-project/my-starter my-site
 ```
 See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts for your starter projects.
 
-Additional options are available to further customize the build:project:create command:
+Additional options are available to further customize the `build:project:create` command:
 
 | Option           | Description    |
 | ---------------- | -------------- |
@@ -169,7 +169,7 @@ To use this tool on a Pantheon site that does not have multidev environments sup
 
 ## Other Build Tools Commands
 
-The examples below show how some of the other build:env: commands are used within test scripts. It is not usually necessary to run any of these commands directly; they may be of interest if you are customizing or building your own test scripts.
+The examples below show how some of the other `build:env:` commands are used within test scripts. It is not usually necessary to run any of these commands directly; they may be of interest if you are customizing or building your own test scripts.
 
 ### Create Testing Multidev
 
