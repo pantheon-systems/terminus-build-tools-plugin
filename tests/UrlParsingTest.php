@@ -33,7 +33,9 @@ final class UrlParsingTest extends TestCase
             ['https://gitlab.com/rvtraveller/example-gitlab-bt-repo', 'rvtraveller', 'example-gitlab-bt-repo'],
             ['https://my-custom-gitlab-host.com/rvtraveller/example-custom-bt-repo', 'rvtraveller', 'example-custom-bt-repo'],
             ['http://insecure-custom-gitlab-host/rvtraveller/example-insecure-custom-gl-bt-repo', 'rvtraveller', 'example-insecure-custom-gl-bt-repo'],
-            ['https://gitlab-ci-token:redactedtoken@custom-git-host.com/rvtraveller/subgroup/smokey.git', 'rvtraveller/subgroup', 'smokey']
+            ['https://gitlab-ci-token:redactedtoken@custom-git-host.com/rvtraveller/subgroup/smokey.git', 'rvtraveller/subgroup', 'smokey'],
+            ['https://bitbucket.org/pantheon-systems/example-drops-8-composer', 'pantheon-systems', 'example-drops-8-composer'],
+            ['git@bitbucket.org:pantheon-systems/example-wordpress-composer.git', 'pantheon-systems', 'example-wordpress-composer'],
         ];
     }
 
