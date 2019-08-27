@@ -12,17 +12,13 @@ cd "$TARGET_REPO_WORKING_COPY"
 # Remove the fixture cleanup script so that the pull requests et. al.
 # created in the test repo are not deleted. We'll remove them in this
 # process so that we can better test the results of the operations.
-FIXTURE_CLEANUP_SCRIPT="$TARGET_REPO_WORKING_COPY/.ci/scripts/05-merge-master"
+FIXTURE_CLEANUP_SCRIPT="$TARGET_REPO_WORKING_COPY/.ci/deploy/pantheon/dev-multidev"
 
 # This presumes the test script layout of the example-drops-8-composer repo
-echo << __EOT__ > $FIXTURE_CLEANUP_SCRIPT
-#!/bin/bash
-
-echo "Script removed for testing"
-__EOT__
+sed -e '/build:env:delete:pr/ s/^#*/#/' -i $FIXTURE_CLEANUP_SCRIPT
 chmod +x "$FIXTURE_CLEANUP_SCRIPT"
 git add "$FIXTURE_CLEANUP_SCRIPT"
-git commit -m "Script removed for testing"
+git commit -m "build:env:delete:pr commented out for testing"
 
 # Create a test pull request
 function createTestPR()
