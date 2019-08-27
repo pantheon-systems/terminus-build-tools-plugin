@@ -466,7 +466,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     // TODO: if we could look up the commandfile for
     // Pantheon\Terminus\Commands\Site\CreateCommand,
     // then we could just call its 'create' method
-    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null,])
+    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null, 'region' => null,])
     {
         if ($this->sites()->nameIsTaken($site_name)) {
             throw new TerminusException('The site name {site_name} is already taken.', compact('site_name'));
@@ -485,6 +485,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (!empty($org_id = $options['org'])) {
             $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
             $workflow_options['organization_id'] = $org->id;
+        }
+
+        // Add the site region.
+        if (!empty($region = $options['region'])) {
+            $workflow_options['preferred_zone'] = $region;
         }
 
         // Create the site
@@ -516,6 +521,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
+        if ($from_env->id === $target->id) {
+            $this->log()->notice("Skipping clone since environments are the same.");
+            return;
+        }
+        
         $from_name = $from_env->getName();
 
         // Clone files if we're only doing files, or if "only do db" is not set.
@@ -726,6 +736,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+        $dev_env = $site->getEnvironments()->get('dev');
         $env_id = $env->getName();
         $multidev = empty($multidev) ? $env_id : $multidev;
         $branch = ($multidev == 'dev') ? 'master' : $multidev;
@@ -762,7 +773,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
-        $this->addPantheonRemote($env, $repositoryDir);
+        $this->addPantheonRemote($dev_env, $repositoryDir);
         // $this->passthru("git -C $repositoryDir fetch pantheon");
 
         // Record the metadata for this build
