@@ -12,7 +12,8 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8.36"
+        "phpunit/phpunit": "^4.8.36",
+        "doctrine/instantiator": "1.0.5"
     },
     "scripts": {
         "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
