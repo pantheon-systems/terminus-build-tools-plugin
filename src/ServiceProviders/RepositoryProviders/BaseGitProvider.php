@@ -68,4 +68,8 @@ abstract class BaseGitProvider
         file_put_contents($buildMetadataFile, $metadataContents);
     }
 
+    public function alterBuildMetadata(&$buildMetadata)
+    {
+    }
+
 }

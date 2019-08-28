@@ -80,4 +80,11 @@ interface GitProvider extends ProviderInterface
      */
     public function branchesForPullRequests($target_project, $state);
 
+    /**
+     * Alter the build metadata being written to Pantheon with any provider specific information.
+     *
+     * @param array $buildMetadata Build metadata to alter.
+     */
+    public function alterBuildMetadata(&$buildMetadata);
+
 }
