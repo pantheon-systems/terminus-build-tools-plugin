@@ -89,11 +89,11 @@ The `build:project:create` command is used to initialize projects within the Git
 
 Additional options are available to further customize the `build:project:create` command:
  
- | Option                       | Description    |
- | ---------------------------- | -------------- |
- | --pantheon-site             | The name to use for the Pantheon site (defaults to the name of the Git site) | 
- | --team                       | The Pantheon team to associate the site with |
- | --org                        | The Git organization to place the repository in (defaults to authenticated user) |
+ | Option             | Description    |
+ | ------------------ | -------------- |
+ | --pantheon-site    | The name to use for the Pantheon site (defaults to the name of the Git site) | 
+ | --team             | The Pantheon team to associate the site with |
+ | --org              | The Git organization to place the repository in (defaults to authenticated user) |
  | --label            | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
  | --email            | The git user email address to use when committing build results |
  | --test-site-name   | The name to use when installing the test site |
@@ -101,12 +101,194 @@ Additional options are available to further customize the `build:project:create`
  | --admin-email      | The email address to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
- | --ci                         | The CI provider to use. Defaults to "circleci" |
- | --git                        | The git repository provider to use. Defaults to "github" |
- | --visibility                 | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
- | --region                     | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+ | --ci               | The CI provider to use. Defaults to "circleci" |
+ | --git              | The git repository provider to use. Defaults to "github" |
+ | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
+ | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
  
- See `terminus help build:project:create` for more information.
+See `terminus help build:project:create` for more information.
+ 
+### build:project:repair
+ 
+The `build:project:repair` command is used to repair projects that were created with the Build Tools plugin.
+ 
+#### Command Options
+ 
+Additional options are available to further customize the `build:project:repair` command:
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --env            | The environment variables you would like to set on the CI system |
+ 
+### build:comment:add:commit
+
+The `build:comment:add:commit` command is used to add a comment to a commit on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
+
+#### Command Options
+
+Additional options are available to customize the `build:comment:add:commit` command:
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --sha            | The SHA hash of the commit to add the comment to |
+ | --message        | The message to post to the commit |
+ | --site_url       | If provided, will include a "Visit Site" link at the start of the comment, linking to the provided site URL |
+ 
+### build:credentials:clear
+ 
+The `build:credentials:clear` command is available to clear cached credentials from Build Tools. This is useful when developing Build Tools or trying to remove credentials from a machine.
+
+#### Command Options
+
+There are no additional options for this command.
+
+### build:env:create
+
+The `build:env:create` command creates a multidev environment on Pantheon.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --label          | The name of the environment in commit comments |
+ | --clone-content  | Clone the content from the dev environment to the new multidev environment |
+ | --db-only        | When cloning content, whether to only clone the database (by default, both the database and files are cloned |
+ | --message        | The commit message to use when committing the built assets to Pantheon |
+ 
+### build:env:delete:ci
+
+The `build:env:delete:ci` command is used to delete multidev environments on Pantheon that match the CI pattern of builds (ci-*).
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --keep           | The number of environments matching the pattern to keep |
+ | --dry-run        | If set, this command only determines which environments should be deleted but doesn't actually delete them |
+ 
+### build:env:delete:pr
+
+The `build:env:delete:pr` command is used to delete multidev environments on Pantheon that match the PR pattern of builds (pr-*) for PRs that have been closed.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --dry-run        | If set, this command only determines which environments should be deleted but doesn't actually delete them |
+ 
+### build:env:install
+
+The `build:env:install` command is used to install the CMS in the specified site.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --account-mail   | The email address for the first user account created during install |
+ | --account-name   | The username for the first user account created during install |
+ | --account-pass   | The password for the first user account created during install |
+ | --site-mail      | The email address used for the CMS |
+ | --site-name      | The name of the site to be set within the CMS |
+ 
+### build:env:list
+
+The `build:env:list` command is used to list the multidev environments in the specified site.
+
+#### Command Options
+
+There are no additional options for this command.
+
+### build:env:merge
+
+The `build:env:merge` command merges a multidev environment in Pantheon into the dev environment.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --label          | The name of the environment when referred to in commit comments |
+ | --delete         | Whether or not to delete the multidev environment after it is merged |
+
+### build:env:obliterate
+
+The `build:env:obliterate` command deletes a Pantheon site that was set up through the `build:project:create` workflow.
+
+#### Command Options
+
+There are no additional command options for this command.
+
+### build:env:push
+
+The `build:env:push` command pushes code to an existing Pantheon site/environment.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --label          | The name of the site when referred to in commit comments. |
+ | --message        | The commit message to use when committing built code to Pantheon |
+ 
+### build:project:info
+ 
+The `build:project:info` command displays information about a site created by the `build:project:create` command.
+
+#### Command Options
+
+There are no additional command options for this command.
+
+### build:secrets:delete
+
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
+
+### build:secrets:list
+
+The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
+  
+### build:secrets:set
+
+The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
+ | --clear          | If set, will overwrite a secret with the existing name |
+ | --skip-if-empty  | If set, will not write anything if the value passed to the command is empty |
+ 
+### build:secrets:show
+
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
+
+### build:workflow:wait
+
+The `build:workflow:wait` command waits for a workflow in Pantheon to complete before returning. This is useful when waiting for code to be deployed to a Pantheon environment.
+
+#### Command Options
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --start          | The time to ignore workflow operations before |
+ | --max            | The maximum amount of time to wait for a workflow to complete |
+
 
 ## Customization
 
@@ -117,10 +299,9 @@ $ terminus build:project:create --team='My Agency Name' my-project/my-starter my
 See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts for your starter projects.
 
 
-
 ### Configuration
 
-Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`.
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would liike every site created within their Pantheon team.
 
 #### Default Values for Options
 
@@ -155,7 +336,6 @@ To customize this for a specific project:
   - TERMINUS_SITE: The name of the Pantheon site that will be used in testing.
   - TERMINUS_TOKEN: A Terminus OAuth token that has write access to the terminus site specified by TERMINUS_SITE.
   - GIT_EMAIL: Used to configure the git user’s email address for commits we make.
-  - GITHUB_TOKEN: Optional, if needed.
 - Customize `dependencies:` as needed to install additional tools.
 - Replace example `test:` section with commands to run your tests.
 - [Add a `build-assets` script](https://pantheon.io/blog/writing-composer-scripts) to your composer.json file.
