@@ -20,9 +20,11 @@ Build Tools is a Terminus Plugin that contains a collection of commands useful f
 ## Project Purpose
 The main purposes of the Build Tools project are to:
 
-Ease the creation of new projects making use of an external Git provider, a Continuous Integration service, and Pantheon. This is primarily done through the [`build:project:create` commands](#buildprojectcreate), which scaffolds new projects from a [template repository](#template-repositories) and performs one-time setup, such as configuring SSH keys and environment variables, needed to connect an external Git provider and CI service with Pantheon. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). To use your own template repository see [Customization](#customization).
+**Ease the creation of new projects making use of an external Git provider, a Continuous Integration service, and Pantheon.**
+This is primarily done through the [`build:project:create` commands](#buildprojectcreate), which scaffolds new projects from a [template repository](#template-repositories) and performs one-time setup, such as configuring SSH keys and environment variables, needed to connect an external Git provider and CI service with Pantheon. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). To use your own template repository see [Customization](#customization).
 
-Add additional commands to Terminus to make tasks common in an automated CI workflow easier. See [Commands](#commands) and [Build Tools Command Examples](#build-tools-command-examples) for details.
+**Add additional commands to Terminus to make tasks common in an automated CI workflow easier.**
+See [Commands](#commands) and [Build Tools Command Examples](#build-tools-command-examples) for details.
 
 ## Requirements
 
