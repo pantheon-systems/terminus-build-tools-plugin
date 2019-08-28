@@ -3,12 +3,12 @@
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
 [![Terminus v1.x Compatible](https://img.shields.io/badge/terminus-v1.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x)
 
-Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a GitHub PR workflow with Behat tests run via Circle CI (or some other testing service). For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). There is also a startup command that will set up and configure a new Composer-managed test site with scripts.
+Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a Git PR workflow with Behat tests run via a CI provider. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/).
 
 ## Requirements
 
-- If you are using Terminus 2, you must use the development Build Tools 2.x release
-- If you are using Terminus 1, you must use the stable Build Tools 1.x release
+- If you are using Terminus 2, you must use the Build Tools 2.x release
+- If you are using Terminus 1, you must use the stable Build Tools 1.x release. Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline).
 
 PHP 7.2 is recommended.
 
@@ -60,17 +60,11 @@ At the moment, the `build:project:create` command only supports services in the 
 | GitLab    | GitLabCI   |
 | BitBucket | CircleCI   |
 
-Of these, only GitHub with CircleCI is complete and stable. The GitLab and BitBucket services are incomplete; see the sections below for details.
-
 ### Starting a new GitLab Project
 
 ```
 $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 ```
-
-#### Limitations
-
-- Commits to the Pantheon site are not pushed back to the GitLab repository
 
 ### Starting a new BitBucket Project
 
@@ -81,34 +75,48 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 #### Limitations
 
 - Automatic multidev deletion not working; test multidevs must be deleted manually
-- Commits to the Pantheon site are not pushed back to the BitBucket repository
 - Comments are not added to pull requests when multidevs are created
+
+## Commands
+
+The following commands are available as part of the Build Tools plugin.
+
+### build:project:create
+
+The `build:project:create` command is used to initialize projects within the Git PR workflow. Automated setup of the Pantheon website along with the corresponding Git and CI provider is included.
+
+#### Command Options
+
+Additional options are available to further customize the `build:project:create` command:
+ 
+ | Option                       | Description    |
+ | ---------------------------- | -------------- |
+ | --pantheon-site             | The name to use for the Pantheon site (defaults to the name of the Git site) | 
+ | --team                       | The Pantheon team to associate the site with |
+ | --org                        | The Git organization to place the repository in (defaults to authenticated user) |
+ | --label            | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
+ | --email            | The git user email address to use when committing build results |
+ | --test-site-name   | The name to use when installing the test site |
+ | --admin-password   | The password to use for the admin when installing the test site |
+ | --admin-email      | The email address to use for the admin |
+ | --stability        | The stability to use with composer when creating the project (defaults to dev) |
+ | --keep             | The ability to keep a project repository cloned after your project is created |
+ | --ci                         | The CI provider to use. Defaults to "circleci" |
+ | --git                        | The git repository provider to use. Defaults to "github" |
+ | --visibility                 | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
+ | --region                     | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+ 
+ See `terminus help build:project:create` for more information.
 
 ## Customization
 
-More starter sites will be available in the future. You may easily create your own by forking one of the standard starter sites and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the `build:project:create` command:
+You may easily create your own by forking one of the standard starter sites (linked above) and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the `build:project:create` command:
 ```
 $ terminus build:project:create --team='My Agency Name' my-project/my-starter my-site
 ```
 See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on defining your own shortcuts for your starter projects.
 
-Additional options are available to further customize the `build:project:create` command:
 
-| Option           | Description    |
-| ---------------- | -------------- |
-| --pantheon-site  | The name to use for the Pantheon site (defaults to the name of the GitHub site) | 
-| --team           | The Pantheon team to associate the site with |
-| --org            | The GitHub org to place the repository in (defaults to authenticated user) |
-| --email          | The git user email address to use when committing build results |
-| --test-site-name | The name to use when installing the test site |
-| --admin-password | The password to use for the admin when installing the test site |
-| --admin-email    | The email address to use for the admin |
-| --ci             | The CI provider to use. Defaults to "circleci" |
-| --git            | The git repository provider to use. Defaults to "github" |
-| --visibility     | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
-| --region         | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
-
-See `terminus help build:project:create` for more information.
 
 ### Configuration
 
