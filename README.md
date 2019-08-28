@@ -16,6 +16,7 @@ Build Tools is a Terminus Plugin that contains a collection of commands useful f
 7. [Customization](#customization)
 8. [Build Tools Command Examples](#build-tools-command-examples)
 9. [Help](#help)
+10. [Related Repositories](#related-repositories)
 
 ## Project Purpose
 The main purposes of the Build Tools project are to:
@@ -53,13 +54,13 @@ composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-t
 
 It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `2` and Build Tools `2.x`.
 
-### Template Repositories
-
 The default template repositories are each assigned an abbreviation, as shown below:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
+
+More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
@@ -414,3 +415,23 @@ This command will commit the generated artifacts to an existing multidev environ
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
+
+## Related Repositories
+
+### Template Repositories
+
+In addition to the Terminus Build Tools Plugin, Pantheon maintains template repositories for:
+
+- [WordPress](https://github.com/pantheon-systems/example-wordpress-composer)
+- [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer)
+- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer)
+
+Each repository includes an opinionated set of workflows and deployment scripts. These templates are meant to be a one-time starting point for new projects and customized as needed. Improvements made over time must be manually applied to existing projects. These are examples, **not** frameworks.
+
+### Build Tools CI Dockerfile
+
+Pantheon maintains a [Build Tools CI Dockerfile](https://github.com/pantheon-systems/docker-build-tools-ci/), which is deployed to [`quay.io`](https://quay.io/repository/pantheon-public/build-tools-ci?tab=tags), for use in Continuous Integration environments. It contains common Pantheon tools, such as Terminus and the Terminus Build Tools plugin. The deployed image tags follow semantic versioning.
+
+### Quicksilver Pushback
+
+[Quicksilver pushback](https://github.com/pantheon-systems/quicksilver-pushback/) is a project that makes use of Pantheon's [Quicksilver Webhooks](https://pantheon.io/docs/quicksilver) to apply code commits made on Pantheon to an external Git provider.
