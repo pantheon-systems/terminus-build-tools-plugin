@@ -5,12 +5,25 @@
 
 Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a Git PR workflow with Behat tests run via a CI provider. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/).
 
+## Table of Contents
+
+1. [Requirements](#requirements)
+2. [Installation](#installation)
+3. [Setup](#setup)
+4. [Available Services](#available-services)
+5. [Commands](#commands)
+6. [Customization](#customization)
+7. [Other Build Tools Commands](#other-build-tools-commands)
+8. [Help](#help)
+
 ## Requirements
 
 - If you are using Terminus 2, you must use the Build Tools 2.x release
 - If you are using Terminus 1, you must use the stable Build Tools 1.x release. Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline).
 
 PHP 7.2 is recommended.
+
+## Installation
 
 ### Installing Build Tools 2.x:
 ```
