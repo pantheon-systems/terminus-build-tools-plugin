@@ -111,9 +111,6 @@ class EnvDeleteCommand extends BuildToolsBase
             $oldestEnvironments
         );
 
-        // Find the URL to the remote origin
-        $remoteUrlFromGit = exec('git config --get remote.origin.url');
-
         // Find the URL of the remote origin stored in the build metadata.
         // If there is no metadata, then there is nothing we can delete. Exit.
         $remoteUrl = $this->retrieveRemoteUrlFromBuildMetadata($site_id, $oldestEnvironments);
@@ -125,11 +122,6 @@ class EnvDeleteCommand extends BuildToolsBase
         // Create a git repository service provider appropriate to the URL and ensure credentials are present
         $this->inferGitProviderFromUrl($remoteUrl);
         $this->providerManager()->validateCredentials();
-
-        // Bail if there is a URL mismatch
-        if (!empty($remoteUrlFromGit) && ($this->projectFromRemoteUrl($remoteUrlFromGit) != $this->projectFromRemoteUrl($remoteUrl))) {
-            throw new TerminusException('Remote repository mismatch: local repository, {gitrepo} is different than the repository {metadatarepo} associated with the site {site}.', ['gitrepo' => $this->projectFromRemoteUrl($remoteUrlFromGit), 'metadatarepo' => $this->projectFromRemoteUrl($remoteUrl), 'site' => $site_id]);
-        }
 
         // Create a git repository service provider appropriate to the URL and ensure credentials are present
         $provider = $this->inferGitProviderFromUrl($remoteUrl);
