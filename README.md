@@ -1,37 +1,47 @@
 # Terminus Build Tools Plugin
 
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
-[![Terminus v1.x Compatible](https://img.shields.io/badge/terminus-v1.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x)
+[![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x)
 
-Terminus Plugin that contains a collection of commands useful during the build step on a [Pantheon](https://www.pantheon.io) site that manages its files using Composer, and uses a Git PR workflow with Behat tests run via a CI provider. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/).
+Build Tools is a Terminus Plugin that contains a collection of commands useful for projects making use of an external Git provider and Continuous Integration (CI) along with [Pantheon](https://www.pantheon.io).
 
 ## Table of Contents
 
-1. [Requirements](#requirements)
-2. [Installation](#installation)
-3. [Setup](#setup)
-4. [Available Services](#available-services)
-5. [Commands](#commands)
-6. [Customization](#customization)
-7. [Other Build Tools Commands](#other-build-tools-commands)
-8. [Help](#help)
+1. [Project Purpose](#project-purpose)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Setup](#setup)
+5. [Available Services](#available-services)
+6. [Commands](#commands)
+7. [Customization](#customization)
+8. [Build Tools Command Examples](#build-tools-command-examples)
+9. [Help](#help)
+
+## Project Purpose
+The main purposes of the Build Tools project are to:
+
+Ease the creation of new projects making use of an external Git provider, a Continuous Integration service, and Pantheon. This is primarily done through the [`build:project:create` commands](#buildprojectcreate), which scaffolds new projects from a [template repository](#template-repositories) and performs one-time setup, such as configuring SSH keys and environment variables, needed to connect an external Git provider and CI service with Pantheon. For detailed set-up instructions, see the [Terminus Build Tools Guide](https://pantheon.io/docs/guides/build-tools/). To use your own template repository see [Customization](#customization).
+
+Add additional commands to Terminus to make tasks common in an automated CI workflow easier. See [Commands](#commands) and [Build Tools Command Examples](#build-tools-command-examples) for details.
 
 ## Requirements
 
-- If you are using Terminus 2, you must use the Build Tools 2.x release
-- If you are using Terminus 1, you must use the stable Build Tools 1.x release. Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline).
+- If you are using Terminus 2, you must use the Build Tools `2.x` release
+- If you are using Terminus 1, you must use [the Build Tools `1.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x). Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline) and version 2 is recommended.
 
-PHP 7.2 is recommended.
+PHP `7.2` or greater is recommended.
 
 ## Installation
 
 ### Installing Build Tools 2.x:
+
 ```
 mkdir -p ~/.terminus/plugins
 composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta12
 ```
 
 ### Installing Build Tools 1.x:
+
 ```
 mkdir -p ~/.terminus/plugins
 composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^1
@@ -39,13 +49,15 @@ composer create-project -d ~/.terminus/plugins pantheon-systems/terminus-build-t
 
 ## Setup
 
-It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects have been updated to use Terminus 2 and the unstable Build Tools 2.x release.
+It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `2` and Build Tools `2.x`.
 
-The standard example repositories are each assigned an abbreviation, as shown below:
+### Template Repositories
 
-- [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): wp
-- [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): d8
-- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): d7
+The default template repositories are each assigned an abbreviation, as shown below:
+
+- [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
+- [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
+- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
@@ -57,15 +69,15 @@ This command will create:
 - A GitHub repository
 - A CircleCI test configuration
 
-It will prompt you for the credentials it needs to create these assets.
+It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
 
 Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
-Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will not have the capability to create multidev environments.
+Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will be associated with your user and will not have the capability to create multidev environments.
 
 ## Available Services
 
-At the moment, the `build:project:create` command only supports services in the following combination: 
+The `build:project:create` command supports services in the following combination: 
 
 | Git Host  | CI Service |
 | --------- | ---------- |
@@ -87,8 +99,8 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 
 #### Limitations
 
+**BitBucket**
 - Automatic multidev deletion not working; test multidevs must be deleted manually
-- Comments are not added to pull requests when multidevs are created
 
 ## Commands
 
@@ -123,7 +135,7 @@ See `terminus help build:project:create` for more information.
  
 ### build:project:repair
  
-The `build:project:repair` command is used to repair projects that were created with the Build Tools plugin.
+The `build:project:repair` command is used to repair projects that were created with the Build Tools plugin. This is useful for rotating credentials, such as provider authentication tokens.
  
 #### Command Options
  
@@ -157,7 +169,7 @@ There are no additional options for this command.
 
 ### build:env:create
 
-The `build:env:create` command creates a multidev environment on Pantheon.
+The `build:env:create` command creates the specified multidev environment on the given Pantheon site from the build assets at the current working directory.
 
 #### Command Options
 
@@ -170,7 +182,7 @@ The `build:env:create` command creates a multidev environment on Pantheon.
  
 ### build:env:delete:ci
 
-The `build:env:delete:ci` command is used to delete multidev environments on Pantheon that match the CI pattern of builds (ci-*).
+The `build:env:delete:ci` command is used to delete multidev environments on Pantheon that match the CI pattern of builds (`ci-*`).
 
 #### Command Options
 
@@ -181,7 +193,7 @@ The `build:env:delete:ci` command is used to delete multidev environments on Pan
  
 ### build:env:delete:pr
 
-The `build:env:delete:pr` command is used to delete multidev environments on Pantheon that match the PR pattern of builds (pr-*) for PRs that have been closed.
+The `build:env:delete:pr` command is used to delete multidev environments on Pantheon that match the PR pattern of builds (`pr-*`) for pull requests (GitHub and BitBucket) or merge requests (GitLab) that have been closed.
 
 #### Command Options
 
@@ -191,7 +203,7 @@ The `build:env:delete:pr` command is used to delete multidev environments on Pan
  
 ### build:env:install
 
-The `build:env:install` command is used to install the CMS in the specified site.
+The `build:env:install` command is used to install the CMS on a Pantheon site the specified site.
 
 #### Command Options
 
@@ -224,7 +236,9 @@ The `build:env:merge` command merges a multidev environment in Pantheon into the
 
 ### build:env:obliterate
 
-The `build:env:obliterate` command deletes a Pantheon site that was set up through the `build:project:create` workflow.
+The `build:env:obliterate` command deletes a project that was set up through the `build:project:create` workflow. This includes the Pantheon site as well as the Git provider repository and the CI provider project.
+
+Note: this is a destructive, irreversible command that should be used with caution.
 
 #### Command Options
 
@@ -232,7 +246,7 @@ There are no additional command options for this command.
 
 ### build:env:push
 
-The `build:env:push` command pushes code to an existing Pantheon site/environment.
+The `build:env:push` command pushes code in the current directory to an existing Pantheon site/environment.
 
 #### Command Options
 
@@ -251,7 +265,7 @@ There are no additional command options for this command.
 
 ### build:secrets:delete
 
-The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -283,7 +297,7 @@ The `build:secrets:set` command sets a secret in a Pantheon. These secrets are c
  
 ### build:secrets:show
 
-The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -305,7 +319,7 @@ The `build:workflow:wait` command waits for a workflow in Pantheon to complete b
 
 ## Customization
 
-You may easily create your own by forking one of the standard starter sites (linked above) and customizing it to suit. To use a custom starter, register your project on Packagist, and then use the projects org/name with the `build:project:create` command:
+You may easily create your own project template by forking one of the Pantheon maintained examples (linked above) and customizing it to suit your needs. To use a custom starter, register your project on Packagist, and then use the projects org/name with the `build:project:create` command:
 ```
 $ terminus build:project:create --team='My Agency Name' my-project/my-starter my-site
 ```
@@ -328,6 +342,7 @@ command:
           admin-password: secret-secret
           team: My Pantheon Org
 ```
+
 #### Starter Site Shortcuts
 
 If you often create sites based on certain common starter sites, you may also use your Terminus configuration file to define custom starter site shortcuts. The example below defines shortcuts for the Lightning and Contenta distributions:
@@ -345,30 +360,29 @@ Note that the project name follows the standard defined by Composer: `org-name` 
 
 To customize this for a specific project:
 
-- Define necessary environment variables in the Circle project settings file `circle.yml`:
+- Define necessary environment variables within your CI provider:
   - TERMINUS_SITE: The name of the Pantheon site that will be used in testing.
   - TERMINUS_TOKEN: A Terminus OAuth token that has write access to the terminus site specified by TERMINUS_SITE.
   - GIT_EMAIL: Used to configure the git user’s email address for commits we make.
 - Customize `dependencies:` as needed to install additional tools.
 - Replace example `test:` section with commands to run your tests.
 - [Add a `build-assets` script](https://pantheon.io/blog/writing-composer-scripts) to your composer.json file.
-- Add any needed cleanup steps (e.g. `drush updatedb`) after `build:env:merge`.
 
 ### PR Environments vs Other Test Environments
 
-Note that using a single environment for each PR means that it is not possible to run multiple tests against the same PR at the same time. Currently, no effort is made to cancel running tests when a new one is kicked off; if the concurrent build is not cancelled before a new commit is pushed to the PR branch, then the two tests could potentially conflict with each other. If support for parallel tests on the same PR is desired, then it is possible to eliminate PR environments, and make all tests run in their own independent CI environment. To do this, make the following change in the environments section of the circle.yml file:
+Note that using a single environment for each PR means that it is not possible to run multiple tests against the same PR at the same time. Currently, no effort is made to cancel running tests when a new one is kicked off; if the concurrent build is not cancelled before a new commit is pushed to the PR branch, then the two tests could potentially conflict with each other. If support for parallel tests on the same PR is desired, then it is possible to eliminate PR environments, and make all tests run in their own independent CI environment. To do this, configure your CI provider by **adding** the following environment variable:
 ```
     TERMINUS_ENV: $CI_LABEL
 ```
 ### Running Tests without Multidevs
 
-To use this tool on a Pantheon site that does not have multidev environments support, it is possible to run all tests against the dev environment. If this is done, then clearly it is not possible to run multiple tests at the same time. To use the dev environment, make the following change in the environments section of the circle.yml file:
+To use this tool on a Pantheon site that does not have multidev environments support, it is possible to run all tests against the `dev` environment. If this is done, then it is not possible to run multiple tests at the same time. To use the `dev` environment, configure your CI provider by **adding** the following environment variable:
 ```
     TERMINUS_ENV: dev
 ```
-** IMPORTANT NOTE: ** If you initially set up your site using `terminus build:project:create`, and you do **not** use the `--team` option, or the team you specify is not an Agency organization, then your Circle configuration will automatically be set up to use only the dev environment. If you later add multidev capabilities to your site, you will need to [visit the Circle CI environment variables configuration page](https://circleci.com/docs/api/#authentication) and **delete** the entry for TERMINUS_ENV.
+** IMPORTANT NOTE: ** If you initially set up your site using `terminus build:project:create`, and you do **not** use the `--team` option, or the team you specify is not an Agency organization, then your configuration will automatically be set up to use only the dev environment. If you later add multidev capabilities to your site, you will need to edit the environment variables in your CI configuration and **delete** the entry for `TERMINUS_ENV`.
 
-## Other Build Tools Commands
+## Build Tools Command Examples
 
 The examples below show how some of the other `build:env:` commands are used within test scripts. It is not usually necessary to run any of these commands directly; they may be of interest if you are customizing or building your own test scripts.
 
@@ -378,7 +392,7 @@ The examples below show how some of the other `build:env:` commands are used wit
 
 This command will commit the generated artifacts to a new branch and then create the requested multidev environment for use in testing.
 
-### Push Code to an Existing Multidev
+### Push Code to the Dev Environment
 
 `terminus build:env:push my-pantheon-site.dev`
 
@@ -398,4 +412,3 @@ This command will commit the generated artifacts to an existing multidev environ
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
-
