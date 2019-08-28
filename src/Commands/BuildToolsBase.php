@@ -15,6 +15,7 @@ use Pantheon\Terminus\Commands\TerminusCommand;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\Terminus\Site\SiteAwareInterface;
 use Pantheon\Terminus\Site\SiteAwareTrait;
+use Pantheon\TerminusBuildTools\Utility\UrlParsing;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Process\ProcessUtils;
@@ -841,43 +842,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * orgUserFromRemoteUrl converts from a url e.g. https://github.com/org/repo
-     * to the "org" portion of the provided url.
-     */
-    protected function orgUserFromRemoteUrl($url)
-    {
-        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
-        {
-            $parsed_url = parse_url($url);
-            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
-            return $path_components[0];
-        }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
-    }
-
-    /**
-     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
-     * to the "repo" portion of the provided url.
-     */
-    protected function repositoryFromRemoteUrl($url)
-    {
-        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
-        {
-            $parsed_url = parse_url($url);
-            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
-            return $path_components[1];
-        }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
-    }
-
-    /**
-     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * projectFromRemoteUrl converts from a url e.g. https://github.com/org/repo
      * to the "org/repo" portion of the provided url.
      */
     protected function projectFromRemoteUrl($url)
     {
-        $org_user = $this->orgUserFromRemoteUrl($url);
-        $repository = $this->repositoryFromRemoteUrl($url);
+        $org_user = UrlParsing::orgUserFromRemoteUrl($url);
+        $repository = UrlParsing::repositoryFromRemoteUrl($url);
         return "$org_user/$repository";
     }
 
