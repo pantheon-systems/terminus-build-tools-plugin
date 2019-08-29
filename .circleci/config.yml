@@ -180,6 +180,52 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
+    test_drupal_8_selfhosted_gitlab:
+        <<: *defaults
+        docker:
+            - image: quay.io/pantheon-public/php-ci:2.x
+              environment:
+                  TERMINUS_BUILD_TOOLS_PROVIDER_GIT_GITLAB_URL: gitlab-secure
+            - image: gitlab/gitlab-ce:latest
+              name: gitlab
+            - image: foxylion/nginx-self-signed-https:latest
+              name: gitlab-secure
+              environment:
+                  REMOTE_URL: http://gitlab:80
+        resource_class: large
+        steps:
+              - checkout
+              - run:
+                  name: Install Dockerize
+                  command: curl -LO https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+                  environment:
+                      DOCKERIZE_VERSION: v0.3.0
+              - run:
+                  name: Wait for GitLab
+                  command: dockerize -wait tcp://gitlab:80 -timeout 5m
+              - run:
+                  name: Set up GitLab
+                  command: ./.circleci/configure-selfhosted-gitlab.sh
+              - run:
+                  name: Configure globals
+                  command: ./.circleci/set-up-globals.sh
+              - run:
+                  name: Check Terminus version
+                  command: terminus --version
+              - run:
+                  name: Test D8 with GitLab
+                  command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+              - run:
+                    name: Watch GitLab CI tests
+                    command: ./.circleci/watch-gitlabci.sh
+              - run:
+                  name: Clean up D8 GitLab fixtures after pass
+                  command: ./.circleci/cleanup-fixtures.sh ok
+              - run:
+                  name: Clean up D8 GitLab fixtures after failure
+                  when: on_fail
+                  command: ./.circleci/cleanup-fixtures.sh fail
+
 workflows:
     version: 2
     build_test:
@@ -197,6 +243,9 @@ workflows:
             - test_wordpress_gitlab:
                 requires:
                    - unit
+            - test_drupal_8_selfhosted_gitlab:
+                requires:
+                    - unit
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
@@ -204,3 +253,4 @@ workflows:
                    - test_drupal_7_github
                    - test_wordpress
                    - test_wordpress_gitlab
+                   - test_drupal_8_selfhosted_gitlab

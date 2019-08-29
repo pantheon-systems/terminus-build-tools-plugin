@@ -47,6 +47,7 @@ class GitLabAPI extends WebAPI
             [
                 'base_uri' => 'https://' . $this->getGitLabUrl(),
                 'headers' => $headers,
+                'verify' => false
             ]
         );
     }
