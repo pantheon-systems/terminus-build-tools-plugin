@@ -51,6 +51,28 @@ jobs:
                 name: Run unit tests
                 command: composer run unit-test
 
+    test_drupal_7_github:
+        <<: *defaults
+        resource_class: large
+        steps:
+            - checkout
+            - run:
+                name: Configure globals
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test D7 with GitHub
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Clean up D7 GitHub fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up D7 GitHub fixtures after failure
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh fail
+
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
     # We test creating a PR and merging it to master here, but omit those tests
     # elsewhere in the interest of saving testing time.
@@ -91,25 +113,25 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_drupal_7_github:
+    test_drupal_8_gitlab:
         <<: *defaults
         resource_class: large
         steps:
             - checkout
             - run:
-                name: Configure globals
+                name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
+                name: Test WordPress with GitLab
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
             - run:
-                name: Watch CircleCI tests
-                command: ./.circleci/watch-circle.sh
+                name: Watch GitLab CI tests
+                command: ./.circleci/watch-gitlabci.sh
             - run:
-                name: Clean up D7 GitHub fixtures after pass
+                name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D7 GitHub fixtures after failure
+                name: Clean up WordPress GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -136,7 +158,10 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_wordpress:
+    # Note that we do more work on the WordPress + GitHub test than in other permutations.
+    # We test creating a PR and merging it to master here, but omit those tests
+    # elsewhere in the interest of saving testing time.
+    test_wordpress_github:
         <<: *defaults
         resource_class: large
         steps:
@@ -148,8 +173,20 @@ jobs:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
-                name: Watch CircleCI tests
+                name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test build:project:repair
+                command: ./.circleci/test-github-repair.sh
+            - run:
+                name: Watch CircleCI tests after build:project:repair
+                command: ./.circleci/watch-circle.sh
+            - run:
+                name: Test merge to master
+                command: ./.circleci/test-merge-master.sh
             - run:
                 name: Clean up WordPress GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -180,25 +217,26 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_d8_gitlab:
+    test_wordpress_bitbucket:
         <<: *defaults
-        resource_class: large
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+                name: Test D8 with BitBucket
+                command: echo "BitBucket test skipped"
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
-                name: Watch GitLab CI tests
-                command: ./.circleci/watch-gitlabci.sh
+                name: Watch CircleCI tests
+                command: echo "Skipping the watch-cicle step too"
+                #command: ./.circleci/watch-circle.sh
             - run:
-                name: Clean up WordPress GitLab fixtures after pass
+                name: Clean up D8 Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up WordPress GitLab fixtures after failure
+                name: Clean up D8 Bitbucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -213,7 +251,7 @@ workflows:
             - test_drupal_7_github:
                 requires:
                    - unit
-            - test_wordpress:
+            - test_wordpress_github:
                 requires:
                    - unit
             - test_wordpress_gitlab:
@@ -225,8 +263,16 @@ workflows:
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_8_github
                    - test_drupal_7_github
-                   - test_wordpress
+                   - test_drupal_8_github
+                   - test_drupal_8_gitlab
+                   - test_wordpress_github
                    - test_wordpress_gitlab
-                   - test_d8_gitlab
+            - test_wordpress_bitbucket:
+                requires:
+                   - unit
+                   - test_drupal_7_github
+                   - test_drupal_8_github
+                   - test_drupal_8_gitlab
+                   - test_wordpress_github
+                   - test_wordpress_gitlab
