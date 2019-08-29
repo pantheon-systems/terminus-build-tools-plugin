@@ -180,6 +180,28 @@ jobs:
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
+    test_d8_gitlab:
+        <<: *defaults
+        resource_class: large
+        steps:
+            - checkout
+            - run:
+                name: dependencies
+                command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Test WordPress with GitLab
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+            - run:
+                name: Watch GitLab CI tests
+                command: ./.circleci/watch-gitlabci.sh
+            - run:
+                name: Clean up WordPress GitLab fixtures after pass
+                command: ./.circleci/cleanup-fixtures.sh ok
+            - run:
+                name: Clean up WordPress GitLab fixtures after failure
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh fail
+
 workflows:
     version: 2
     build_test:
@@ -197,6 +219,9 @@ workflows:
             - test_wordpress_gitlab:
                 requires:
                    - unit
+            - test_d8_gitlab:
+                requires:
+                   - unit
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
@@ -204,3 +229,4 @@ workflows:
                    - test_drupal_7_github
                    - test_wordpress
                    - test_wordpress_gitlab
+                   - test_d8_gitlab
