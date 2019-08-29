@@ -257,7 +257,7 @@ workflows:
             - test_wordpress_gitlab:
                 requires:
                    - unit
-            - test_d8_gitlab:
+            - test_drupal_8_gitlab:
                 requires:
                    - unit
             - test_drupal_8_bitbucket:
