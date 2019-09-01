@@ -56,8 +56,19 @@ class EnvCreateCommand extends BuildToolsBase
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+        // Revert to build:env:push if build:env:create is run against dev.
+        if ('dev' === $multidev) {
+            $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
+            // Get the site ID
+            $siteInfo = $site->serialize();
+            $site_id = $siteInfo['id'];
+            // Run build:env:push. Ignore errors.
+            passthru('terminus build:env:push ' . $site_id . '.dev');
+            return;
+        }
+
         if ($env->id === $multidev) {
-            $this->log()->notice('Cannot create environment from itself.');
+            $this->log()->notice('Cannot create an environment from itself. Aborting.');
             return;
         }
         $env_id = $env->getName();
