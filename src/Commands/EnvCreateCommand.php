@@ -56,6 +56,12 @@ class EnvCreateCommand extends BuildToolsBase
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+
+        $env_label = $multidev;
+        if (!empty($options['label'])) {
+            $env_label = $options['label'];
+        }
+
         // Revert to build:env:push if build:env:create is run against dev.
         if ('dev' === $multidev) {
             $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
@@ -70,10 +76,6 @@ class EnvCreateCommand extends BuildToolsBase
         }
 
         $env_id = $env->getName();
-        $env_label = $multidev;
-        if (!empty($options['label'])) {
-            $env_label = $options['label'];
-        }
 
         $doNotify = false;
 
