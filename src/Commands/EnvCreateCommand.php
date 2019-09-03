@@ -59,11 +59,8 @@ class EnvCreateCommand extends BuildToolsBase
         // Revert to build:env:push if build:env:create is run against dev.
         if ('dev' === $multidev) {
             $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
-            // Get the site ID
-            $siteInfo = $site->serialize();
-            $site_id = $siteInfo['id'];
-            // Run build:env:push. Ignore errors.
-            passthru('terminus build:env:push ' . $site_id . '.dev');
+            // Run build:env:push.
+            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
             return;
         }
 
@@ -71,6 +68,7 @@ class EnvCreateCommand extends BuildToolsBase
             $this->log()->notice('Cannot create an environment from itself. Aborting.');
             return;
         }
+
         $env_id = $env->getName();
         $env_label = $multidev;
         if (!empty($options['label'])) {
