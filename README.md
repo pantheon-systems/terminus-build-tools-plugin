@@ -50,6 +50,10 @@ mkdir -p ~/.terminus/plugins
 composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^1
 ```
 
+### Note about dev dependencies
+
+The Terminus Build Tools plugin should be installed **without** dev dependencies. If you install the plugin with a different method, such as cloning this source repository, use `composer install --no-dev` to download the project dependencies.
+
 ## Setup
 
 It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `2` and Build Tools `2.x`.
