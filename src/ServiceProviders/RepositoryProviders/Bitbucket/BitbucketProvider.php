@@ -38,7 +38,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $org = '')
+    public function createRepository($local_site_path, $target, $org = '', $private = false)
     {
         // repository id must be lower case.
         $target = strtolower($target);

@@ -30,10 +30,11 @@ interface GitProvider extends ProviderInterface
      * @param string $dir Local working copy of repository to create
      * @param string $target Project name of the repository to create
      * @param string $org Which org to create the project in; leave off to create a user repository.
+     * @param bool $private Whether to make the repository private in github or not
      *
      * @return string Project created (usually org/target)
      */
-    public function createRepository($dir, $target, $org = '');
+    public function createRepository($dir, $target, $org = '', $private = false);
 
     /**
      * Push repository back to repository service. Note that, in essence,
@@ -78,5 +79,12 @@ interface GitProvider extends ProviderInterface
      * @param string $state Check for pull requests with this state - 'open' or 'closed'.
      */
     public function branchesForPullRequests($target_project, $state);
+
+    /**
+     * Alter the build metadata being written to Pantheon with any provider specific information.
+     *
+     * @param array $buildMetadata Build metadata to alter.
+     */
+    public function alterBuildMetadata(&$buildMetadata);
 
 }

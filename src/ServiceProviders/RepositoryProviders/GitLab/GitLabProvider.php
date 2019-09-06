@@ -56,7 +56,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $gitlab_org = '') {
+    public function createRepository($local_site_path, $target, $gitlab_org = '', $visibility = 'public') {
         $createRepoUrl = "api/v4/projects";
         $target_org = $gitlab_org;
         if (empty($gitlab_org)) {
@@ -74,6 +74,10 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
                 $postData = ['name' => $target];
             }
         }
+
+        // Set project visibility as specified.
+        $postData['visibility'] = $visibility;
+
         $target_project = "$target_org/$target";
 
         // Create a GitLab repository
@@ -195,6 +199,14 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         $metadata = parent::generateBuildProvidersData($git_service_name, $ci_service_name);
         $metadata['api-host'] = $this->getGitLabUrl();
         return $metadata;
+    }
+
+    public function alterBuildMetadata(&$buildMetadata) {
+        parent::alterBuildMetadata($buildMetadata);
+        // If we are running in CI, use CI Branch variable because Git Checkout is detached.
+        if (getenv('GITLABCI')) {
+            $buildMetadata['ref'] = getenv('CI_COMMIT_REF_NAME');
+        }
     }
 
 }

@@ -15,6 +15,7 @@ use Pantheon\Terminus\Commands\TerminusCommand;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\Terminus\Site\SiteAwareInterface;
 use Pantheon\Terminus\Site\SiteAwareTrait;
+use Pantheon\TerminusBuildTools\Utility\UrlParsing;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Process\ProcessUtils;
@@ -466,7 +467,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     // TODO: if we could look up the commandfile for
     // Pantheon\Terminus\Commands\Site\CreateCommand,
     // then we could just call its 'create' method
-    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null,])
+    public function siteCreate($site_name, $label, $upstream_id, $options = ['org' => null, 'region' => null,])
     {
         if ($this->sites()->nameIsTaken($site_name)) {
             throw new TerminusException('The site name {site_name} is already taken.', compact('site_name'));
@@ -485,6 +486,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (!empty($org_id = $options['org'])) {
             $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
             $workflow_options['organization_id'] = $org->id;
+        }
+
+        // Add the site region.
+        if (!empty($region = $options['region'])) {
+            $workflow_options['preferred_zone'] = $region;
         }
 
         // Create the site
@@ -516,6 +522,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function cloneContent(Environment $target, Environment $from_env, $db_only = false, $files_only = false)
     {
+        if ($from_env->id === $target->id) {
+            $this->log()->notice("Skipping clone since environments are the same.");
+            return;
+        }
+        
         $from_name = $from_env->getName();
 
         // Clone files if we're only doing files, or if "only do db" is not set.
@@ -726,6 +737,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $message = '')
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
+        $dev_env = $site->getEnvironments()->get('dev');
         $env_id = $env->getName();
         $multidev = empty($multidev) ? $env_id : $multidev;
         $branch = ($multidev == 'dev') ? 'master' : $multidev;
@@ -762,7 +774,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Add a remote named 'pantheon' to point at the Pantheon site's git repository.
         // Skip this step if the remote is already there (e.g. due to CI service caching).
-        $this->addPantheonRemote($env, $repositoryDir);
+        $this->addPantheonRemote($dev_env, $repositoryDir);
         // $this->passthru("git -C $repositoryDir fetch pantheon");
 
         // Record the metadata for this build
@@ -830,43 +842,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * orgUserFromRemoteUrl converts from a url e.g. https://github.com/org/repo
-     * to the "org" portion of the provided url.
-     */
-    protected function orgUserFromRemoteUrl($url)
-    {
-        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
-        {
-            $parsed_url = parse_url($url);
-            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
-            return $path_components[0];
-        }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
-    }
-
-    /**
-     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
-     * to the "repo" portion of the provided url.
-     */
-    protected function repositoryFromRemoteUrl($url)
-    {
-        if ((strpos($url, 'https://') !== false) || (strpos($url, 'http://') !== false))
-        {
-            $parsed_url = parse_url($url);
-            $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
-            return $path_components[1];
-        }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
-    }
-
-    /**
-     * repositoryFromRemoteUrl converts from a url e.g. https://github.com/org/repo
+     * projectFromRemoteUrl converts from a url e.g. https://github.com/org/repo
      * to the "org/repo" portion of the provided url.
      */
     protected function projectFromRemoteUrl($url)
     {
-        $org_user = $this->orgUserFromRemoteUrl($url);
-        $repository = $this->repositoryFromRemoteUrl($url);
+        $org_user = UrlParsing::orgUserFromRemoteUrl($url);
+        $repository = UrlParsing::repositoryFromRemoteUrl($url);
         return "$org_user/$repository";
     }
 
@@ -1028,7 +1010,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function getBuildMetadata($repositoryDir)
     {
-        return [
+        $buildMetadata = [
           'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
@@ -1036,6 +1018,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'commit-date' => exec("git -C $repositoryDir show -s --format=%ci HEAD"),
           'build-date'  => date("Y-m-d H:i:s O"),
         ];
+
+        if (isset($this->git_provider)) {
+            $this->git_provider->alterBuildMetadata($repositoryDir);
+        }
+
+        return $buildMetadata;
     }
 
     /**

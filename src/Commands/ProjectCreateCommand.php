@@ -189,6 +189,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
+     * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
      */
     public function createProject(
         $source,
@@ -208,6 +209,8 @@ class ProjectCreateCommand extends BuildToolsBase
             'keep' => false,
             'ci' => '',
             'git' => 'github',
+            'visibility' => 'public',
+            'region' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -218,6 +221,8 @@ class ProjectCreateCommand extends BuildToolsBase
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
+        $visibility = $options['visibility'];
+        $region = $options['region'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -247,25 +252,6 @@ class ProjectCreateCommand extends BuildToolsBase
 
         // $builder->setStateValue('ci-env', $ci_env)
 
-        $this->log()->notice('Determine whether build-assets exists for {project}', ['project' => $target_label]);
-
-/*
-        // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
-        exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
-        if (!$status) {
-            $this->log()->notice('build-assets command exists for {project}', ['project' => $target_label]);
-            $builder
-                // Run build assets
-                ->progressMessage('Run build assets for project')
-                ->addCode(
-                    function ($state) use ($siteDir) {
-                            $this->log()->notice('Building assets for project');
-                            $this->passthru("composer --working-dir=$siteDir build-assets");
-                        }
-                );
-        }
-*/
-
         $builder
 
             // Create a repository
@@ -278,9 +264,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $target, $target_org, $siteDir) {
+                function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility) {
 
-                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
+                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org, $visibility);
 
                     $repositoryAttributes = $ci_env->getState('repository');
                     // $github_token = $repositoryAttributes->token();
@@ -295,13 +281,13 @@ class ProjectCreateCommand extends BuildToolsBase
             // Create a Pantheon site
             ->progressMessage('Create Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $label, $team, $target, $siteDir) {
+                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region) {
                     // Look up our upstream.
                     $upstream = $this->autodetectUpstream($siteDir);
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
-                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
+                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team, 'region' => $region]);
 
                     $siteInfo = $site->serialize();
                     $site_uuid = $siteInfo['id'];
@@ -358,11 +344,13 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->provider($this->git_provider, $this->ci_provider)
             ->progressmessage('Set build secrets')
             ->addCode(
-                function ($state) use ($site_name) {
+                function ($state) use ($site_name, $siteDir) {
                     $secretValues = [
                         'token' => $this->git_provider->token($this->git_provider->tokenKey())
                     ];
                     $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                   // Remember the initial commit sha
+                    $state['initial_commit'] = $this->getHeadCommit($siteDir);
                 }
             )
 
@@ -372,20 +360,27 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->target($this->target_project)
                 ->dir($siteDir)
             */
+            // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
+            ->progressMessage('Build assets for {site}', ['site' => $site_name])
+            ->addCode(
+                function ($state) use ($siteDir, $source, $site_name) {
+                  $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
+                  exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
+                  if (!$status) {
+                    $this->log()->notice('Building assets for {site}', ['site' => $site_name]);
+                    $this->passthru("composer --working-dir=$siteDir build-assets");
+                  }
+                }
+            )
 
             // Push code to newly-created project.
             // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($site_name, $siteDir) {
-                    // Remember the initial commit sha
-                    $initial_commit = $this->getHeadCommit($siteDir);
-
-                    // TODO: build assets should happen here
-
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
-                    $this->resetToCommit($siteDir, $initial_commit);
+                    $this->resetToCommit($siteDir, $state['initial_commit']);
                 })
 
             // Install our site and export configuration.
