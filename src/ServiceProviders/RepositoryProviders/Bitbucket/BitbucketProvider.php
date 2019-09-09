@@ -38,7 +38,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $org = '', $private = false)
+    public function createRepository($local_site_path, $target, $org = '', $visibility = "public")
     {
         // repository id must be lower case.
         $target = strtolower($target);
@@ -52,7 +52,11 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $result = $this->api()->request("repositories/$target_project", [], 'PUT');
+        $postData = [];
+        if ($visibility != 'public') {
+          $postData['is_private'] = TRUE;
+        }
+        $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
 
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
