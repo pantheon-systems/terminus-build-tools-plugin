@@ -2,6 +2,7 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
+use Pantheon\TerminusBuildTools\API\PullRequestInfo;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
