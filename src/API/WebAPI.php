@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\API;
 use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
@@ -73,7 +74,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                     // $uri already has $queryParams, as altered in the $pager_info
                     $res = $this->sendRequest($uri, [], 'GET');
                     $httpCode = $res->getStatusCode();
-                    $resultData = json_decode($res->getBody(), true);
+                    $resultData = $this->getResultData($res);
                     $isDone = !$this->checkPagedCallback($resultData, $callback);
 
                     if (!is_null($resultData))
@@ -163,7 +164,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return TRUE;
     }
 
-    protected function getResultData($res)
+    protected function getResultData(ResponseInterface $res)
     {
         return json_decode($res->getBody(), true);
     }
