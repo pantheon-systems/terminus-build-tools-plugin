@@ -132,7 +132,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
                 $branch_name = $item['source']['branch']['name'];
                 return [$pr_number, $branch_name];
             },
-            $data['values']
+            $data
         ), 1, 0);
 
         return $branchList;

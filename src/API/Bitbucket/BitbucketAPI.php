@@ -6,6 +6,7 @@ use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -62,5 +63,11 @@ class BitbucketAPI extends WebAPI
     protected function getNextPageUri($pager_info)
     {
         return null;
+    }
+
+    protected function getResultData(ResponseInterface $res)
+    {
+        $resultData = json_decode($res->getBody(), true);
+        return isset( $resultData['values'] ) ? $resultData['values'] : [];
     }
 }
