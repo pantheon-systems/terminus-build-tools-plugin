@@ -6,6 +6,7 @@ use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
@@ -57,8 +58,9 @@ class GitHubAPI extends WebAPI
         return $queryParams;
     }
 
-    protected function isPagedResponse($headers)
+    protected function isPagedResponse(ResponseInterface $res)
     {
+        $headers = $res->getHeaders();
         if (empty($headers['Link'])) {
             return FALSE;
         }
@@ -70,8 +72,9 @@ class GitHubAPI extends WebAPI
         return !empty($pager_headers);
     }
 
-    protected function getPagerInfo($headers)
+    protected function getPagerInfo(ResponseInterface $res)
     {
+        $headers = $res->getHeaders();
         $links = $headers['Link'];
         // Find a link header that contains a "rel" type set to "next" or "last".
         $pager_headers = array_filter($links, function ($link) {

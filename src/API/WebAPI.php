@@ -27,9 +27,9 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
     abstract protected function apiClient();
 
-    abstract protected function isPagedResponse($headers);
+    abstract protected function isPagedResponse(ResponseInterface $res);
 
-    abstract protected function getPagerInfo($headers);
+    abstract protected function getPagerInfo(ResponseInterface $res);
 
     abstract protected function isLastPage($page_link, $pager_info);
 
@@ -59,10 +59,9 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
         // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
         // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
-        $headers = $res->getHeaders();
         // Check if the array is numeric. Otherwise we can't consider this a collection.
-        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
-            $pager_info = $this->getPagerInfo($headers);
+        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($res)) {
+            $pager_info = $this->getPagerInfo($res);
             while (($httpCode == 200) && !$isDone) {
                 $isDone = $this->isLastPage($uri, $pager_info);
                 $next = $this->getNextPageUri($pager_info);
