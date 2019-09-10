@@ -47,22 +47,33 @@ class BitbucketAPI extends WebAPI
 
     protected function isPagedResponse(ResponseInterface $res)
     {
-        return true;
+        $responseBody = json_decode($res->getBody(), true);
+        if (!empty($responseBody['next']) || ! empty($responseBody['previous'])) {
+            return true;
+        }
+        return false;
     }
 
     protected function getPagerInfo(ResponseInterface $res)
     {
-        return [];
+        $responseBody = json_decode($res->getBody(), true);
+        $pagerInfo = [];
+        foreach (['next', 'previous'] as $type) {
+            if (isset($responseBody[$type])) {
+                $pagerInfo[$type] = $responseBody[$type];
+            }
+        }
+        return $pagerInfo;
     }
 
     protected function isLastPage($page_link, $pager_info)
     {
-        return true;
+        return empty($pager_info['next']);
     }
 
     protected function getNextPageUri($pager_info)
     {
-        return null;
+        return !empty($pager_info['next']) ? $pager_info['next'] : false;
     }
 
     protected function getResultData(ResponseInterface $res)
