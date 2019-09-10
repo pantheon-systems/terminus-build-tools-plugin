@@ -49,7 +49,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         $queryParams = $this->alterPagedRequestQueryParams($queryParams);
         $res = $this->sendRequest($uri, $queryParams, 'GET');
 
-        $resultData = json_decode($res->getBody(), true);
+        $resultData = $this->getResultData($res);
         $httpCode = $res->getStatusCode();
 
         // Remember all of the collected data in $accumulatedData
@@ -161,5 +161,10 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
             }
         }
         return TRUE;
+    }
+
+    protected function getResultData($res)
+    {
+        return json_decode($res->getBody(), true);
     }
 }
