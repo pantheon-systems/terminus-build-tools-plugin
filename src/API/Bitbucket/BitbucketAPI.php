@@ -73,7 +73,7 @@ class BitbucketAPI extends WebAPI
 
     protected function getNextPageUri($pager_info)
     {
-        return !empty($pager_info['next']) ? $pager_info['next'] : false;
+        return !empty($pager_info['next']) ? $pager_info['next'] : NULL;
     }
 
     protected function getResultData(ResponseInterface $res)
