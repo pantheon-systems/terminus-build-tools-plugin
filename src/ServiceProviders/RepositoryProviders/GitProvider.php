@@ -87,4 +87,11 @@ interface GitProvider extends ProviderInterface
      */
     public function alterBuildMetadata(&$buildMetadata);
 
+    /**
+     * Return an associative array of values to be written to tokens.json build secrets.
+     *
+     * @return array
+     */
+    public function getSecretValues();
+
 }

@@ -162,10 +162,8 @@ class ProjectRepairCommand extends BuildToolsBase
 
             ->addCode(
                 function ($state) use ($site_name) {
-                    $secretValues = [
-                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
-                    ];
-                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                  $secretValues = $this->git_provider->getSecretValues();
+                  $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
                 }
             );
 
