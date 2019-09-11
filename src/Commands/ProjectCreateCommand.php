@@ -345,9 +345,7 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressmessage('Set build secrets')
             ->addCode(
                 function ($state) use ($site_name, $siteDir) {
-                    $secretValues = [
-                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
-                    ];
+                    $secretValues = $this->git_provider->getSecretValues();
                     $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
                    // Remember the initial commit sha
                     $state['initial_commit'] = $this->getHeadCommit($siteDir);

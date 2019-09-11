@@ -143,4 +143,12 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         $isClosed = ($data['state'] != 'OPEN');
         return new PullRequestInfo($data['id'], $isClosed, $data['source']['branch']['name']);
     }
+
+    public function getSecretValues() {
+      return parent::getSecretValues() + [
+        'user' => $this->getBitBucketUser(),
+        'password' => $this->getBitBucketPassword(),
+      ];
+    }
+
 }

@@ -72,4 +72,10 @@ abstract class BaseGitProvider
     {
     }
 
+    public function getSecretValues() {
+      return [
+        'token' => $this->token($this->tokenKey())
+      ];
+    }
+
 }
