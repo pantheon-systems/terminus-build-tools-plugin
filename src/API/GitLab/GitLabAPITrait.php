@@ -82,7 +82,7 @@ trait GitLabAPITrait
     $gitlabTokenRequest = (new CredentialRequest($this->tokenKey()))
         ->setInstructions($instructions)
         ->setPrompt("Enter GitLab personal access token: ")
-        ->setValidateRegEx('#^[0-9a-zA-Z\-]{20}$#')
+        ->setValidateRegEx('#^[0-9a-zA-Z\-_]{20}$#')
         ->setValidationErrorMessage($validation_message)
         ->setValidationCallbackErrorMessage($could_not_authorize)
         ->setValidateFn(
