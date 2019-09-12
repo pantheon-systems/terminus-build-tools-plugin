@@ -1020,7 +1020,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         ];
 
         if (isset($this->git_provider)) {
-            $this->git_provider->alterBuildMetadata($repositoryDir);
+            $this->git_provider->alterBuildMetadata($buildMetadata);
         }
 
         return $buildMetadata;
