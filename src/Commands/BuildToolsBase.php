@@ -1010,8 +1010,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function getBuildMetadata($repositoryDir)
     {
+        // Get the url from the Git remote
+        $url = exec("git -C $repositoryDir config --get remote.origin.url");
+        // Some providers use http, but we want to force https
+        $url = $url = preg_replace("/^http:/i", "https:", $url);
+
         $buildMetadata = [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'         => $url,
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
@@ -1020,7 +1025,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         ];
 
         if (isset($this->git_provider)) {
-            $this->git_provider->alterBuildMetadata($buildMetadata);
+            $this->git_provider->alterBuildMetadata($repositoryDir);
         }
 
         return $buildMetadata;

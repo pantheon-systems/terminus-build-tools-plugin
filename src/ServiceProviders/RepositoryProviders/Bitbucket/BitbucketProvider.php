@@ -151,12 +151,4 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
       ];
     }
 
-    public function alterBuildMetadata(&$buildMetadata) {
-        parent::alterBuildMetadata($buildMetadata);
-        // Force https in the URL on BitBucket
-        if (getenv('CI')) {
-            $buildMetadata['url'] = str_replace('http','https', $buildMetadata['url']);
-        }
-    }
-
 }
