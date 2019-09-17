@@ -166,12 +166,35 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         $this->validateEmail('admin-email', $admin_email);
 
         // Pass the credentials on to the site environment
-        $this->getEnvironment()
+        $env = $this->getEnvironment()
             ->setSiteName($site_name)
             ->setTestSiteName($test_site_name)
             ->setAdminPassword($adminPassword)
             ->setAdminEmail($admin_email)
             ->setGitEmail($git_email);
+
+        // Assign COMPOSER_AUTH if defined in config.yml or environment.
+        if ($composerAuth = $this->getComposerAuth()) {
+          $env->setComposerAuth($composerAuth);
+        }
+    }
+
+    protected function getComposerAuth() {
+      // First check our session config (from .terminus/config.yml)
+      $composerAuth = $this->session()->getConfig()->get('COMPOSER_AUTH');
+      // Fall back on environment variable.
+      if (empty($composerAuth)) {
+        $composerAuth = getenv('COMPOSER_AUTH');
+      }
+
+      // Make sure COMPOSER_AUTH is valid JSON.
+      if (!empty($composerAuth)) {
+        json_decode($composerAuth);
+        if (json_last_error()) {
+          return FALSE;
+        }
+      }
+      return $composerAuth;
     }
 
     /**
