@@ -119,8 +119,8 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
     }
 
     /**
-     * Runs a provided callback on the result set allow outside logic
-     * control whether the paging logic should continue to iterate.
+     * Runs a provided callback on the result set, allowing outside logic
+     * to control whether the paging logic should continue to iterate.
      *
      * As an example, Pantheon\TerminusBuildTools\Utility\MultiDevRetention
      * uses this feature to only iterate pull requests until all pull requests
