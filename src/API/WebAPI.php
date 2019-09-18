@@ -55,6 +55,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
         // Remember all of the collected data in $accumulatedData
         $accumulatedData = $resultData;
+        // Check with the calling method to see if we need to iterate.
         $isDone = !$this->checkPagedCallback($resultData, $callback);
 
         // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
@@ -74,6 +75,8 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                     $res = $this->sendRequest($uri, [], 'GET');
                     $httpCode = $res->getStatusCode();
                     $resultData = $this->getResultData($res);
+                    // Check with the calling method to see if we need to *continue*
+                    // to iterate.
                     $isDone = !$this->checkPagedCallback($resultData, $callback);
 
                     if (!is_null($resultData))
@@ -115,6 +118,18 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return $client->request($method, $uri, $guzzleParams);
     }
 
+    /**
+     * Runs a provided callback on the result set, allowing outside logic
+     * to control whether the paging logic should continue to iterate.
+     *
+     * As an example, Pantheon\TerminusBuildTools\Utility\MultiDevRetention
+     * uses this feature to only iterate pull requests until all pull requests
+     * associated with a multidev environment have been seen.
+     *
+     * @param array    $resultData Result data from the current API request.
+     * @param callback $callback   Some callable function.
+     * @return boolean
+     */
     protected function checkPagedCallback($resultData, $callback)
     {
         if (!$callback) {
