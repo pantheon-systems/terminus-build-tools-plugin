@@ -26,6 +26,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     use GitLabAPITrait;
 
     protected $serviceName = 'gitlab';
+    protected $baseGitUrl;
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
@@ -33,6 +34,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     public function __construct(Config $config) {
         parent::__construct($config);
         $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
+        $this->baseGitUrl = 'git@' . $this->getGitLabUrl();
     }
 
     /**
@@ -92,7 +94,6 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
-        // TODO: maybe in the future we will not need to set this?
         $this->execGit($local_site_path, "remote add origin " . $result['ssh_url_to_repo']);
 
         return $result['path_with_namespace'];
@@ -101,12 +102,16 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function pushRepository($dir, $target_project) {
-        $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', [
-            'token' => $this->token(),
-            'gitlab_url' => $this->getGitLabUrl(),
-            'target' => $target_project
-        ], ['token']);
+    public function pushRepository($dir, $target_project, $use_ssh = false) {
+        if ($use_ssh) {
+            $this->execGit($dir, 'push --progress origin master');
+        } else {
+            $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', [
+                'token' => $this->token(),
+                'gitlab_url' => $this->getGitLabUrl(),
+                'target' => $target_project
+            ], ['token']);
+        }
     }
 
     /**
