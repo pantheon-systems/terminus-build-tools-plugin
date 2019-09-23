@@ -171,7 +171,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --ssh
             - run:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
@@ -205,7 +205,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci --ssh
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
@@ -227,7 +227,7 @@ jobs:
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --ssh
             - run:
                 name: Watch CircleCI tests
                 command: echo "Skipping the watch-cicle step too"
