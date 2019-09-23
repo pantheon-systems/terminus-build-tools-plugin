@@ -133,7 +133,7 @@ Additional options are available to further customize the `build:project:create`
  | --admin-email      | The email address to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
- | --ssh              | The ability to perform the initial push over SSH instead of HTTPS |
+ | --use-ssh          | The ability to perform the initial push over SSH instead of HTTPS |
  | --ci               | The CI provider to use. Defaults to "circleci" |
  | --git              | The git repository provider to use. Defaults to "github" |
  | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
