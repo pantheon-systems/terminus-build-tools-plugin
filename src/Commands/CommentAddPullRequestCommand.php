@@ -46,7 +46,7 @@ class CommentAddPullRequestCommand extends BuildToolsBase
 
         // Compile message
         if (!empty($options['site_url'])) {
-            $message = "[![Visit Site](https://raw.githubusercontent.com/pantheon-systems/ci-drops-8/0.1.0/data/img/visit-site-36.png)](".$options['site_url'].")\n\n".$options['message'];
+            $message = "[![Visit Site](https://raw.githubusercontent.com/pantheon-systems/terminus-build-tools-plugin/master/assets/images/visit-site-36.png)](".$options['site_url'].")\n\n".$options['message'];
         } else {
             $message = $options['message'];
         }
