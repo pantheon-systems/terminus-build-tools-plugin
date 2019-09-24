@@ -815,7 +815,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
         if ($prepareForPantheon) {
-          $this->passthru('composer prepare-for-pantheon');
+          $this->log()->notice('Determine whether prepare-for-pantheon exists for {site}', ['site' => $site]);
+          exec("composer help build-assets", $outputLines, $status);
+          if (!$status) {
+            $this->passthru('composer prepare-for-pantheon');
+          }
           $this->passthru("git -C $repositoryDir add -A");
         }
         else {
