@@ -43,6 +43,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option db-only Only clone the database when runing env:clone-content
      * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
      * @option message Commit message to include when committing assets to Pantheon
+     * @option prepare-for-pantheon Run the `prepare-for-pantheon` composer command instead of the default of git add using --force flag.
      */
     public function createBuildEnv(
         $site_env_id,
@@ -53,6 +54,7 @@ class EnvCreateCommand extends BuildToolsBase
             'notify' => '',
             'db-only' => false,
             'message' => '',
+            'prepare-for-pantheon' => FALSE,
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -66,7 +68,7 @@ class EnvCreateCommand extends BuildToolsBase
         if ('dev' === $multidev) {
             $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
             // Run build:env:push.
-            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
+            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], $options['prepare-for-pantheon']);
             return;
         }
 
@@ -102,7 +104,7 @@ class EnvCreateCommand extends BuildToolsBase
             $doNotify = true;
         }
 
-        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
+        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], $options['prepare-for-pantheon']);
 
         // Create a new environment for this test.
         if (!$environmentExists && !$createBeforePush) {

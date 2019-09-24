@@ -526,7 +526,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->log()->notice("Skipping clone since environments are the same.");
             return;
         }
-        
+
         $from_name = $from_env->getName();
 
         // Clone files if we're only doing files, or if "only do db" is not set.
@@ -734,7 +734,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $multidev = '',
         $repositoryDir = '',
         $label = '',
-        $message = '')
+        $message = '',
+        $prepareForPantheon = FALSE)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
@@ -813,7 +814,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        $this->passthru("git -C $repositoryDir add --force -A .");
+        if ($prepareForPantheon) {
+          $this->passthru('composer prepare-for-pantheon');
+          $this->passthru("git -C $repositoryDir add -A");
+        }
+        else {
+          $this->passthru("git -C $repositoryDir add --force -A .");
+        }
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
