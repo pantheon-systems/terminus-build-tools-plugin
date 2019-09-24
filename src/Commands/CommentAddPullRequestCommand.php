@@ -9,31 +9,33 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
+use Pantheon\Terminus\Exceptions\TerminusException;
+
 /**
- * Commit Comment Command
+ * Pull Request Comment Command
  */
-class CommentAddCommitCommand extends BuildToolsBase
+class CommentAddPullRequestCommand extends BuildToolsBase
 {
 
     /**
-     * Add a comment to the latest commit on the repository.
+     * Add a comment to a specified PR on the repository.
      *
      * @authorize
      *
-     * @command build:comment:add:commit
+     * @command build:comment:add:pr
      */
-    public function commentAddCommit(
+    public function commentAddPullRequest(
         $options = [
-            'sha' => '',
+            'pr_id' => '',
             'message' => '',
             'site_url' => ''
         ])
     {
         // Get current repository and commit
         $remoteUrlFromGit = exec('git config --get remote.origin.url');
-        $commitHash = $options['sha'];
-        if (empty($commitHash)) {
-            $commitHash = exec('git rev-parse HEAD');
+        $prId = $options['pr_id'];
+        if (empty($prId)) {
+            throw new TerminusException( '--pr_id=<id> is required.' );
         }
 
         // Create a Git repository service provider appropriate to the URL
@@ -52,7 +54,7 @@ class CommentAddCommitCommand extends BuildToolsBase
         if (!empty($message)) {
             // Submit message
             $targetProject = $this->projectFromRemoteUrl($remoteUrlFromGit);
-            $this->git_provider->commentOnCommit($targetProject, $commitHash, $message);
+            $this->git_provider->commentOnPullRequest($targetProject, $prId, $message);
         }
     }
 }

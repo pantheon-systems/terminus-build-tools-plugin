@@ -43,6 +43,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option db-only Only clone the database when runing env:clone-content
      * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
      * @option message Commit message to include when committing assets to Pantheon
+     * @option pr-id Post notification comment to a specific PR instead of the commit hash.
      */
     public function createBuildEnv(
         $site_env_id,
@@ -53,6 +54,7 @@ class EnvCreateCommand extends BuildToolsBase
             'notify' => '',
             'db-only' => false,
             'message' => '',
+            'pr-id' =>  '',
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -61,6 +63,8 @@ class EnvCreateCommand extends BuildToolsBase
         if (!empty($options['label'])) {
             $env_label = $options['label'];
         }
+
+        $pr_id = $options['pr-id'];
 
         // Revert to build:env:push if build:env:create is run against dev.
         if ('dev' === $multidev) {
@@ -150,18 +154,24 @@ class EnvCreateCommand extends BuildToolsBase
             $site_name = $site->getName();
             $project = $this->projectFromRemoteUrl($metadata['url']);
             $dashboard_url = "https://dashboard.pantheon.io/sites/{$site_id}#{$multidev}";
+
             $metadata += [
                 'project' => $project,
                 'site-id' => $site_id,
                 'site' => $site_name,
                 'env' => $multidev,
+                'pr_id' => $pr_id,
                 'label' => $env_label,
                 'dashboard-url' => $dashboard_url,
                 'site-url' => "https://{$multidev}-{$site_name}.pantheonsite.io/",
                 'message' => "Created multidev environment [{$multidev}]({$dashboard_url}) for {$site_name}."
             ];
 
-            $command = $this->interpolate('terminus build:comment:add:commit --sha [[sha]] --message [[message]] --site_url [[site-url]]', $metadata);
+            if ( ! empty( $pr_id ) ) {
+                $command = $this->interpolate('terminus build:comment:add:pr --pr_id [[pr_id]] --message [[message]] --site_url [[site-url]]', $metadata);
+            } else {
+                $command = $this->interpolate('terminus build:comment:add:commit --sha [[sha]] --message [[message]] --site_url [[site-url]]', $metadata);
+            }
 
             // Run notification command. Ignore errors.
             passthru($command);
