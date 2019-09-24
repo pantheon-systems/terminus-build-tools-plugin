@@ -105,6 +105,16 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
+    public function commentOnPullRequest($target_project, $pr_id, $message)
+    {
+        $url = "repos/$target_project/issues/$pr_id/comments";
+        $data = [ 'body' => $message ];
+        $this->api()->request($url, $data);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function commentOnCommit($target_project, $commit_hash, $message)
     {
         $url = "repos/$target_project/commits/$commit_hash/comments";
