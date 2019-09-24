@@ -190,6 +190,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
+     * @option type The project type. Options are git, npm, gatsby and composer. Defaults to composer.
      */
     public function createProject(
         $source,
@@ -211,6 +212,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'git' => 'github',
             'visibility' => 'public',
             'region' => '',
+            'type' => 'composer',
         ])
     {
         $this->warnAboutOldPhp();
