@@ -329,6 +329,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
             'example-wordpress-composer' => ['wp', 'wordpress'],
+            'https://github.com/populist/gatsby-starter-wordpress' => ['gatsby-wp', 'gatsby-wordpress'],
         ];
 
         // Convert the defaults into a more straightforward mapping:
@@ -387,13 +388,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * Create our project from source, either via composer create-project,
      * or from an existing source directory. Record the build metadata.
      */
-    protected function createFromSource($source, $target, $stability = '', $options = [])
+    protected function createFromSource($source, $target, $stability = '', $options = ['type' => 'composer'])
     {
         if (is_dir($source)) {
             return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
         }
         else {
-            return $this->createFromSourceProject($source, $target, $stability);
+            return $this->createFromSourceProject($source, $target, $stability, $options['type']);
         }
     }
 
@@ -413,9 +414,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
-     * Use composer create-project to create a new local copy of the source project.
+     * Use create a new local copy of the source project,
+     * using the proper tools depending on project type.
      */
-    protected function createFromSourceProject($source, $target, $stability = '')
+    protected function createFromSourceProject($source, $target, $stability = '', $project_type='composer')
     {
         $source_project = $this->sourceProjectFromSource($source);
 
@@ -426,15 +428,99 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (empty($stability) && preg_match('#:dev-#', $source)) {
             $stability = 'dev';
         }
-        // Pass in --stability to `composer create-project` if user requested it.
-        $stability_flag = empty($stability) ? '' : "--stability $stability";
 
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
-        $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
+        // Stash the local site path
         $local_site_path = "$tmpsitedir/$target";
+
+        // Use the proper create command based on the type
+        switch( $project_type ) {
+            case "gatsby":
+                $this->createGatsbyFromSourceProject($local_site_path, $source);
+                break;
+            case "composer":
+                $this->createComposerFromSourceProject($source, $local_site_path, $stability = '');
+                break;
+            case "npm":
+                $this->createNpmFromSourceProject($local_site_path, $source);
+                break;
+            // Default to git clone
+            default:
+                $this->createGitFromSourceProject($local_site_path, $source);
+                break;
+        }
+
         return $local_site_path;
+    }
+
+    /**
+     * Use composer-create to create a new local copy of the source project
+     */
+    protected function createComposerFromSourceProject($source, $local_site_path, $stability = '')
+    {
+        // Pass in --stability to `composer create-project` if user requested it.
+        $stability_flag = empty($stability) ? '' : "--stability $stability";
+
+        $this->passthru("composer create-project $source $local_site_path -n $stability_flag");
+
+        $this->removeGitDirs($local_site_path);
+    }
+
+    /**
+     * Use gatsby new to create a new local copy of the source project
+     */
+    protected function createGatsbyFromSourceProject($local_site_path, $source)
+    {
+        $this->log()->notice('Creating Gatsby project and resolving dependencies.');
+
+        $this->passthru("gatsby new $local_site_path $source");
+
+        $this->removeGitDirs($local_site_path);
+    }
+
+    /**
+     * Use npm init to create a new local copy of the source project
+     */
+    protected function createNpmFromSourceProject($local_site_path, $source)
+    {
+        $this->log()->notice('Creating NPM project and resolving dependencies.');
+
+        $this->passthru("npm init $source $local_site_path");
+
+        $this->removeGitDirs($local_site_path);
+    }
+
+    /**
+     * Use git clone to create a new local copy of the source project
+     */
+    protected function createGitFromSourceProject($local_site_path, $source)
+    {
+        $this->log()->notice('Git cloning project and removing .git directory.');
+
+        $this->passthru("git clone $source $local_site_path");
+
+        $this->removeGitDirs($local_site_path);
+
+    }
+
+    protected function removeGitDirs($path)
+    {
+        $dirsToDelete = [];
+        $finder = new Finder();
+        foreach (
+          $finder
+            ->directories()
+            ->in($path)
+            ->ignoreDotFiles(false)
+            ->ignoreVCS(false)
+            ->name('.git')
+          as $dir) {
+          $dirsToDelete[] = $dir;
+        }
+        $fs = new Filesystem();
+        $fs->remove($dirsToDelete);
     }
 
     /**
