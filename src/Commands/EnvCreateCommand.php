@@ -54,7 +54,7 @@ class EnvCreateCommand extends BuildToolsBase
             'notify' => '',
             'db-only' => false,
             'message' => '',
-            'prepare-for-pantheon' => FALSE,
+            'prepare-for-pantheon' => false,
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
