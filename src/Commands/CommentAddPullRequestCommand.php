@@ -55,6 +55,8 @@ class CommentAddPullRequestCommand extends BuildToolsBase
             // Submit message
             $targetProject = $this->projectFromRemoteUrl($remoteUrlFromGit);
             $this->git_provider->commentOnPullRequest($targetProject, $prId, $message);
+        } else {
+            throw new TerminusException( '--message and/or --site_url are required.' );
         }
     }
 }
