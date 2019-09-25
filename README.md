@@ -165,7 +165,21 @@ Additional options are available to customize the `build:comment:add:commit` com
  | --sha            | The SHA hash of the commit to add the comment to |
  | --message        | The message to post to the commit |
  | --site_url       | If provided, will include a "Visit Site" link at the start of the comment, linking to the provided site URL |
- 
+
+### terminus build:comment:add:pr
+
+The `build:comment:add:pr` command is used to add a comment to a pull request on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
+
+#### Command Options
+
+Additional options are available to customize the `build:comment:add:commit` command:
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --pr_id          | Required. The number of the pull request to add the comment to |
+ | --message        | The message to post to the pull request |
+ | --site_url       | If provided, will include a "Visit Site" link at the start of the pull request, linking to the provided site URL |
+
 ### build:credentials:clear
  
 The `build:credentials:clear` command is available to clear cached credentials from Build Tools. This is useful when developing Build Tools or trying to remove credentials from a machine.
@@ -416,6 +430,10 @@ This command will commit the generated artifacts to an existing multidev environ
 ### List Testing Multidevs
 
 `terminus build:env:list`
+
+### Commenting on a pull request or merge request
+
+`terminus build:comment:add:pr --pr_number=123 --message="Behat tests passed!"`
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
