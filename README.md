@@ -156,6 +156,8 @@ Additional options are available to further customize the `build:project:repair`
 
 The `build:comment:add:commit` command is used to add a comment to a commit on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
 
+Either the `--message` and/or the `--site_url` options are required.
+
 #### Command Options
 
 Additional options are available to customize the `build:comment:add:commit` command:
@@ -170,9 +172,11 @@ Additional options are available to customize the `build:comment:add:commit` com
 
 The `build:comment:add:pr` command is used to add a comment to a pull request on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
 
+The `--pr_id` option and either the `--message` and/or the `--site_url` options are required.
+
 #### Command Options
 
-Additional options are available to customize the `build:comment:add:commit` command:
+Additional options are available to customize the `build:comment:add:pr` command:
 
  | Option           | Description      |
  | ---------------- | ---------------- |
