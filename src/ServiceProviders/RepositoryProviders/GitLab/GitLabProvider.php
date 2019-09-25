@@ -132,6 +132,16 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
+    public function commentOnPullRequest($target_project, $pr_id, $message)
+    {
+        $url = "api/v4/projects/" . urlencode($target_project) . "/merge_requests/" . $pr_id . "/notes";
+        $data = ['body' => $message];
+        $this->api()->request($url, $data);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function commentOnCommit($target_project, $commit_hash, $message) {
         // We need to check and see if a MR exists for this commit.
         $mrs = $this->api()

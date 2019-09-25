@@ -65,6 +65,15 @@ interface GitProvider extends ProviderInterface
     public function projectURL($target_project);
 
     /**
+     * Add a comment to a PR.
+     *
+     * @param string $target_project Project to comment on.
+     * @param string $pr_id Id of the PR to comment on.
+     * @param string $message The content of the comment.
+     */
+    public function commentOnPullRequest($target_project, $pr_id, $message);
+
+    /**
      * Add a comment to a commit.
      *
      * @param string $target_project Project to comment on.

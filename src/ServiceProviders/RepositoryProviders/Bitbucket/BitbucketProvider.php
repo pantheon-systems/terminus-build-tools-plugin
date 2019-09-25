@@ -104,6 +104,19 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
+    public function commentOnPullRequest($target_project, $pr_id, $message)
+    {
+        $body = [
+            'content' => [
+                'raw' => $message,
+            ],
+        ];
+        $result = $this->api()->request("repositories/$target_project/pullrequests/$pr_id/comments", $body);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function commentOnCommit($target_project, $commit_hash, $message)
     {
         $body = [
