@@ -350,6 +350,18 @@ command:
           team: My Pantheon Org
 ```
 
+#### Self-Hosted GitLab
+
+The GitLab URL used by Build Tools can be defined by updating the `build-tools:provider:git:gitlab:url` configuration value, as demonstrated by the example below. Note that you will need to replace `hostname` with the actual GitLab instance hostname.
+
+```
+build-tools:
+  provider:
+    git:
+      gitlab:
+        url: hostname
+```
+
 #### Starter Site Shortcuts
 
 If you often create sites based on certain common starter sites, you may also use your Terminus configuration file to define custom starter site shortcuts. The example below defines shortcuts for the Lightning and Contenta distributions:
