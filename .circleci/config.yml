@@ -170,6 +170,9 @@ jobs:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
             - run:
@@ -204,6 +207,9 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - run:
                 name: Test WordPress with GitLab
                 command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci --use-ssh
             - run:
@@ -224,6 +230,9 @@ jobs:
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
