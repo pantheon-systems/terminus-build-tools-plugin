@@ -211,7 +211,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci --use-ssh
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
@@ -236,7 +236,7 @@ jobs:
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
                 name: Watch CircleCI tests
                 command: echo "Skipping the watch-cicle step too"
