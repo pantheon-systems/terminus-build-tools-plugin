@@ -9,6 +9,8 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
+use Pantheon\Terminus\Exceptions\TerminusException;
+
 /**
  * Commit Comment Command
  */
@@ -53,6 +55,8 @@ class CommentAddCommitCommand extends BuildToolsBase
             // Submit message
             $targetProject = $this->projectFromRemoteUrl($remoteUrlFromGit);
             $this->git_provider->commentOnCommit($targetProject, $commitHash, $message);
+        } else {
+            throw new TerminusException( '--message and/or --site_url are required.' );
         }
     }
 }
