@@ -104,6 +104,11 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
 ```
 
+#### Limitations
+
+**Bitbucket**
+- Composer Lock Updater isn't working quite yet.
+
 ## Commands
 
 The following commands are available as part of the Build Tools plugin.
