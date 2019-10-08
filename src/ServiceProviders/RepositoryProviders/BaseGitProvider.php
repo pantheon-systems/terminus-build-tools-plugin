@@ -18,6 +18,7 @@ abstract class BaseGitProvider
 
     protected $repositoryEnvironment;
     protected $serviceName;
+    protected $baseGitUrl;
 
     public function __construct(Config $config)
     {
@@ -30,6 +31,11 @@ abstract class BaseGitProvider
     public function getServiceName()
     {
         return $this->serviceName;
+    }
+
+    public function getBaseGitUrl()
+    {
+        return $this->baseGitUrl;
     }
 
     public function getEnvironment()
@@ -76,6 +82,11 @@ abstract class BaseGitProvider
       return [
         'token' => $this->token($this->tokenKey())
       ];
+    }
+
+    public function verifySSHConnect(){
+        passthru(sprintf('ssh -T %s', $this->baseGitUrl), $result);
+        return $result === 0;
     }
 
 }

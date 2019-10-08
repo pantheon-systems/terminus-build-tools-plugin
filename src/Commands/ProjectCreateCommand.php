@@ -194,6 +194,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
+     * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
      */
     public function createProject(
         $source,
@@ -211,6 +212,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
+            'use-ssh' => false,
             'ci' => '',
             'git' => 'github',
             'visibility' => 'public',
@@ -227,6 +229,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $stability = $options['stability'];
         $visibility = $options['visibility'];
         $region = $options['region'];
+        $use_ssh = $options['use-ssh'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -255,6 +258,14 @@ class ProjectCreateCommand extends BuildToolsBase
         if ($composerAuth) {
             $backupAuth = getenv('COMPOSER_AUTH');
             putenv('COMPOSER_AUTH=' . $composerAuth);
+        }
+
+        // If using SSH, verify authentication works as expected.
+        if ($use_ssh){
+          if (!$this->git_provider->verifySSHConnect()) {
+            throw new TerminusException('Unable to connect to {git} via SSH. Try `ssh -T {baseGitUrl}` to test the connection.', ['git' => $options['git'], 'baseGitUrl' => $this->git_provider->getBaseGitUrl()]);
+          }
+          $this->log()->notice('Verified SSH connection to Git provider');
         }
 
         // Pull down the source project
@@ -432,9 +443,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $siteDir) {
+                function ($state) use ($ci_env, $siteDir, $use_ssh) {
                     $repositoryAttributes = $ci_env->getState('repository');
-                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
                 })
 
             // Tell the CI server to start testing our project
