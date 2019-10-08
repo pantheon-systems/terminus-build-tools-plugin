@@ -8,6 +8,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
+use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Pantheon\Terminus\Exceptions\TerminusException;
 
 /**
@@ -174,27 +175,9 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             ->setGitEmail($git_email);
 
         // Assign COMPOSER_AUTH if defined in config.yml or environment.
-        if ($composerAuth = $this->getComposerAuth()) {
+        if ($composerAuth = Config_Utility::getComposerAuthJson($this->session())) {
           $env->setComposerAuth($composerAuth);
         }
-    }
-
-    protected function getComposerAuth() {
-      // First check our session config (from .terminus/config.yml)
-      $composerAuth = $this->session()->getConfig()->get('COMPOSER_AUTH');
-      // Fall back on environment variable.
-      if (empty($composerAuth)) {
-        $composerAuth = getenv('COMPOSER_AUTH');
-      }
-
-      // Make sure COMPOSER_AUTH is valid JSON.
-      if (!empty($composerAuth)) {
-        json_decode($composerAuth);
-        if (json_last_error()) {
-          return FALSE;
-        }
-      }
-      return $composerAuth;
     }
 
     /**

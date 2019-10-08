@@ -27,6 +27,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
+use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -176,6 +177,9 @@ class ProjectCreateCommand extends BuildToolsBase
      * GitLab/GitLabCI configuration:
      *   export GITLAB_TOKEN=gitlab_personal_access_token
      *
+     * Composer authentication details (if necessary):
+     *   export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
+     *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
@@ -244,9 +248,22 @@ class ProjectCreateCommand extends BuildToolsBase
         // Add the environment variables from the site provider to the CI environment.
         $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
+        // Set the COMPOSER_AUTH environment variable if there's one defined in config.
+        $composerAuth = Config_Utility::getComposerAuthJson($this->site_provider->session());
+        $backupAuth   = null;
+        if ($composerAuth) {
+            $backupAuth = getenv('COMPOSER_AUTH');
+            putenv('COMPOSER_AUTH=' . $composerAuth);
+        }
+
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
         $siteDir = $this->createFromSource($source, $target, $stability, $options);
+
+        // Restore COMPOSER_AUTH if necessary.
+        if (!is_null($backupAuth)) {
+            putenv('COMPOSER_AUTH=' . $backupAuth);
+        }
 
         $builder = $this->collectionBuilder();
 
