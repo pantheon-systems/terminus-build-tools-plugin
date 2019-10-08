@@ -106,8 +106,8 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 
 #### Limitations
 
-**BitBucket**
-- Automatic multidev deletion not working; test multidevs must be deleted manually
+**Bitbucket**
+- Composer Lock Updater isn't working quite yet.
 
 ## Commands
 
