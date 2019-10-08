@@ -104,11 +104,6 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
 ```
 
-#### Limitations
-
-**BitBucket**
-- Automatic multidev deletion not working; test multidevs must be deleted manually
-
 ## Commands
 
 The following commands are available as part of the Build Tools plugin.
