@@ -249,6 +249,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
         // Set the COMPOSER_AUTH environment variable if there's one defined in config.
+        // We might need it to check out any private dependencies.
         $composerAuth = Config_Utility::getComposerAuthJson($this->site_provider->session());
         $backupAuth   = null;
         if ($composerAuth) {
