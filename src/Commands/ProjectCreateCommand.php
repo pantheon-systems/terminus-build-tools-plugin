@@ -194,14 +194,14 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
      * @option email email address to place in ssh-key
      * @option test-site-name The name to use when installing the test site.
-     * @option admin-email The email address to use for the admin.
-     * @option admin-password The password to use for the admin when installing the test site.
+     * @option admin-email The email address to use for the CMS admin.
+     * @option admin-password The password to use for the CMS admin when installing the test site.
      * @option stability Minimum allowed stability for template project.
      * @option git Specify a git provider. Options are github (default), gitlab, and bitbucket.
      * @option ci Specify a CI provider. Options are circleci, gitlab-pipelines, and bitbucket-pipelines. If not provided, CI will be assigned based on git provider choice.
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
      * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
-     * @option region Specify a data residency region. Options are US (United States, default), AU (Australia), CA (Canada), and EU (European Union).
+     * @option region Specify a data residency region. See https://pantheon.io/docs/regions#available-regions for the current region options.
      * @option preserve-local-repository If given, use the repository in the existing source directory. Otherwise, use composer create-project to create a new local copy of the source project.
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
