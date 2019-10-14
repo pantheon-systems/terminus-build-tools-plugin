@@ -138,6 +138,7 @@ class ProjectCreateCommand extends BuildToolsBase
         if ($team != '-') {
             $input->setOption('team', $team);
         }
+
     }
 
     /**
@@ -195,6 +196,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option stability Minimum allowed stability for template project.
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
      * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
+     * @option extra Specify any additional provider-specific options. For example, --extra='bitbucket-project=TEAM' to provide the "bitbucket-project" option with value of "TEAM".
      */
     public function createProject(
         $source,
@@ -217,6 +219,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'git' => 'github',
             'visibility' => 'public',
             'region' => '',
+            'extra' => [],
         ])
     {
         $this->warnAboutOldPhp();
@@ -230,6 +233,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
+        $this->validateExtraOptions();
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -267,6 +271,10 @@ class ProjectCreateCommand extends BuildToolsBase
           }
           $this->log()->notice('Verified SSH connection to Git provider');
         }
+
+        // Grant providers opportunity to add their own interactions just before
+        // creating project assets.
+        $this->providerManager()->addInteractions($this->input(), $this->output());
 
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
@@ -491,6 +499,30 @@ class ProjectCreateCommand extends BuildToolsBase
         $this->passthru("git -C $repositoryDir add .");
         $this->passthru("git -C $repositoryDir commit -m 'Create new Pantheon site from $source'");
         return $this->getHeadCommit($repositoryDir);
+    }
+
+    /**
+     * Munge extra options into an associative array.
+     *
+     * @param array $options
+     *
+     * @throws \Pantheon\Terminus\Exceptions\TerminusException
+     *   If any given extra option overrides a first-class option.
+     */
+    protected function validateExtraOptions()
+    {
+        $extras = [];
+        foreach ($this->input()->getOption('extra') as $extra) {
+            list($key, $value) = explode('=', $extra, 2) + ['', ''];
+            if ($this->input->hasOption($key)) {
+                // Don't allow overriding first-class options with "extra" option injection.
+                throw new TerminusException('Invalid extra option "{key}".', ['key' => $key]);
+            }
+            if (!empty($key) && !empty($value)) {
+                $extras[$key] = $value;
+            }
+        }
+        $this->input()->setOption('extra', $extras);
     }
 
 }

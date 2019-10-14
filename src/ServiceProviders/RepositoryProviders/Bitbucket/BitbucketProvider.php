@@ -3,30 +3,27 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\ServiceProviders\AdditionalInteractionsInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
-
-use GuzzleHttp\Client;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
  */
-class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface, AdditionalInteractionsInterface
 {
     use BitbucketAPITrait;
 
     protected $serviceName = 'bitbucket';
     protected $baseGitUrl = 'git@bitbucket.org';
+    protected $project = '';
     const BITBUCKET_URL = 'https://bitbucket.org';
 
     private $bitbucketClient;
@@ -56,6 +53,9 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         $postData = [];
         if ($visibility != 'public') {
           $postData['is_private'] = TRUE;
+        }
+        if (!empty($this->project)) {
+          $postData['project']['key'] = $this->project;
         }
         $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
 
@@ -166,6 +166,43 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         'user' => $this->getBitBucketUser(),
         'password' => $this->getBitBucketPassword(),
       ];
+    }
+
+    protected function getProjectOptions($org) {
+      // Trailing slash is REQUIRED on this resource. See https://jira.atlassian.com/browse/BCLOUD-17211
+      $projects = $this->api()->request("teams/$org/projects/");
+      if (empty($projects) || empty($projects['values'])) {
+        return [];
+      }
+      $options = [];
+      foreach ($projects['values'] as $value) {
+        $options[] = $value['name'] . ' (' . $value['key'] . ')';
+      }
+      return $options;
+    }
+
+    /**
+     * Add repository to a project, if bitbucket org supports it.
+     */
+    public function addInteractions(InputInterface $input, OutputInterface $output) {
+        if (!$org = $input->getOption('org')) {
+            return;
+        }
+        $extras = $input->getOption('extra');
+        if (!empty($extras['bitbucket-project'])) {
+            $this->project = $extras['bitbucket-project'];
+            return;
+        }
+        if (!$projects = $this->getProjectOptions($org)) {
+            return;
+        }
+        $default = '(Do not assign a project)';
+        $projects[] = $default;
+        $io = new SymfonyStyle($input, $output);
+        $project = $io->choice('Select a project for the new repository', $projects, $default);
+        if ($project != $default) {
+            $this->project = $project;
+        }
     }
 
 }

@@ -7,6 +7,8 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Robo\Config\Config;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 class ProviderManager implements LoggerAwareInterface
 {
@@ -130,4 +132,16 @@ class ProviderManager implements LoggerAwareInterface
             }
         }
     }
+
+    public function addInteractions(InputInterface $input, OutputInterface $output)
+    {
+        foreach ($this->providers as $provider) {
+          if ($provider instanceof AdditionalInteractionsInterface) {
+            // Allow service providers to perform additional interactions to
+            // collect provider-specific options, e.g. Bitbucket project.
+            $provider->addInteractions($input, $output);
+          }
+        }
+    }
+
 }
