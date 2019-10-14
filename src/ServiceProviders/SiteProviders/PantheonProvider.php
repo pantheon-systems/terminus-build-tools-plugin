@@ -8,6 +8,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
+use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Pantheon\Terminus\Exceptions\TerminusException;
 
 /**
@@ -166,12 +167,17 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         $this->validateEmail('admin-email', $admin_email);
 
         // Pass the credentials on to the site environment
-        $this->getEnvironment()
+        $env = $this->getEnvironment()
             ->setSiteName($site_name)
             ->setTestSiteName($test_site_name)
             ->setAdminPassword($adminPassword)
             ->setAdminEmail($admin_email)
             ->setGitEmail($git_email);
+
+        // Assign COMPOSER_AUTH if defined in config.yml or environment.
+        if ($composerAuth = Config_Utility::getComposerAuthJson($this->session())) {
+          $env->setComposerAuth($composerAuth);
+        }
     }
 
     /**

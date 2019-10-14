@@ -27,6 +27,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
+use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -176,6 +177,9 @@ class ProjectCreateCommand extends BuildToolsBase
      * GitLab/GitLabCI configuration:
      *   export GITLAB_TOKEN=gitlab_personal_access_token
      *
+     * Composer authentication details (if necessary):
+     *   export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
+     *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
@@ -190,6 +194,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option email email address to place in ssh-key
      * @option stability Minimum allowed stability for template project.
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
+     * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
      */
     public function createProject(
         $source,
@@ -207,6 +212,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
+            'use-ssh' => false,
             'ci' => '',
             'git' => 'github',
             'visibility' => 'public',
@@ -223,6 +229,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $stability = $options['stability'];
         $visibility = $options['visibility'];
         $region = $options['region'];
+        $use_ssh = $options['use-ssh'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -244,9 +251,31 @@ class ProjectCreateCommand extends BuildToolsBase
         // Add the environment variables from the site provider to the CI environment.
         $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
+        // Set the COMPOSER_AUTH environment variable if there's one defined in config.
+        // We might need it to check out any private dependencies.
+        $composerAuth = Config_Utility::getComposerAuthJson($this->site_provider->session());
+        $backupAuth   = null;
+        if ($composerAuth) {
+            $backupAuth = getenv('COMPOSER_AUTH');
+            putenv('COMPOSER_AUTH=' . $composerAuth);
+        }
+
+        // If using SSH, verify authentication works as expected.
+        if ($use_ssh){
+          if (!$this->git_provider->verifySSHConnect()) {
+            throw new TerminusException('Unable to connect to {git} via SSH. Try `ssh -T {baseGitUrl}` to test the connection.', ['git' => $options['git'], 'baseGitUrl' => $this->git_provider->getBaseGitUrl()]);
+          }
+          $this->log()->notice('Verified SSH connection to Git provider');
+        }
+
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
         $siteDir = $this->createFromSource($source, $target, $stability, $options);
+
+        // Restore COMPOSER_AUTH if necessary.
+        if (!is_null($backupAuth)) {
+            putenv('COMPOSER_AUTH=' . $backupAuth);
+        }
 
         $builder = $this->collectionBuilder();
 
@@ -414,9 +443,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $siteDir) {
+                function ($state) use ($ci_env, $siteDir, $use_ssh) {
                     $repositoryAttributes = $ci_env->getState('repository');
-                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
                 })
 
             // Tell the CI server to start testing our project
