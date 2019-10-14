@@ -136,11 +136,11 @@ class ProviderManager implements LoggerAwareInterface
     public function addInteractions(InputInterface $input, OutputInterface $output)
     {
         foreach ($this->providers as $provider) {
-          if ($provider instanceof AdditionalInteractionsInterface) {
-            // Allow service providers to perform additional interactions to
-            // collect provider-specific options, e.g. Bitbucket project.
-            $provider->addInteractions($input, $output);
-          }
+            if ($provider instanceof AdditionalInteractionsInterface) {
+                // Allow service providers to perform additional interactions to
+                // collect provider-specific options, e.g. Bitbucket project.
+                $provider->addInteractions($input, $output);
+            }
         }
     }
 

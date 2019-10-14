@@ -138,7 +138,6 @@ class ProjectCreateCommand extends BuildToolsBase
         if ($team != '-') {
             $input->setOption('team', $team);
         }
-
     }
 
     /**
@@ -282,8 +281,7 @@ class ProjectCreateCommand extends BuildToolsBase
           $this->log()->notice('Verified SSH connection to Git provider');
         }
 
-        // Grant providers opportunity to add their own interactions just before
-        // creating project assets.
+        // Grant service providers opportunity to add their own interactions just before creating project assets.
         $this->providerManager()->addInteractions($this->input(), $this->output());
 
         // Pull down the source project

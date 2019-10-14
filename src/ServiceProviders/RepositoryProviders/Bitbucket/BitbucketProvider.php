@@ -168,23 +168,25 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
       ];
     }
 
-    protected function getProjectOptions($org) {
-      // Trailing slash is REQUIRED on this resource. See https://jira.atlassian.com/browse/BCLOUD-17211
-      $projects = $this->api()->request("teams/$org/projects/");
-      if (empty($projects) || empty($projects['values'])) {
-        return [];
-      }
-      $options = [];
-      foreach ($projects['values'] as $value) {
-        $options[] = $value['name'] . ' (' . $value['key'] . ')';
-      }
-      return $options;
+    protected function getProjectOptions($org)
+    {
+        // Trailing slash is REQUIRED on this resource. See https://jira.atlassian.com/browse/BCLOUD-17211
+        $projects = $this->api()->request("teams/$org/projects/");
+        if (empty($projects) || empty($projects['values'])) {
+            return [];
+        }
+        $options = [];
+        foreach ($projects['values'] as $value) {
+            $options[] = $value['name'] . ' (' . $value['key'] . ')';
+        }
+        return $options;
     }
 
     /**
      * Add repository to a project, if bitbucket org supports it.
      */
-    public function addInteractions(InputInterface $input, OutputInterface $output) {
+    public function addInteractions(InputInterface $input, OutputInterface $output)
+    {
         if (!$org = $input->getOption('org')) {
             return;
         }
