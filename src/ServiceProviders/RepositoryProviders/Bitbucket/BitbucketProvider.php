@@ -50,12 +50,14 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $postData = [];
+        $postData = [
+            'scm' => 'git'
+        ];
         if ($visibility != 'public') {
           $postData['is_private'] = TRUE;
         }
         if (!empty($this->project)) {
-          $postData['project']['key'] = $this->project;
+          $postData['project']['uuid'] = $this->project;
         }
         $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
 
