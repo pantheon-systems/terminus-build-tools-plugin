@@ -171,12 +171,12 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     protected function getProjectOptions($org)
     {
         // Trailing slash is REQUIRED on this resource. See https://jira.atlassian.com/browse/BCLOUD-17211
-        $projects = $this->api()->request("teams/$org/projects/");
-        if (empty($projects) || empty($projects['values'])) {
+        $projects = $this->api()->pagedRequest("teams/$org/projects/");
+        if (empty($projects)) {
             return [];
         }
         $options = [];
-        foreach ($projects['values'] as $value) {
+        foreach ($projects as $value) {
             $options[] = [
                 "name" => $value['name'],
                 "key" => $value['key'],
