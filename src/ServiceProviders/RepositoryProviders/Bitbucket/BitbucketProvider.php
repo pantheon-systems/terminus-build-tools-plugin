@@ -177,7 +177,11 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         }
         $options = [];
         foreach ($projects['values'] as $value) {
-            $options[] = $value['name'] . ' (' . $value['key'] . ')';
+            $options[] = [
+                "name" => $value['name'],
+                "key" => $value['key'],
+                "uuid" => $value['uuid'],
+            ];
         }
         return $options;
     }
@@ -199,11 +203,19 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
             return;
         }
         $default = '(Do not assign a project)';
-        $projects[] = $default;
+        $project_options = [
+            $default
+        ];
+        foreach ( $projects as $project ) {
+            $project_options[] = $project['name'] . ' (' . $project['key'] . ')';
+        }
         $io = new SymfonyStyle($input, $output);
-        $project = $io->choice('Select a project for the new repository', $projects, $default);
-        if ($project != $default) {
-            $this->project = $project;
+        $project = $io->choice('Select a project for the new repository', $project_options, $default);
+        // Remove the default value
+        array_shift( $project_options );
+        $project_array_key = array_search( $project, $project_options, true );
+        if ($project != $default && FALSE !== $project_array_key ) {
+            $this->project = $projects[$project_array_key]['uuid'];
         }
     }
 
