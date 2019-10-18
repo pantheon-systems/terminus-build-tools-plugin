@@ -462,13 +462,17 @@ class ProjectCreateCommand extends BuildToolsBase
                 function ($state) use ($ci_env, $siteDir, $use_ssh) {
                     $repositoryAttributes = $ci_env->getState('repository');
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
-                })
+                });
 
-            // Tell the CI server to start testing our project
-            ->progressMessage('Beginning CI testing')
-            ->taskCIStartTesting()
-                ->provider($this->ci_provider)
-                ->environment($ci_env);
+        // Sleep for 10 seconds to allow the CI
+        // provider to recognize the project
+        sleep(10);
+
+        // Tell the CI server to start testing our project
+        $builder->progressMessage('Beginning CI testing')
+        ->taskCIStartTesting()
+            ->provider($this->ci_provider)
+            ->environment($ci_env);
 
 
         // If the user specified --keep, then clone a local copy of the project
