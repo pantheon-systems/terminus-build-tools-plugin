@@ -195,7 +195,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         $branchList = array_column(array_map(
             function ($item) {
                 $pr_number = $item['iid'];
-                $branch_name = $item['sha'];
+                $branch_name = $item['source_branch'];
                 return [$pr_number, $branch_name];
             },
             $data
