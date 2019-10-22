@@ -184,17 +184,6 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
             'all' => ['all']
         ];
 
-        switch($return_key) {
-            case 'branch':
-            case 'source_branch':
-                $return_key = 'source_branch';
-                break;
-            case 'sha':
-            case 'hash':
-                $return_key = 'sha';
-                break;
-        }
-
         if (!isset($stateParameters[$state])) {
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
         }
@@ -203,17 +192,45 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
 
         $data = $this->api()
             ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
-        $branchList = array_column(array_map(
-            function ($item) {
-                if(!isset($item[$return_key])) {
-                    throw new TerminusException("branchesForPullRequests - invalid return key");
-                }
-                return [$item['iid'], $item[$return_key]];
-            },
-            $data
-        ), 1, 0);
+        $branchList = $this->filterBranchList($data, $return_key);
 
         return $branchList;
+    }
+
+    private function filterBranchList($data, $return_key) {
+        switch($return_key) {
+            case 'branch':
+            case 'source_branch':
+                $key = 'source_branch';
+                break;
+            case 'sha':
+            case 'hash':
+                $key = 'sha';
+                break;
+            case 'all':
+                $key = 'all';
+                break;
+            default:
+                $key = $return_key;
+                break;
+        }
+
+        $output = [];
+
+        foreach( $data as $item ) {
+            if('all' === $key ) {
+                $output[$item['iid']] = $item;
+                continue;
+            }
+
+            if(!isset($item[$key])) {
+                throw new TerminusException("branchesForPullRequests - invalid return key");
+            }
+
+            $output[$item['iid']] = $item[$key];
+        }
+
+        return $output;
     }
 
     public function convertPRInfo($data) {
