@@ -204,7 +204,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         $data = $this->api()
             ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
         $branchList = array_column(array_map(
-            function ($item, $return_key) {
+            function ($item) {
                 if(!isset($item[$return_key])) {
                     throw new TerminusException("branchesForPullRequests - invalid return key");
                 }
