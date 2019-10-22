@@ -177,12 +177,23 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    function branchesForPullRequests($target_project, $state, $callback = NULL) {
+    function branchesForPullRequests($target_project, $state, $callback = NULL, $return_key='sha') {
         $stateParameters = [
             'open' => ['opened'],
             'closed' => ['merged', 'closed'],
             'all' => ['all']
         ];
+
+        switch($return_key) {
+            case 'branch':
+            case 'source_branch':
+                $return_key = 'source_branch';
+                break;
+            case 'sha':
+            case 'hash':
+                $return_key = 'sha';
+                break;
+        }
 
         if (!isset($stateParameters[$state])) {
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
@@ -193,10 +204,11 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         $data = $this->api()
             ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
         $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['iid'];
-                $branch_name = $item['source_branch'];
-                return [$pr_number, $branch_name];
+            function ($item, $return_key) {
+                if(!isset($item[$return_key])) {
+                    throw new TerminusException("branchesForPullRequests - invalid return key");
+                }
+                return [$item['iid'], $item[$return_key]];
             },
             $data
         ), 1, 0);
