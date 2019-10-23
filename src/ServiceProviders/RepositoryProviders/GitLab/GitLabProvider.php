@@ -190,8 +190,13 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
 
         $projectID = $this->getProjectID($target_project);
 
-        $data = $this->api()
-            ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
+        $data = [];
+        foreach ($stateParameters[$state] as $stateParameter) {
+            $temp = $this->api()
+              ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => $stateParameter]);
+            $data = array_merge($data, $temp);
+        }
+
         $branchList = $this->filterBranchList($data, $return_key);
 
         return $branchList;
