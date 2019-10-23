@@ -2,20 +2,13 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPI;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Robo\Config\Config;
 
 /**
  * Holds state information destined to be registered with the CI service.

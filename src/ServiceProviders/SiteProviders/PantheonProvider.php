@@ -2,7 +2,6 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\SiteProviders;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
