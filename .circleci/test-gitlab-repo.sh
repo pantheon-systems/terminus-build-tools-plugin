@@ -4,6 +4,7 @@ set -e
 
 SOURCE_COMPOSER_PROJECT="$1"
 CI_PROVIDER="$2"
+EXTRA_ARGS="$3"
 
 BUILD_TOOLS_VERSION="dev-master"
 if [[ -n "$CIRCLE_BRANCH" ]]; then
@@ -18,7 +19,7 @@ CLONE_URL="https://oauth2:${GITLAB_TOKEN}@gitlab.com/${TARGET_REPO}.git"
 composer clear-cache
 
 # Build a test project on gitlab
-terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=gitlab --ci=$CI_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
+terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=gitlab --ci=$CI_PROVIDER --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION" $EXTRA_ARGS
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 # Confirm that the GitLab project was created

@@ -26,6 +26,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     use BitbucketAPITrait;
 
     protected $serviceName = 'bitbucket';
+    protected $baseGitUrl = 'git@bitbucket.org';
     const BITBUCKET_URL = 'https://bitbucket.org';
 
     private $bitbucketClient;
@@ -65,19 +66,22 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
-        // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@bitbucket.org:{$target_project}.git'");
+        $this->execGit($local_site_path, "remote add origin '{$this->getBaseGitUrl()}:{$target_project}.git'");
         return $target_project;
     }
 
     /**
      * @inheritdoc
      */
-    public function pushRepository($dir, $target_project)
+    public function pushRepository($dir, $target_project, $use_ssh = false)
     {
-        $bitbucket_token = $this->token();
-        $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
-        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        if ($use_ssh) {
+            $this->execGit($dir, 'push --progress origin master');
+        } else {
+            $bitbucket_token = $this->token();
+            $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
+            $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        }
     }
 
     /**
@@ -127,7 +131,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         $stateParameters = [
             'open' => ['OPEN'],

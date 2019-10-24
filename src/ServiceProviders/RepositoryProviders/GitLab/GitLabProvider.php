@@ -26,6 +26,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     use GitLabAPITrait;
 
     protected $serviceName = 'gitlab';
+    protected $baseGitUrl;
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
     const GITLAB_TOKEN = 'GITLAB_TOKEN';
@@ -33,6 +34,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     public function __construct(Config $config) {
         parent::__construct($config);
         $this->setGitLabUrl(GitLabAPI::determineGitLabUrl($config));
+        $this->baseGitUrl = 'git@' . $this->getGitLabUrl();
     }
 
     /**
@@ -92,7 +94,6 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
-        // TODO: maybe in the future we will not need to set this?
         $this->execGit($local_site_path, "remote add origin " . $result['ssh_url_to_repo']);
 
         return $result['path_with_namespace'];
@@ -101,12 +102,16 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function pushRepository($dir, $target_project) {
-        $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', [
-            'token' => $this->token(),
-            'gitlab_url' => $this->getGitLabUrl(),
-            'target' => $target_project
-        ], ['token']);
+    public function pushRepository($dir, $target_project, $use_ssh = false) {
+        if ($use_ssh) {
+            $this->execGit($dir, 'push --progress origin master');
+        } else {
+            $this->execGit($dir, 'push --progress https://oauth2:{token}@{gitlab_url}/{target}.git master', [
+                'token' => $this->token(),
+                'gitlab_url' => $this->getGitLabUrl(),
+                'target' => $target_project
+            ], ['token']);
+        }
     }
 
     /**
@@ -172,7 +177,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    function branchesForPullRequests($target_project, $state, $callback = NULL) {
+    function branchesForPullRequests($target_project, $state, $callback = NULL, $return_key='sha') {
         $stateParameters = [
             'open' => ['opened'],
             'closed' => ['merged', 'closed'],
@@ -185,18 +190,52 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
 
         $projectID = $this->getProjectID($target_project);
 
-        $data = $this->api()
-            ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
-        $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['iid'];
-                $branch_name = $item['sha'];
-                return [$pr_number, $branch_name];
-            },
-            $data
-        ), 1, 0);
+        $data = [];
+        foreach ($stateParameters[$state] as $stateParameter) {
+            $temp = $this->api()
+              ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => $stateParameter]);
+            $data = array_merge($data, $temp);
+        }
+
+        $branchList = $this->filterBranchList($data, $return_key);
 
         return $branchList;
+    }
+
+    private function filterBranchList($data, $return_key) {
+        switch($return_key) {
+            case 'branch':
+            case 'source_branch':
+                $key = 'source_branch';
+                break;
+            case 'sha':
+            case 'hash':
+                $key = 'sha';
+                break;
+            case 'all':
+                $key = 'all';
+                break;
+            default:
+                $key = $return_key;
+                break;
+        }
+
+        $output = [];
+
+        foreach( $data as $item ) {
+            if('all' === $key ) {
+                $output[$item['iid']] = $item;
+                continue;
+            }
+
+            if(!isset($item[$key])) {
+                throw new TerminusException("branchesForPullRequests - invalid return key");
+            }
+
+            $output[$item['iid']] = $item[$key];
+        }
+
+        return $output;
     }
 
     public function convertPRInfo($data) {
