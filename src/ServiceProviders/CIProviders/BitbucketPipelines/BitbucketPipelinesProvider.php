@@ -102,7 +102,29 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // Temporary: catch and eat errors without stopping the command
         try
         {
+            // Enable Pipelines for the project.
             $this->api()->request("$repoApiUrl/pipelines_config", $data, 'PUT');
+        } catch (\Exception $e) {
+            $this->logger->error($e->getMessage());
+        }
+
+        // @TODO: verify that the custom "clu" task exists in yml first?
+        $data = [
+          'enabled' => true,
+          'cron_pattern' => '0 0 4 * * ? *',
+          'target' => [
+            'type' => 'pipeline_ref_target',
+            'ref_type' => 'branch',
+            'ref_name' => 'master',
+            'selector' => [
+              'type' => 'custom',
+              'pattern' => 'clu'
+            ]
+          ]
+        ];
+        try {
+            // Enable CLU scheduled task.
+            $this->api()->request("$repoApiUrl/pipelines_config/schedules/", $data, 'POST');
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
         }
