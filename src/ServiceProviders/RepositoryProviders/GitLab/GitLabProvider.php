@@ -177,7 +177,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    function branchesForPullRequests($target_project, $state, $callback = NULL) {
+    function branchesForPullRequests($target_project, $state, $callback = NULL, $return_key='sha') {
         $stateParameters = [
             'open' => ['opened'],
             'closed' => ['merged', 'closed'],
@@ -197,16 +197,45 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
             $data = array_merge($data, $temp);
         }
 
-        $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['iid'];
-                $branch_name = $item['sha'];
-                return [$pr_number, $branch_name];
-            },
-            $data
-        ), 1, 0);
+        $branchList = $this->filterBranchList($data, $return_key);
 
         return $branchList;
+    }
+
+    private function filterBranchList($data, $return_key) {
+        switch($return_key) {
+            case 'branch':
+            case 'source_branch':
+                $key = 'source_branch';
+                break;
+            case 'sha':
+            case 'hash':
+                $key = 'sha';
+                break;
+            case 'all':
+                $key = 'all';
+                break;
+            default:
+                $key = $return_key;
+                break;
+        }
+
+        $output = [];
+
+        foreach( $data as $item ) {
+            if('all' === $key ) {
+                $output[$item['iid']] = $item;
+                continue;
+            }
+
+            if(!isset($item[$key])) {
+                throw new TerminusException("branchesForPullRequests - invalid return key");
+            }
+
+            $output[$item['iid']] = $item[$key];
+        }
+
+        return $output;
     }
 
     public function convertPRInfo($data) {
