@@ -1,8 +1,6 @@
 <?php
 namespace Pantheon\TerminusBuildTools\Task\CI;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Robo\Result;
 
 class StartTesting extends Base

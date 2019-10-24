@@ -9,21 +9,6 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
-use Consolidation\OutputFormatters\StructuredData\PropertyList;
-use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
-use Pantheon\Terminus\Commands\TerminusCommand;
-use Pantheon\Terminus\Exceptions\TerminusException;
-use Pantheon\Terminus\Site\SiteAwareInterface;
-use Pantheon\Terminus\Site\SiteAwareTrait;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
-use Consolidation\AnnotatedCommand\AnnotationData;
-use Consolidation\AnnotatedCommand\CommandData;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Composer\Semver\Comparator;
-
 /**
  * Env Merge Command
  */

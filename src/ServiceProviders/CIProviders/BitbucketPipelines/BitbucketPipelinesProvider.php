@@ -4,18 +4,11 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BitbucketPipe
 
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\KeyPairReciever;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-use Robo\Common\ConfigAwareTrait;
-use Robo\Config\Config;
 
 /**
  * Manages the configuration of a project to be tested on BitbucketPipelines.

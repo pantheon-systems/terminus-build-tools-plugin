@@ -7,17 +7,11 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
-use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Robo\Common\ConfigAwareTrait;
 use Robo\Config\Config;
 
 /**

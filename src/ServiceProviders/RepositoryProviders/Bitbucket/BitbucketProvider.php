@@ -3,20 +3,13 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
-
-use GuzzleHttp\Client;
 
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
