@@ -122,7 +122,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");

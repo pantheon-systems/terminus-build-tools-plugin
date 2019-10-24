@@ -124,7 +124,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         $stateParameters = [
             'open' => ['OPEN'],
