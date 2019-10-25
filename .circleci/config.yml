@@ -68,10 +68,10 @@ jobs:
             - run:
                 name: Clean up D7 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
-            - run:
-                name: Clean up D7 GitHub fixtures after failure
-                when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh fail
+            #- run:
+            #    name: Clean up D7 GitHub fixtures after failure
+            #    when: on_fail
+            #    command: ./.circleci/cleanup-fixtures.sh fail
 
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
     # We test creating a PR and merging it to master here, but omit those tests
