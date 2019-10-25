@@ -272,16 +272,6 @@ workflows:
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
-                   - test_wordpress_github
-                   - test_wordpress_gitlab
             - test_wordpress_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
-                   - test_wordpress_github
-                   - test_wordpress_gitlab
