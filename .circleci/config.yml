@@ -126,7 +126,7 @@ jobs:
                 command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
-                command: ./.circleci/watch-gitlabci.sh
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -214,7 +214,7 @@ jobs:
                 command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
-                command: ./.circleci/watch-gitlabci.sh
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
