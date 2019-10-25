@@ -122,11 +122,14 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with GitLab
+                name: Test D8 with GitLab
                 command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -215,6 +218,9 @@ jobs:
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok

@@ -2,7 +2,6 @@
 
 set -e
 
-TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 TERMINUS_ENV=dev
 
 terminus build:secrets:set "$TERMINUS_SITE.$TERMINUS_ENV" key val --file=build-testing.json
