@@ -260,24 +260,24 @@ workflows:
     build_test:
         jobs:
             - unit
-            - test_drupal_8_github:
-                requires:
-                   - unit
-            - test_drupal_7_github:
-                requires:
-                   - unit
-            - test_wordpress_github:
-                requires:
-                   - unit
+            #- test_drupal_8_github:
+            #    requires:
+            #       - unit
+            #- test_drupal_7_github:
+            #    requires:
+            #       - unit
+            #- test_wordpress_github:
+            #    requires:
+            #       - unit
             - test_wordpress_gitlab:
                 requires:
                    - unit
             - test_drupal_8_gitlab:
                 requires:
                    - unit
-            - test_drupal_8_bitbucket:
-                requires:
-                   - unit
-            - test_wordpress_bitbucket:
-                requires:
-                   - unit
+            #- test_drupal_8_bitbucket:
+            #    requires:
+            #       - unit
+            #- test_wordpress_bitbucket:
+            #    requires:
+            #       - unit
