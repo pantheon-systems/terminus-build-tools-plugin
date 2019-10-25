@@ -19,9 +19,12 @@ source $BASH_ENV
 set -ex
 
 cd ~/terminus_build_tools_plugin
-mkdir -p $HOME/.terminus/plugins
-ln -s $(pwd) $HOME/.terminus/plugins
+TERMINUS_PLUGINS_DIR=${TERMINUS_PLUGINS_DIR:-$HOME/.terminus/plugins}
+echo -e "\nThe Setting up Build Tools in the Terminus plugin directory: $TERMINUS_PLUGINS_DIR"
+mkdir -p $TERMINUS_PLUGINS_DIR
+ln -s $(pwd) $TERMINUS_PLUGINS_DIR
 terminus list -n build
+terminus list -n project
 terminus --version
 
 set +ex
