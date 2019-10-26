@@ -14,12 +14,14 @@ defaults: &defaults
     # TERMINUS_SITE:  Name of the Pantheon site to run tests on, e.g. my_site
     # TERMINUS_TOKEN: The Pantheon machine token
     # TERMINUS_ORG:   Name of Pantheon Agency / Team
+    # GITLAB_USER:    GitLab User
+    # GITLAB_TOKEN:   GitLab Token
     # CIRCLE_TOKEN:   Circle CI Token
     # GITHUB_TOKEN:   The GitHub personal access token
     # GITHUB_USER:    The GitHub username
     # GIT_EMAIL:      The email address to use when making commits
-    # BITBUCKET_USER: The Bitbucket Username
-    # BITBUCKET_PASS: The Bitbucket app specific password
+    # BITBUCKET_USER: The BitBucket Username
+    # BITBUCKET_PASS: The BitBucket app specific password
     #
     # TEST_SITE_NAME: The name of the test site to provide when installing.
     # ADMIN_PASSWORD: The admin password to use when installing.
