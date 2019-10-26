@@ -339,7 +339,7 @@ workflows:
             - test_wordpress_github:
                 requires:
                    - unit
-            - bitbucketgitlab:
+            - test_wordpress_gitlab:
                 requires:
                    - unit
             - test_drupal_8_gitlab:
