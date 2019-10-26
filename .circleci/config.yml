@@ -123,7 +123,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh d8
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
@@ -151,31 +151,51 @@ jobs:
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
-            #- run:
-            #    name: Clean up WordPress GitLab fixtures after failure
-            #    when: on_fail
-            #    command: ./.circleci/cleanup-fixtures.sh fail
+            - run:
+                name: Clean up WordPress GitLab fixtures after failure
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_drupal_8_bitbucket:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
-                name: Configure globals
+                name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with BitBucket
-                command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                name: Test WordPress with BitBucket
+                command: ./.circleci/test-bitbucket-repo.sh d8
             - run:
-                name: Watch CircleCI tests
-                command: echo "Skipping the watch-cicle step too"
-                #command: ./.circleci/watch-circle.sh
+                name: Watch BitBucket CI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh bitbucket
+            - run:
+                name: Watch CircleCI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up WordPress BitBucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up WordPress BitBucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -229,7 +249,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh wp
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
@@ -257,34 +277,51 @@ jobs:
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
-            #- run:
-            #    name: Clean up WordPress GitLab fixtures after failure
-            #    when: on_fail
-            #    command: ./.circleci/cleanup-fixtures.sh fail
+            - run:
+                name: Clean up WordPress GitLab fixtures after failure
+                when: on_fail
+                command: ./.circleci/cleanup-fixtures.sh fail
 
     test_wordpress_bitbucket:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
-                name: Configure globals
+                name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+                name: Test WordPress with BitBucket
+                command: ./.circleci/test-bitbucket-repo.sh wp
             - run:
-                name: Test D8 with BitBucket
-                command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+                name: Watch BitBucket CI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
-                name: Watch CircleCI tests
-                command: echo "Skipping the watch-cicle step too"
-                #command: ./.circleci/watch-circle.sh
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh bitbucket
+            - run:
+                name: Watch CircleCI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up WordPress BitBucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up WordPress BitBucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -293,24 +330,24 @@ workflows:
     build_test:
         jobs:
             - unit
-            #- test_drupal_8_github:
-            #    requires:
-            #       - unit
-            #- test_drupal_7_github:
-            #    requires:
-            #       - unit
-            #- test_wordpress_github:
-            #    requires:
-            #       - unit
-            - test_wordpress_gitlab:
+            - test_drupal_8_github:
+                requires:
+                   - unit
+            - test_drupal_7_github:
+                requires:
+                   - unit
+            - test_wordpress_github:
+                requires:
+                   - unit
+            - bitbucketgitlab:
                 requires:
                    - unit
             - test_drupal_8_gitlab:
                 requires:
                    - unit
-            #- test_drupal_8_bitbucket:
-            #    requires:
-            #       - unit
-            #- test_wordpress_bitbucket:
-            #    requires:
-            #       - unit
+            - test_drupal_8_bitbucket:
+                requires:
+                   - unit
+            - test_wordpress_bitbucket:
+                requires:
+                   - unit
