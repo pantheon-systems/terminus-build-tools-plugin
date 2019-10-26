@@ -146,4 +146,45 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
             $this->logger->error($e->getMessage());
         }
     }
+
+    public function getMostRecentPipelineId(CIState $ci_env, $branchName)
+    {
+        $repoApiUrl = $this->targetRepositoryBaseUrl($ci_env);
+        // BitBucket defaults to ascending order, we need to sort
+        // by -created_on to get the descding order
+        // We can also target the branch and specific fields in the result
+        // See https://community.atlassian.com/t5/Bitbucket-questions/I-would-like-a-way-to-know-the-last-status-of-a-pipeline-for/qaq-p/1135687#M44752
+        $pipelines = $this->api()->request("$repoApiUrl/pipelines/?sort=-created_on&target.branch=" . urlencode($branchName), [], 'GET');
+        if (empty($pipelines)) {
+            return FALSE;
+        }
+        return $pipelines['values'][0]['uuid'];
+    }
+
+    /**
+     * @return string Must be one of 'success', 'pending', or 'failed'.
+     */
+    public function getPipelineStatus(CIState $ci_env, $pipelineId)
+    {
+        $repoApiUrl = $this->targetRepositoryBaseUrl($ci_env);
+        $pipeline = $this->api()->request(sprintf("$repoApiUrl/pipelines/%s", $pipelineId), [], 'GET');
+        if (empty($pipeline)) {
+            return FALSE;
+        }
+        if( 'COMPLETED' !== $pipeline['state']['name'] ) {
+            return 'pending';
+        }
+        if( 'IN_PROGRESS' === $pipeline['state']['name'] ){
+            return 'pending';
+        }
+        switch( $pipeline['state']['result']['name'] ) {
+            case 'FAILED':
+                return 'failed';
+                break;
+            case 'SUCCESSFUL':
+                return 'success';
+                break;
+        }
+        return false;
+    }
 }
