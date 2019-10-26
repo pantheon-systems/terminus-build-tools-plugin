@@ -135,7 +135,7 @@ jobs:
                 command: ./.circleci/test-pr-to-multidev.sh gitlab
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-ci.sh pr-1
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -232,7 +232,7 @@ jobs:
                 command: ./.circleci/test-pr-to-multidev.sh gitlab
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-ci.sh pr-1
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
