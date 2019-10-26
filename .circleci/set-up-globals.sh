@@ -34,3 +34,6 @@ git config --global user.email "$GIT_EMAIL"
 git config --global user.name "Circle CI"
 # Ignore file permissions.
 git config --global core.fileMode false
+
+# Disable strict SSH host checking to prevent SSH connect issues
+echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"

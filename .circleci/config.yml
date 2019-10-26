@@ -216,9 +216,6 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
-            - run:
                 name: Test WordPress with GitLab
                 command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
