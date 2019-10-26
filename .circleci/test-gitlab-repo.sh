@@ -12,8 +12,7 @@ EXTRA_ARGS="$3"
 #fi
 unset BUILD_TOOLS_VERSION
 
-TARGET_REPO=$GITLAB_USER/$TERMINUS_SITE
-CLONE_URL="https://oauth2:${GITLAB_TOKEN}@gitlab.com/${TARGET_REPO}.git"
+CLONE_URL="git@gitlab.com:$GITLAB_USER/$TERMINUS_SITE.git"
 
 # Clear Composer cache before running build:project:create
 composer clear-cache

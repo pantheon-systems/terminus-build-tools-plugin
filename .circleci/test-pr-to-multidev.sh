@@ -7,20 +7,6 @@ terminus build:project:repair -n "$TERMINUS_SITE" --email="$GIT_EMAIL"
 
 cd "$TARGET_REPO_WORKING_COPY"
 
-CI_PROVIDER=$1
-
-if [[ "$CI_PROVIDER" == "gitlab" ]]; then
-    TOKEN=$GITLAB_TOKEN
-    ORIGIN="https://gitlab-ci-token:$GITLAB_TOKEN@gitlab.com/$GITLAB_USER/$TERMINUS_SITE.git"
-elif [[ "$CI_PROVIDER" == "bitbucket" ]]; then
-    #ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
-else
-    TOKEN=$GITHUB_TOKEN
-    ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
-fi
-
-git remote set-url origin $ORIGIN 2>&1 | sed -e "s/$TOKEN/[REDACTED]/g"
-
 # A helper function to create a branch and pull request
 function createBranchandPR()
 {
@@ -38,7 +24,7 @@ function createBranchandPR()
     git commit -m "$TEST_COMMENT"
 
     # Push the branch
-    git push -u origin "$TEST_BRANCH_NAME" 2>&1 | sed -e "s/$TOKEN/[REDACTED]/g"
+    git push -u origin "$TEST_BRANCH_NAME"
 
     # Create the pull request
     terminus -n project:pull-request:create $TERMINUS_SITE --target=master --title="$TEST_COMMENT" --source="$TEST_BRANCH_NAME"
