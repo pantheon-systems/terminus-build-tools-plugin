@@ -141,7 +141,7 @@ jobs:
                 command: ./.circleci/test-multidev-created.sh
             - run:
                 name: Test merging multidev branch to master
-                command: ./.circleci/test-merge-multidev-to-master.sh
+                command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
                 name: Watch CircleCI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
@@ -247,7 +247,7 @@ jobs:
                 command: ./.circleci/test-multidev-created.sh
             - run:
                 name: Test merging multidev branch to master
-                command: ./.circleci/test-merge-multidev-to-master.sh
+                command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
                 name: Watch CircleCI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
