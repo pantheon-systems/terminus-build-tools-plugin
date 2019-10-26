@@ -13,7 +13,7 @@ function createBranchandPR()
     TEST_BRANCH_NAME="$1"
     TEST_COMMENT="$2"
 
-    echo -e "Creating new pull request from branch $TEST_BRANCH_NAME"
+    echo -e "\nCreating new pull request from branch $TEST_BRANCH_NAME"
 
     # Make a branch so for our test commit
     git checkout -b "$TEST_BRANCH_NAME" master
@@ -34,7 +34,7 @@ function createBranchandPR()
 }
 
 # Make a pull request to actually run tests
-createBranchandPR 'test-after-repair' "Test after repair"
+createBranchandPR "$TEST_BRANCH_NAME" "Test after repair"
 
 # Create a bunch of pull requests that will not run any tests.
 # We do this so that we'll have to make more than one API request

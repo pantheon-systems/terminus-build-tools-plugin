@@ -13,6 +13,8 @@
   echo 'export PATH=$PATH:$HOME/bin'
   echo 'export TARGET_REPO_WORKING_COPY=$HOME/system-under-test'
   echo 'export TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM'
+  echo 'export TEST_BRANCH_NAME=test-after-repair'
+  echo 'export TEST_MULTIDEV_ENV=pr-1'
 ) >> $BASH_ENV
 source $BASH_ENV
 
