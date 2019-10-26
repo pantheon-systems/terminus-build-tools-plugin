@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# Do -not- fail on errors
+set +e
 
 cd "$TARGET_REPO_WORKING_COPY"
 
