@@ -12,7 +12,7 @@ CI_PROVIDER=$1
 if [[ "$CI_PROVIDER" == "gitlab" ]]; then
     TOKEN=$GITLAB_TOKEN
     ORIGIN="https://gitlab-ci-token:$GITLAB_TOKEN@gitlab.com/$GITLAB_USER/$TERMINUS_SITE.git"
-if [[ "$CI_PROVIDER" == "bitbucket" ]]
+elif [[ "$CI_PROVIDER" == "bitbucket" ]]; then
     #ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
 else
     TOKEN=$GITHUB_TOKEN
