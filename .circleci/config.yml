@@ -84,34 +84,40 @@ jobs:
         steps:
             - checkout
             - run:
-                name: Configure globals
+                name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Check Terminus version
-                command: terminus --version
+                name: Test D8 with GitLab
+                command: ./.circleci/test-github-repo.sh d8
             - run:
-                name: Test D8 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
-            - run:
-                name: Watch CircleCI tests after build:project:create
-                command: ./.circleci/watch-circle.sh
+                name: Watch GitLab CI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test secrets can be set and removed
                 command: ./.circleci/test-secrets.sh
             - run:
-                name: Test build:project:repair
-                command: ./.circleci/test-github-repair.sh
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
-                name: Test merge to master
-                command: ./.circleci/test-merge-master.sh
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
             - run:
-                name: Clean up D8 GitHub fixtures after pass
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 GitHub fixtures after failure
+                name: Clean up WordPress GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -134,7 +140,7 @@ jobs:
                 command: ./.circleci/test-secrets.sh
             - run:
                 name: Test multidev to PR and build:project:repair
-                command: ./.circleci/test-pr-to-multidev.sh gitlab
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
@@ -217,7 +223,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
+                command: ./.circleci/test-github-repo-v1.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
             - run:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
@@ -260,7 +266,7 @@ jobs:
                 command: ./.circleci/test-secrets.sh
             - run:
                 name: Test multidev to PR and build:project:repair
-                command: ./.circleci/test-pr-to-multidev.sh gitlab
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
