@@ -87,10 +87,10 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with GitLab
+                name: Test D8 with GitHub
                 command: ./.circleci/test-github-repo.sh d8
             - run:
-                name: Watch GitLab CI tests
+                name: Watch CircleCI tests
                 command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test secrets can be set and removed
@@ -142,7 +142,7 @@ jobs:
                 name: Test multidev to PR and build:project:repair
                 command: ./.circleci/test-pr-to-multidev.sh
             - run:
-                name: Watch CircleCI tests after build:project:repair
+                name: Watch GitLab CI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Test multidev created from PR
@@ -151,7 +151,7 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
-                name: Watch CircleCI tests after merging multidev to master
+                name: Watch GitLab CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test multidev deleted
@@ -173,7 +173,7 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with BitBucket
+                name: Test D8 with BitBucket
                 command: ./.circleci/test-bitbucket-repo.sh d8
             - run:
                 name: Watch BitBucket CI tests
@@ -185,7 +185,7 @@ jobs:
                 name: Test multidev to PR and build:project:repair
                 command: ./.circleci/test-pr-to-multidev.sh bitbucket
             - run:
-                name: Watch CircleCI tests after build:project:repair
+                name: Watch BitBucket CI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Test multidev created from PR
@@ -194,7 +194,7 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
-                name: Watch CircleCI tests after merging multidev to master
+                name: Watch BitBucket CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test multidev deleted
@@ -216,34 +216,40 @@ jobs:
         steps:
             - checkout
             - run:
-                name: Configure globals
+                name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
-            - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo-v1.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
+                command: ./.circleci/test-github-repo.sh wp
             - run:
-                name: Watch CircleCI tests after build:project:create
-                command: ./.circleci/watch-circle.sh
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test secrets can be set and removed
                 command: ./.circleci/test-secrets.sh
             - run:
-                name: Test build:project:repair
-                command: ./.circleci/test-github-repair.sh
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
-                name: Test merge to master
-                command: ./.circleci/test-merge-master.sh
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
             - run:
-                name: Clean up WordPress GitHub fixtures after pass
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up WordPress GitHub fixtures after failure
+                name: Clean up WordPress GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -268,7 +274,7 @@ jobs:
                 name: Test multidev to PR and build:project:repair
                 command: ./.circleci/test-pr-to-multidev.sh
             - run:
-                name: Watch CircleCI tests after build:project:repair
+                name: Watch GitLab CI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Test multidev created from PR
@@ -277,7 +283,7 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
-                name: Watch CircleCI tests after merging multidev to master
+                name: Watch GitLab CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test multidev deleted
@@ -311,7 +317,7 @@ jobs:
                 name: Test multidev to PR and build:project:repair
                 command: ./.circleci/test-pr-to-multidev.sh bitbucket
             - run:
-                name: Watch CircleCI tests after build:project:repair
+                name: Watch BitBucket CI tests after build:project:repair
                 command: ./.circleci/watch-ci.sh test-after-repair
             - run:
                 name: Test multidev created from PR
@@ -320,7 +326,7 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
-                name: Watch CircleCI tests after merging multidev to master
+                name: Watch BitBucket CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test multidev deleted
