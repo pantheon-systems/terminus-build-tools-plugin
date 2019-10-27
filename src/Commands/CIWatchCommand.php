@@ -108,7 +108,7 @@ class CIWatchCommand extends BuildToolsBase
         // With the most recent pipeline identified, make an API request every
         // 15 seconds to see if the pipeline passed successfully or failed.
         do {
-            $status = $ciProvider->getPipelineStatus($ci_env, $pipelineId);
+            $status = $ciProvider->getPipelineStatus($ci_env, $pipelineId, $options['branch-name']);
             // If the pipeline is pending, wait 15 seconds before fetching again.
             if ('pending' === $status) {
                 $this->log()->notice('Pipeline was \'pending\'. Waiting 15 seconds before checking pipeline status again.');

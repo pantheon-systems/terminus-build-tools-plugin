@@ -206,4 +206,147 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
         return $serviceName;
     }
+
+    protected function apiClient()
+    {
+        $headers = [
+            // 'Content-Type' => 'application/json',
+            'User-Agent' => 'Terminus Build Tools 2.x',
+            'cache-control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'Accept-Encoding' => 'gzip, deflate',
+            'Host' => 'circleci.com',
+            'Cache-Control' => 'no-cache',
+            'Accept' => '*/*',
+        ];
+
+        return new \GuzzleHttp\Client(
+            [
+                // 'base_uri' => 'https://circleci.com/api/v1.1',
+                'base_uri' => '',
+                'headers' => $headers,
+            ]
+        );
+    }
+
+    protected function processResponse($resultData, $httpCode)
+    {
+        $errors = [];
+        $message = '';
+        if (isset($resultData['errors'])) {
+            foreach ($resultData['errors'] as $error) {
+                $errors[] = $error['message'];
+            }
+        }
+        if ($httpCode && ($httpCode >= 300)) {
+            $errors[] = "Http status code: $httpCode";
+            $message = isset($resultData['message']) ? "{$resultData['message']}." : '';
+        }
+
+        if (!empty($message) || !empty($errors)) {
+            throw new TerminusException('error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
+        }
+
+        return $resultData;
+    }
+
+    protected function request($uri, $data = [], $method = '')
+    {
+        $res = $this->sendRequest($uri, $data, $method);
+
+        $resultData = json_decode($res->getBody(), true);
+        $httpCode = $res->getStatusCode();
+
+        return $this->processResponse($resultData, $httpCode);
+    }
+
+    protected function sendRequest($uri, $data = [], $method = '')
+    {
+        $guzzleParams = [];
+        if (empty($method)) {
+            $method = empty($data) ? 'GET' : 'POST';
+        }
+        if (!empty($data)) {
+            if ($method == 'GET') {
+                $uri .= '?' . http_build_query($data);
+            } else {
+                $guzzleParams['json'] = $data;
+            }
+        }
+
+        $uri_redacted = str_replace($this->circle_token, '[REDACTED]', $uri);
+
+        $this->logger->notice('Call CircleCI API: {method} {uri}', ['method' => $method, 'uri' => $uri_redacted]);
+
+        $client = $this->apiClient();
+        return $client->request($method, $uri, $guzzleParams);
+    }
+
+    public function getMostRecentPipelineId(CIState $ci_env, $branchName)
+    {
+        $circle_url = $this->apiUrl($ci_env);
+        $pipelines = $this->request(
+            "$circle_url/tree/" . \urlencode($branchName),
+            [
+                'circle-token' => $this->circle_token,
+                'limit' => '25',
+                'shallow' => 'true',
+            ],
+            'GET'
+        );
+        foreach( $pipelines as $pipeline ) {
+            // Not all builds have an associated workflow
+            if( !isset($pipeline['workflows']) ) {
+                continue;
+            }
+            return $pipeline['workflows']['workflow_id'];
+        }
+        // If we get through 25 builds without a workflow return false
+        return FALSE;
+    }
+
+    /**
+     * @return string Must be one of 'success', 'pending', or 'failed'.
+     */
+    public function getPipelineStatus(CIState $ci_env, $pipelineId, $branchName)
+    {
+        $circle_url = $this->apiUrl($ci_env);
+        $pipelines = $this->request(
+            "$circle_url/tree/" . \urlencode($branchName),
+            [
+                'circle-token' => $this->circle_token,
+                // We are assuming all jobs in the
+                // workflow are in the most recent 25 jobs
+                'limit' => '25',
+                'shallow' => 'true',
+            ],
+            'GET'
+        );
+        $status = 'success';
+        foreach( $pipelines as $pipeline ) {
+            // Not all builds have an associated workflow
+            // or are associated with the correct workflow
+            if(
+                !isset($pipeline['workflows']) ||
+                $pipelineId !== $pipeline['workflows']['workflow_id']
+            ) {
+                continue;
+            }
+            switch( $pipeline['status']) {
+                case 'failed':
+                    return 'failed';
+                case 'pending':
+                case 'running':
+                    return 'pending';
+                case 'success':
+                    break;
+                default:
+                    // Return false for unknown build status
+                    return FALSE;
+            }
+        }
+        // Will return success if all builds in
+        // the pipeline have a status of success
+        return $status;
+    }
 }
