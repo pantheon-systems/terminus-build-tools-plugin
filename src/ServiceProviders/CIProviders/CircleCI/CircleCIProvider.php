@@ -308,45 +308,33 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
     /**
      * @return string Must be one of 'success', 'pending', or 'failed'.
      */
-    public function getPipelineStatus(CIState $ci_env, $pipelineId, $branchName)
+    public function getPipelineStatus(CIState $ci_env, $pipelineId)
     {
-        $circle_url = $this->apiUrl($ci_env);
-        $pipelines = $this->request(
-            "$circle_url/tree/" . \urlencode($branchName),
+        $circle_url = sprintf('https://circleci.com/api/v2/workflow/%s', $pipelineId);
+        $pipeline = $this->request(
+            $circle_url,
             [
                 'circle-token' => $this->circle_token,
-                // We are assuming all jobs in the
-                // workflow are in the most recent 25 jobs
-                'limit' => '25',
-                'shallow' => 'true',
             ],
             'GET'
         );
-        $status = 'success';
-        foreach( $pipelines as $pipeline ) {
-            // Not all builds have an associated workflow
-            // or are associated with the correct workflow
-            if(
-                !isset($pipeline['workflows']) ||
-                $pipelineId !== $pipeline['workflows']['workflow_id']
-            ) {
-                continue;
-            }
-            switch( $pipeline['status']) {
-                case 'failed':
-                    return 'failed';
-                case 'pending':
-                case 'running':
-                    return 'pending';
-                case 'success':
-                    break;
-                default:
-                    // Return false for unknown build status
-                    return FALSE;
-            }
+        if (empty($pipeline)) {
+            return FALSE;
         }
-        // Will return success if all builds in
-        // the pipeline have a status of success
-        return $status;
+        switch ($pipeline['status']) {
+            case 'running':
+            case 'on_hold':
+                return 'pending';
+            case 'canceled':
+            case 'success':
+                return 'success';
+            case 'failed':
+            case 'canceled':
+            case 'error':
+            case 'failing':
+            case 'unauthorized':
+                return 'failed';
+        }
+        return false;
     }
 }
