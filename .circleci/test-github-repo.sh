@@ -11,7 +11,7 @@ EXTRA_ARGS="$2"
 #fi
 unset BUILD_TOOLS_VERSION
 
-CLONE_URL="git@github.com:$GITLAB_USER/$TERMINUS_SITE.git"
+CLONE_URL="git@github.com:$GITHUB_USER/$TERMINUS_SITE.git"
 
 # Clear Composer cache before running build:project:create
 composer clear-cache
