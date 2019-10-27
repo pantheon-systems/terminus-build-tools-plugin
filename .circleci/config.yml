@@ -66,7 +66,7 @@ jobs:
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
             - run:
                 name: Watch CircleCI tests
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Clean up D7 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
