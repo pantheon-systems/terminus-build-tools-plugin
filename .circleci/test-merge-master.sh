@@ -30,7 +30,7 @@ while [ $STATUS -ne 0 ] ; do
     STATUS="$?"
     if [ $STATUS -ne 0 ] ; then
         COUNT=$(($COUNT+1))
-        if [ $COUNT -ge 20 ] ; then
+        if [ $COUNT -ge 50 ] ; then
             echo "Timed out waiting for $TERMINUS_SITE.$TERMINUS_ENV"
             exit 1
         fi
