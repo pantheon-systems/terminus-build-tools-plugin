@@ -310,6 +310,7 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
      */
     public function getPipelineStatus(CIState $ci_env, $pipelineId)
     {
+        // See https://circleci.com/docs/api/v2/#get-a-workflow-39-s-jobs
         $circle_url = sprintf('https://circleci.com/api/v2/workflow/%s', $pipelineId);
         $pipeline = $this->request(
             $circle_url,
