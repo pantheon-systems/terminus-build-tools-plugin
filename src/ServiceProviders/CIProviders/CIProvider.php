@@ -28,4 +28,16 @@ interface CIProvider extends ProviderInterface
      * Begin testing the project once it has been configured.
      */
     public function startTesting(CIState $ci_env);
+
+    /**
+     * Get the most recent pipeline/workflow ID, filtered by branch
+     * @return string|int ID of the most recent pipelone of the given branch
+     */
+    public function getMostRecentPipelineId(CIState $ci_env, $branchName);
+
+    /**
+     * Get the status of a pipeline/workflow by ID
+     * @return string Must be one of 'success', 'pending', or 'failed'.
+     */
+    public function getPipelineStatus(CIState $ci_env, $pipelineId);
 }
