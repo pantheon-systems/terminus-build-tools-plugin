@@ -5,12 +5,6 @@ set -e
 SOURCE_COMPOSER_PROJECT="$1"
 EXTRA_ARGS="$2"
 
-#BUILD_TOOLS_VERSION="dev-master"
-#if [[ -n "$CIRCLE_BRANCH" ]]; then
-#    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}"
-#fi
-unset BUILD_TOOLS_VERSION
-
 CLONE_URL="git clone git@bitbucket.org:$BITBUCKET_USER/$TERMINUS_SITE.git"
 
 # Clear Composer cache before running build:project:create
