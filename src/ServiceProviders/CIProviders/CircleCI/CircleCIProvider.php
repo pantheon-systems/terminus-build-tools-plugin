@@ -244,7 +244,7 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
 
         if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
+            throw new TerminusException('CircleCI API error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
         }
 
         return $resultData;
