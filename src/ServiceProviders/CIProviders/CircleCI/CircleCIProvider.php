@@ -210,7 +210,6 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
     protected function apiClient()
     {
         $headers = [
-            // 'Content-Type' => 'application/json',
             'User-Agent' => 'Terminus Build Tools 2.x',
             'cache-control' => 'no-cache',
             'Connection' => 'keep-alive',
@@ -222,7 +221,6 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
 
         return new \GuzzleHttp\Client(
             [
-                // 'base_uri' => 'https://circleci.com/api/v1.1',
                 'base_uri' => '',
                 'headers' => $headers,
             ]
