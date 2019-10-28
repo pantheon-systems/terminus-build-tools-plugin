@@ -223,6 +223,7 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
             [
                 'base_uri' => '',
                 'headers' => $headers,
+                'http_errors' => false,
             ]
         );
     }
@@ -242,7 +243,9 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
 
         if (!empty($message) || !empty($errors)) {
-            throw new TerminusException('CircleCI API error: {message} {errors}', ['message' => $message, 'errors' => implode("\n", $errors)]);
+            $message_redacted = str_replace($this->circle_token, '[REDACTED]', $message);
+            $errors_redacted = str_replace($this->circle_token, '[REDACTED]', implode("\n", $errors));
+            throw new TerminusException('CircleCI API error: {message} {errors}', ['message' => $message_redacted, 'errors' => $errors_redacted]);
         }
 
         return $resultData;
