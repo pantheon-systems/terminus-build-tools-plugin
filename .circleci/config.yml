@@ -155,7 +155,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
-                command: ./.circleci/test-bitbucket-repo.sh d8 "--use-ssh --extra='bitbucket-project=Test BB Project'"
+                command: ./.circleci/test-bitbucket-repo.sh d8 --use-ssh
             - run:
                 name: Watch BitBucket CI tests
                 command: ./.circleci/watch-ci.sh master
