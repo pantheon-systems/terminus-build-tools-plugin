@@ -6,6 +6,7 @@ use Pantheon\TerminusBuildTools\API\PullRequestInfo;
 use Pantheon\TerminusBuildTools\ServiceProviders\AdditionalInteractionsInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
+
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
@@ -133,7 +134,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         $stateParameters = [
             'open' => ['OPEN'],

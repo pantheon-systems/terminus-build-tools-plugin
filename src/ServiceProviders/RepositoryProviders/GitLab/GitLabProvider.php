@@ -4,19 +4,12 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLa
 
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Robo\Common\ConfigAwareTrait;
 use Robo\Config\Config;
 
 /**
@@ -177,7 +170,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    function branchesForPullRequests($target_project, $state, $callback = NULL) {
+    function branchesForPullRequests($target_project, $state, $callback = NULL, $return_key='sha') {
         $stateParameters = [
             'open' => ['opened'],
             'closed' => ['merged', 'closed'],
@@ -190,18 +183,52 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
 
         $projectID = $this->getProjectID($target_project);
 
-        $data = $this->api()
-            ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => implode('', $stateParameters[$state])]);
-        $branchList = array_column(array_map(
-            function ($item) {
-                $pr_number = $item['iid'];
-                $branch_name = $item['sha'];
-                return [$pr_number, $branch_name];
-            },
-            $data
-        ), 1, 0);
+        $data = [];
+        foreach ($stateParameters[$state] as $stateParameter) {
+            $temp = $this->api()
+              ->pagedRequest("api/v4/projects/$projectID/merge_requests", $callback, ['scope' => 'all', 'state' => $stateParameter]);
+            $data = array_merge($data, $temp);
+        }
+
+        $branchList = $this->filterBranchList($data, $return_key);
 
         return $branchList;
+    }
+
+    private function filterBranchList($data, $return_key) {
+        switch($return_key) {
+            case 'branch':
+            case 'source_branch':
+                $key = 'source_branch';
+                break;
+            case 'sha':
+            case 'hash':
+                $key = 'sha';
+                break;
+            case 'all':
+                $key = 'all';
+                break;
+            default:
+                $key = $return_key;
+                break;
+        }
+
+        $output = [];
+
+        foreach( $data as $item ) {
+            if('all' === $key ) {
+                $output[$item['iid']] = $item;
+                continue;
+            }
+
+            if(!isset($item[$key])) {
+                throw new TerminusException("branchesForPullRequests - invalid return key");
+            }
+
+            $output[$item['iid']] = $item[$key];
+        }
+
+        return $output;
     }
 
     public function convertPRInfo($data) {

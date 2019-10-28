@@ -2,20 +2,13 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPI;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Robo\Config\Config;
 
 /**
  * Holds state information destined to be registered with the CI service.
@@ -129,7 +122,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");

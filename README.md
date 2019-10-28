@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta16
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
 ```
 
 ### Installing Build Tools 1.x:
@@ -367,6 +367,18 @@ command:
         options:
           admin-password: secret-secret
           team: My Pantheon Org
+```
+
+#### Self-Hosted GitLab
+
+The GitLab URL used by Build Tools can be defined by updating the `build-tools:provider:git:gitlab:url` configuration value, as demonstrated by the example below. Note that you will need to replace `hostname` with the actual GitLab instance hostname.
+
+```
+build-tools:
+  provider:
+    git:
+      gitlab:
+        url: hostname
 ```
 
 #### Starter Site Shortcuts

@@ -3,7 +3,6 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders;
 
 use Psr\Log\LoggerAwareTrait;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Robo\Config\Config;
 

@@ -1,7 +1,6 @@
 <?php
 namespace Pantheon\TerminusBuildTools\Task\Repository;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Robo\Result;
 
 class RepositoryCreate extends Base
