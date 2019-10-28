@@ -201,7 +201,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo.sh wp
+                command: ./.circleci/test-github-repo.sh wp --visibility=private
             - run:
                 name: Watch CircleCI tests
                 command: ./.circleci/watch-ci.sh master
@@ -247,7 +247,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh wp
+                command: ./.circleci/test-gitlab-repo.sh wp --visibility=private
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
@@ -293,7 +293,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with BitBucket
-                command: ./.circleci/test-bitbucket-repo.sh wp
+                command: ./.circleci/test-bitbucket-repo.sh wp --visibility=private
             - run:
                 name: Watch BitBucket CI tests
                 command: ./.circleci/watch-ci.sh master
