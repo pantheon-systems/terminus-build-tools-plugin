@@ -85,7 +85,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with GitHub
-                command: ./.circleci/test-github-repo.sh d8
+                command: ./.circleci/test-github-repo.sh d8 --use-ssh
             - run:
                 name: Watch CircleCI tests
                 command: ./.circleci/watch-ci.sh master
@@ -131,7 +131,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with GitLab
-                command: ./.circleci/test-gitlab-repo.sh d8
+                command: ./.circleci/test-gitlab-repo.sh d8 --use-ssh
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
@@ -177,7 +177,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
-                command: ./.circleci/test-bitbucket-repo.sh d8
+                command: ./.circleci/test-bitbucket-repo.sh d8 --use-ssh
             - run:
                 name: Watch BitBucket CI tests
                 command: ./.circleci/watch-ci.sh master
