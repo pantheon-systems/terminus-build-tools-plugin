@@ -84,7 +84,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with GitHub
@@ -114,10 +114,10 @@ jobs:
                 name: Test multidev deleted
                 command: ./.circleci/test-multidev-deleted-after-merge.sh
             - run:
-                name: Clean up WordPress GitLab fixtures after pass
+                name: Clean up D8 GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up WordPress GitLab fixtures after failure
+                name: Clean up D8 GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -127,7 +127,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with GitLab
@@ -170,7 +170,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
@@ -200,10 +200,10 @@ jobs:
                 name: Test multidev deleted
                 command: ./.circleci/test-multidev-deleted-after-merge.sh
             - run:
-                name: Clean up WordPress BitBucket fixtures after pass
+                name: Clean up D8 BitBucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up WordPress BitBucket fixtures after failure
+                name: Clean up D8 BitBucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -216,7 +216,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitHub
@@ -259,7 +259,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitLab
@@ -302,7 +302,7 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with BitBucket
