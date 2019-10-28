@@ -233,8 +233,10 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         $extras = $input->getOption('extra');
         if (!empty($extras['bitbucket-project'])) {
             $project_uuid = $this->getProjectUUID($extras['bitbucket-project'], $org);
-            $this->project = $project_uuid;
-            return;
+            if (false !== $project_uuid) {
+                $this->project = $project_uuid;
+                return;
+            }
         }
         if (!$projects = $this->getProjectOptions($org)) {
             return;
