@@ -53,28 +53,6 @@ jobs:
                 name: Run unit tests
                 command: composer run unit-test
 
-    test_drupal_7_github:
-        <<: *defaults
-        resource_class: large
-        steps:
-            - checkout
-            - run:
-                name: Configure globals
-                command: ./.circleci/set-up-globals.sh
-            - run:
-                name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
-            - run:
-                name: Watch CircleCI tests
-                command: ./.circleci/watch-ci.sh master
-            - run:
-                name: Clean up D7 GitHub fixtures after pass
-                command: ./.circleci/cleanup-fixtures.sh ok
-            - run:
-                name: Clean up D7 GitHub fixtures after failure
-                when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh fail
-
     test_drupal_8_github:
         <<: *defaults
         resource_class: large
@@ -357,9 +335,6 @@ workflows:
         jobs:
             - unit
             - test_drupal_8_github:
-                requires:
-                   - unit
-            - test_drupal_7_github:
                 requires:
                    - unit
             - test_wordpress_github:

@@ -62,7 +62,6 @@ The default template repositories are each assigned an abbreviation, as shown be
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
-- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
 More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
@@ -463,7 +462,6 @@ In addition to the Terminus Build Tools Plugin, Pantheon maintains template repo
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer)
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer)
-- [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer)
 
 Each repository includes an opinionated set of workflows and deployment scripts. These templates are meant to be a one-time starting point for new projects and customized as needed. Improvements made over time must be manually applied to existing projects. These are examples, **not** frameworks.
 
