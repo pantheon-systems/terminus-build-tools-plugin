@@ -108,6 +108,9 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch CircleCI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -151,6 +154,9 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch GitLab CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -193,6 +199,9 @@ jobs:
             - run:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch BitBucket CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
@@ -240,6 +249,9 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch CircleCI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -283,6 +295,9 @@ jobs:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
             - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch GitLab CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -325,6 +340,9 @@ jobs:
             - run:
                 name: Test merging multidev branch to master
                 command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch BitBucket CI tests after merging multidev to master
                 command: ./.circleci/watch-ci.sh master
