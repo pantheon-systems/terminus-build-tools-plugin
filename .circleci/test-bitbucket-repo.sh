@@ -5,7 +5,7 @@ set -e
 SOURCE_COMPOSER_PROJECT="$1"
 EXTRA_ARGS="$2"
 
-CLONE_URL="git clone git@bitbucket.org:$BITBUCKET_USER/$TERMINUS_SITE.git"
+CLONE_URL="git@bitbucket.org:$BITBUCKET_USER/$TERMINUS_SITE.git"
 
 # Clear Composer cache before running build:project:create
 composer clear-cache
