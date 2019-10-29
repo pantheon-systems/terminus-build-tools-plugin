@@ -76,8 +76,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
                 // TODO: remove debugging message
                 $this->logger->notice('Configure Bitbucket environment variable ' . var_export($data, true));
                 // Temporary: catch and eat errors without stopping the command
-                try
-                {
+                try {
                     $this->api()->request("$repoApiUrl/pipelines_config/variables/", $data);
                 } catch (\Exception $e) {
                     $this->logger->error($e->getMessage());
@@ -100,8 +99,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         $data = ['enabled' => true];
 
         // Temporary: catch and eat errors without stopping the command
-        try
-        {
+        try {
             // Enable Pipelines for the project.
             $this->api()->request("$repoApiUrl/pipelines_config", $data, 'PUT');
         } catch (\Exception $e) {
@@ -110,17 +108,17 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
 
         // @TODO: verify that the custom "clu" task exists in yml first?
         $data = [
-          'enabled' => true,
-          'cron_pattern' => '0 0 4 * * ? *',
-          'target' => [
-            'type' => 'pipeline_ref_target',
-            'ref_type' => 'branch',
-            'ref_name' => 'master',
-            'selector' => [
-              'type' => 'custom',
-              'pattern' => 'clu'
+            'enabled' => true,
+            'cron_pattern' => '0 0 4 * * ? *',
+            'target' => [
+                'type' => 'pipeline_ref_target',
+                'ref_type' => 'branch',
+                'ref_name' => 'master',
+                'selector' => [
+                    'type' => 'custom',
+                    'pattern' => 'clu'
+                ]
             ]
-          ]
         ];
         try {
             // Enable CLU scheduled task.
@@ -139,8 +137,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         $data = ['private_key' => file_get_contents($privateKey), 'public_key' => file_get_contents($publicKey)];
 
         // Temporary: catch and eat errors without stopping the command
-        try
-        {
+        try {
             $this->api()->request("$repoApiUrl/pipelines_config/ssh/key_pair", $data, 'PUT');
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
@@ -155,7 +152,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // We can also target the branch and specific fields in the result
         // See https://community.atlassian.com/t5/Bitbucket-questions/I-would-like-a-way-to-know-the-last-status-of-a-pipeline-for/qaq-p/1135687#M44752
         $pipelines = $this->api()->request("$repoApiUrl/pipelines/?sort=-created_on&target.branch=" . urlencode($branchName), [], 'GET');
-        if (empty($pipelines)) {
+        if (empty($pipelines['values'])) {
             return FALSE;
         }
         return $pipelines['values'][0]['uuid'];
@@ -171,19 +168,24 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         if (empty($pipeline)) {
             return FALSE;
         }
-        if( 'COMPLETED' !== $pipeline['state']['name'] ) {
+        if ('completed' !== strtolower($pipeline['state']['name'])) {
             return 'pending';
         }
-        if( 'IN_PROGRESS' === $pipeline['state']['name'] ){
+        if ('in_progress' === strtolower($pipeline['state']['name'])) {
             return 'pending';
         }
-        switch( $pipeline['state']['result']['name'] ) {
-            case 'FAILED':
+        $pipeline_status = strtolower($pipeline['state']['result']['name']);
+        switch ($pipeline_status) {
+            case 'running':
+            case 'pending':
+            case 'canceled':
+                return 'pending';
+            case 'failed':
+            case 'skipped':
                 return 'failed';
-                break;
-            case 'SUCCESSFUL':
+            case 'successful':
+            case 'success':
                 return 'success';
-                break;
         }
         return false;
     }
