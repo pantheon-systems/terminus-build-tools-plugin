@@ -65,6 +65,9 @@ jobs:
                 name: Test D8 with GitHub
                 command: ./.circleci/test-github-repo.sh d8 --use-ssh
             - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch CircleCI tests
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -110,6 +113,9 @@ jobs:
             - run:
                 name: Test D8 with GitLab
                 command: ./.circleci/test-gitlab-repo.sh d8 --use-ssh
+            - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
@@ -157,6 +163,9 @@ jobs:
                 name: Test D8 with BitBucket
                 command: ./.circleci/test-bitbucket-repo.sh d8 --use-ssh
             - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch BitBucket CI tests
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -202,6 +211,9 @@ jobs:
             - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh wp --visibility=private
+            - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch CircleCI tests
                 command: ./.circleci/watch-ci.sh master
@@ -249,6 +261,9 @@ jobs:
                 name: Test WordPress with GitLab
                 command: ./.circleci/test-gitlab-repo.sh wp --visibility=private
             - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
+            - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-ci.sh master
             - run:
@@ -294,6 +309,9 @@ jobs:
             - run:
                 name: Test WordPress with BitBucket
                 command: ./.circleci/test-bitbucket-repo.sh wp --visibility=private
+            - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch BitBucket CI tests
                 command: ./.circleci/watch-ci.sh master
