@@ -64,7 +64,7 @@ The default template repositories are each assigned an abbreviation, as shown be
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
-More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
+More details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
