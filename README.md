@@ -78,7 +78,7 @@ This command will create:
 
 It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
 
-Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
+Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace", then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
 Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will be associated with your user and will not have the capability to create multidev environments.
 
@@ -354,7 +354,7 @@ See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on 
 
 ### Configuration
 
-Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would liike every site created within their Pantheon team.
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would like every site created within their Pantheon team.
 
 #### Default Values for Options
 
