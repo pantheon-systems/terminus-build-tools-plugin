@@ -19,4 +19,4 @@ if [ -z "$OBLITERATE" ] || [ "x$OBLITERATE" == "xalways" ] || [ "x$OBLITERATE" =
 fi
 
 # Delete old ssh keys; allow the most-recently-created 12 to remain
-for key in $(terminus ssh-key:list --format=csv --fields=Description,ID 2>/dev/null | grep ci-bot-build-tools | sed -e 's/.*ci-bot-build-tools-//' | sort -rn | sed -e 's/.*,//' | sed -e '1,12d') ; do echo "Remove $key"; terminus ssh-key:remove $key ; done
+for key in $(terminus ssh-key:list --format=csv --fields=Description,ID 2>/dev/null | grep build-tools | sed -e 's/.*build-tools-//' | sort -rn | sed -e 's/.*,//' | sed -e '1,12d') ; do echo "Remove $key"; terminus ssh-key:remove $key ; done
