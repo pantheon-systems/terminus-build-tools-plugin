@@ -170,7 +170,6 @@ class ProjectConvertCommand extends BuildToolsBase {
 
         // Do we have a Git Provider? If not, create one.
         if ($this->conversion_type == self::CONVERSION_TYPE_PANTHEON) {
-            var_dump($this->pantheon_site_uuid);
             // Determine if the site has multidev capability
             /** @var \Pantheon\Terminus\Models\Site $site */
             $site = $this->getSite($this->pantheon_site_uuid);
@@ -198,7 +197,7 @@ class ProjectConvertCommand extends BuildToolsBase {
 
               ->progressMessage('Create Pantheon site {site}', ['site' => $target])
               ->addCode(
-                function ($state) use ($target, $label, $team, $target, $siteDir, $region) {
+                function ($state) use ($target, $label, $team, $siteDir, $region) {
                     // Look up our upstream.
                     $upstream = $this->autodetectUpstream($siteDir);
 
@@ -227,16 +226,180 @@ class ProjectConvertCommand extends BuildToolsBase {
                 });
         }
 
-        // Now that we have our sites created, we need to composerize them.
-        // First, clone locally
+//        // Now that we have our sites created, we need to composerize them.
+//        // First, clone locally
         $builder
 
             ->progressMessage('Composerize website')
             ->addCode(
-              //function ($state) use
+              function ($state) use ($target, $siteDir) {
+                  $this->composerizeSite($siteDir);
+              }
             );
 
+        $builder
+
+          ->progressMessage('Make initial commit')
+          ->addCode(
+            function ($state) use ($siteDir, $source) {
+                $headCommit = $this->commitChanges($siteDir, $source);
+            })
+
+          ->progressMessage('Set up CI services')
+
+          // Set up CI to test our project.
+          // Note that this also modifies the README and commits it to the repository.
+          ->taskCISetup()
+          ->provider($this->ci_provider)
+          ->environment($ci_env)
+          ->deferTaskConfiguration('hasMultidevCapability', 'has-multidev-capability')
+          ->dir($siteDir)
+
+          // Create public and private key pair and add them to any provider
+          // that requested them. Providers that implement PrivateKeyReceiver,
+          // PublicKeyReceiver or KeyPairReceiver will be called with the
+          // private key, the public key, or both.
+          ->taskCreateKeys()
+          ->environment($ci_env)
+          ->provider($this->ci_provider)
+          ->provider($this->git_provider)
+          ->provider($this->site_provider)
+
+          ->progressMessage('Initialize build-providers.json')
+          ->taskPushbackSetup()
+          ->dir($siteDir)
+          ->provider($this->git_provider, $this->ci_provider)
+          ->progressmessage('Set build secrets')
+          ->addCode(
+            function ($state) use ($site_name, $siteDir) {
+                $secretValues = $this->git_provider->getSecretValues();
+                $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                // Remember the initial commit sha
+                $state['initial_commit'] = $this->getHeadCommit($siteDir);
+            }
+          )
+
+          /*
+          ->taskRepositoryPush()
+              ->provider($this->git_provider)
+              ->target($this->target_project)
+              ->dir($siteDir)
+          */
+          // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
+          ->progressMessage('Build assets for {site}', ['site' => $site_name])
+          ->addCode(
+            function ($state) use ($siteDir, $source, $site_name) {
+                $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
+                exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
+                if (!$status) {
+                    $this->log()->notice('Building assets for {site}', ['site' => $site_name]);
+                    $this->passthru("composer --working-dir=$siteDir build-assets");
+                }
+            }
+          )
+
+          // Push code to newly-created project.
+          // Note that this also effectively does a 'git reset --hard'
+          ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
+          ->addCode(
+            function ($state) use ($site_name, $siteDir) {
+                $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+                // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
+                $this->resetToCommit($siteDir, $state['initial_commit']);
+            })
+
+          // Install our site and export configuration.
+          // Note that this also commits the configuration to the repository.
+          ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
+          ->addCode(
+            function ($state) use ($ci_env, $site_name, $siteDir) {
+                $siteAttributes = $ci_env->getState('site');
+                $composer_json = $this->getComposerJson($siteDir);
+
+                // Install the site.
+                $site_install_options = [
+                  'account-mail' => $siteAttributes->adminEmail(),
+                  'account-name' => 'admin',
+                  'account-pass' => $siteAttributes->adminPassword(),
+                  'site-mail' => $siteAttributes->adminEmail(),
+                  'site-name' => $siteAttributes->testSiteName(),
+                  'site-url' => "https://dev-{$site_name}.pantheonsite.io"
+                ];
+                $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
+
+                // Before any tests have been configured, export the
+                // configuration set up by the installer.
+                $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
+            })
+
+          // Push the local working repository to the server
+          ->progressMessage('Push initial code to {target}', ['target' => $label])
+          /*
+          ->taskRepositoryPush()
+              ->provider($this->git_provider)
+              ->target($this->target_project)
+              ->dir($siteDir)
+          */
+          ->addCode(
+            function ($state) use ($ci_env, $siteDir) {
+                $repositoryAttributes = $ci_env->getState('repository');
+                $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+            })
+
+          // Tell the CI server to start testing our project
+          ->progressMessage('Beginning CI testing')
+          ->taskCIStartTesting()
+          ->provider($this->ci_provider)
+          ->environment($ci_env);
+
+
+        // If the user specified --keep, then clone a local copy of the project
+        if ($options['keep']) {
+            $builder
+              ->addCode(
+                function ($state) use ($siteDir) {
+                    $keepDir = basename($siteDir);
+                    $fs = new Filesystem();
+                    $fs->mirror($siteDir, $keepDir);
+                    $this->log()->notice('Keeping a local copy of new project at {dir}', ['dir' => $keepDir]);
+                }
+              );
+        }
+
+        // Give a final status message with the project URL
+        $builder->addCode(
+          function ($state) use ($ci_env) {
+              $repositoryAttributes = $ci_env->getState('repository');
+              $target_project = $repositoryAttributes->projectId();
+              $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
+          });
+
+
         return $builder;
+    }
+
+    private function composerizeSite($siteDir) {
+        $this->passthru("cd $siteDir");
+        $upstream = $this->autodetectUpstream($siteDir);
+        if ($upstream == "empty-wordpress") {
+            $command = "composerize-wordpress";
+        }
+        else {
+            $command = "composerize-drupal";
+        }
+        $this->passthru("$command");
+    }
+
+    /**
+     * Make the initial commit to our new project.
+     */
+    protected function commitChanges($repositoryDir, $source)
+    {
+        // Add the canonical repository files to the new GitHub project
+        // respecting .gitignore.
+        $this->passthru("git -C $repositoryDir add .");
+        $this->passthru("git -C $repositoryDir commit -m 'Convert site to be composer managed'");
+        return $this->getHeadCommit($repositoryDir);
     }
 
 }
