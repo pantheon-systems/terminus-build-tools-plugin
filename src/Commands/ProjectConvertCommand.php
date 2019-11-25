@@ -36,6 +36,10 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class ProjectConvertCommand extends BuildToolsBase {
 
+    use \Pantheon\TerminusBuildTools\Task\Ssh\Tasks;
+    use \Pantheon\TerminusBuildTools\Task\CI\Tasks;
+    use \Pantheon\TerminusBuildTools\Task\Quicksilver\Tasks;
+
     const CONVERSION_TYPE_PROVIDER = "PROVIDER";
     const CONVERSION_TYPE_PANTHEON = "PANTHEON";
 
@@ -55,18 +59,37 @@ class ProjectConvertCommand extends BuildToolsBase {
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
 
-        // First things first, we need to figure out if we have a Pantheon site or a Git site.
-        // ssh://codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9@codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9.drush.in:2222/~/repository.git
-        if ($source_provider = $this->providerManager()->inferProvider($source, GitProvider::class)) {
-            $this->conversion_type = self::CONVERSION_TYPE_PROVIDER;
-            $this->git_provider = $source_provider;
-        }
-        elseif ($source_provider = $this->providerManager()->inferProvider($source, SiteProvider::class)) {
-            $this->conversion_type = self::CONVERSION_TYPE_PANTHEON;
+        if ($this->conversion_type == self::CONVERSION_TYPE_PROVIDER) {
+            $ci_provider_class_or_alias = $this->selectCIProvider($this->git_provider->getServiceName(), $input->getOption('ci'));
         }
         else {
-            throw new TerminusException("Unable to determine source repository provider. Please check your GIT URL.");
+            $ci_provider_class_or_alias = $this->selectCIProvider($git_provider_class_or_alias, $input->getOption('ci'));
         }
+
+        // Create the providers via the provider manager.
+        // Each provider that is created is also registered, so
+        // when we call `credentialManager()->ask()` et. al.,
+        // each will be called in turn.
+        $this->createProviders(
+          $git_provider_class_or_alias,
+          $ci_provider_class_or_alias,
+          'pantheon'
+        );
+
+        // @TODO -- inferring providers here duplicates them in the provider manager and corrupts the credentials.
+
+        // First things first, we need to figure out if we have a Pantheon site or a Git site.
+        // ssh://codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9@codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9.drush.in:2222/~/repository.git
+//        if ($source_provider = $this->providerManager()->inferProvider($source, GitProvider::class)) {
+//            $this->conversion_type = self::CONVERSION_TYPE_PROVIDER;
+//            $this->git_provider = $source_provider;
+//        }
+//        elseif ($source_provider = $this->providerManager()->inferProvider($source, SiteProvider::class)) {
+            $this->conversion_type = self::CONVERSION_TYPE_PANTHEON;
+//        }
+//        else {
+//            throw new TerminusException("Unable to determine source repository provider. Please check your GIT URL.");
+//        }
 
         // Validate that appropriate options were set depending on the conversion type.
         if ($this->conversion_type == self::CONVERSION_TYPE_PANTHEON) {
@@ -76,6 +99,8 @@ class ProjectConvertCommand extends BuildToolsBase {
             // Determine site's UUID so we can look it up later.
             $repo_url_parts = explode('.', $source);
             $this->pantheon_site_uuid = str_replace('@codeserver', '', $repo_url_parts[2]);
+            $pantheon_site = $this->sites()->get($this->pantheon_site_uuid);
+            $site_name = $pantheon_site->getName();
         }
         else {
             if (empty($site_name)) {
@@ -89,32 +114,39 @@ class ProjectConvertCommand extends BuildToolsBase {
             }
         }
 
-        if ($this->conversion_type == self::CONVERSION_TYPE_PROVIDER) {
-            $ci_provider_class_or_alias = $this->selectCIProvider($this->git_provider->getServiceName(), $input->getOption('ci'));
-        }
-        else {
-            $ci_provider_class_or_alias = $this->selectCIProvider($git_provider_class_or_alias, $input->getOption('ci'));
-        }
-
-
-        // Create the providers via the provider manager.
-        // Each provider that is created is also registered, so
-        // when we call `credentialManager()->ask()` et. al.,
-        // each will be called in turn.
-        $this->createProviders(
-          $git_provider_class_or_alias,
-          $ci_provider_class_or_alias,
-          'pantheon'
-        );
-
         // Assign variables back to $input after filling in defaults.
         $input->setArgument('source', $source);
         $input->setOption('org', $target_org);
         $input->setOption('pantheon-site', $site_name);
         $input->setOption('ci', $ci_provider_class_or_alias);
-        $input->setOption('pantheon-site', $site_name);
         // Copy the options into the credentials cache as appropriate
         $this->providerManager()->setFromOptions($input);
+    }
+
+    /**
+     * Ensure that the user has provided credentials for GitHub and Circle CI,
+     * and prompt for them if they have not.
+     *
+     * n.b. This hook is not called in --no-interaction mode.
+     *
+     * @hook interact build:project:convert
+     */
+    public function interact(InputInterface $input, OutputInterface $output, AnnotationData $annotationData)
+    {
+        $io = new SymfonyStyle($input, $output);
+        $this->providerManager()->credentialManager()->ask($io);
+    }
+
+
+    /**
+     * Ensure that the user has not supplied any parameters with invalid values.
+     *
+     * @hook validate build:project:convert
+     */
+    public function validateConvertProject(CommandData $commandData)
+    {
+        // Ensure that all of our providers are given the credentials they requested.
+        $this->providerManager()->validateCredentials();
     }
 
     /**
@@ -148,6 +180,7 @@ class ProjectConvertCommand extends BuildToolsBase {
         // Copy options into ordinary variables.
         $target_org = $options['org'];
         $target = $options['pantheon-site'];
+        $site_name = $options['pantheon-site'];
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
@@ -189,7 +222,18 @@ class ProjectConvertCommand extends BuildToolsBase {
 
                     $this->log()->notice('The target is {target}', ['target' => $target_project]);
                     $repositoryAttributes->setProjectId($target_project);
-                });
+                })
+                ->progressMessage('Adding existing Pantheon site as remote')
+                ->addCode(
+                  function ($state) use ($siteDir, $target, $site) {
+                      $dev_env = $site->getEnvironments()->get('dev');
+                      $connectionInfo = $dev_env->connectionInfo();
+                      $gitUrl = $connectionInfo['git_url'];
+                      $this->passthru("git -C $siteDir remote add pantheon $gitUrl");
+                      $this->passthru("git -C $siteDir pull pantheon master");
+                      $this->passthru("ls");
+                  }
+                );
         }
         else {
             // We need to create the Pantheon site.
@@ -226,8 +270,47 @@ class ProjectConvertCommand extends BuildToolsBase {
                 });
         }
 
-//        // Now that we have our sites created, we need to composerize them.
-//        // First, clone locally
+        // Update composer-drupal to use our template files.
+        $builder
+            ->progressMessage('Update composerize tool to use Pantheon template files.')
+            ->addCode(
+              function ($state) {
+                  $home_dir = $this->exec("composer global config home -q");
+                  $home_dir = $home_dir[0];
+                  if (!file_exists($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json')) {
+                      throw new TerminusException("Composerize Drupal does not appear to be installed.");
+                  }
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/composer.json -O {$home_dir}/vendor/grasmash/composerize-drupal/template.composer.json");
+                  $composer_json = json_decode(file_get_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json'));
+                  $merge_object = new \stdClass();
+                  $merge_object = [
+                    'include' => [
+                      'web/modules/custom/*/composer.json',
+                    ],
+                      'replace' => FALSE,
+                      'ignore-duplicates' => FALSE,
+                  ];
+                  $composer_json->extra->{"merge-plugin"} = $merge_object;
+                  file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$home_dir}/vendor/grasmash/composerize-drupal/template.gitignore");
+              }
+            );
+
+        // Github doesn't allow us to pull down directories via git archive so we abuse svn instead.
+        $builder
+          ->progressMessage("Download required files from example repository")
+            ->addCode(
+              function ($state) use ($siteDir) {
+                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/scripts");
+                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/tests");
+                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.ci");
+                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.circleci");
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
+              }
+            );
+
+        // Now that we have our sites created, we need to composerize them.
         $builder
 
             ->progressMessage('Composerize website')
@@ -286,13 +369,13 @@ class ProjectConvertCommand extends BuildToolsBase {
               ->dir($siteDir)
           */
           // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
-          ->progressMessage('Build assets for {site}', ['site' => $site_name])
+          ->progressMessage('Build assets for {site}', ['site' => $label])
           ->addCode(
-            function ($state) use ($siteDir, $source, $site_name) {
+            function ($state) use ($siteDir, $source, $label) {
                 $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
                 exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
                 if (!$status) {
-                    $this->log()->notice('Building assets for {site}', ['site' => $site_name]);
+                    $this->log()->notice('Building assets for {site}', ['site' => $label]);
                     $this->passthru("composer --working-dir=$siteDir build-assets");
                 }
             }
@@ -300,36 +383,12 @@ class ProjectConvertCommand extends BuildToolsBase {
 
           // Push code to newly-created project.
           // Note that this also effectively does a 'git reset --hard'
-          ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
+          ->progressMessage('Push code to Pantheon site {site}', ['site' => $label])
           ->addCode(
             function ($state) use ($site_name, $siteDir) {
                 $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                 // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
                 $this->resetToCommit($siteDir, $state['initial_commit']);
-            })
-
-          // Install our site and export configuration.
-          // Note that this also commits the configuration to the repository.
-          ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
-          ->addCode(
-            function ($state) use ($ci_env, $site_name, $siteDir) {
-                $siteAttributes = $ci_env->getState('site');
-                $composer_json = $this->getComposerJson($siteDir);
-
-                // Install the site.
-                $site_install_options = [
-                  'account-mail' => $siteAttributes->adminEmail(),
-                  'account-name' => 'admin',
-                  'account-pass' => $siteAttributes->adminPassword(),
-                  'site-mail' => $siteAttributes->adminEmail(),
-                  'site-name' => $siteAttributes->testSiteName(),
-                  'site-url' => "https://dev-{$site_name}.pantheonsite.io"
-                ];
-                $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
-
-                // Before any tests have been configured, export the
-                // configuration set up by the installer.
-                $this->exportInitialConfiguration("{$site_name}.dev", $siteDir, $composer_json, $site_install_options);
             })
 
           // Push the local working repository to the server
@@ -374,12 +433,11 @@ class ProjectConvertCommand extends BuildToolsBase {
               $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
           });
 
-
+//        $builder = $this->collectionBuilder();
         return $builder;
     }
 
     private function composerizeSite($siteDir) {
-        $this->passthru("cd $siteDir");
         $upstream = $this->autodetectUpstream($siteDir);
         if ($upstream == "empty-wordpress") {
             $command = "composerize-wordpress";
@@ -387,7 +445,7 @@ class ProjectConvertCommand extends BuildToolsBase {
         else {
             $command = "composerize-drupal";
         }
-        $this->passthru("$command");
+        $this->passthru("cd $siteDir && composer $command");
     }
 
     /**
