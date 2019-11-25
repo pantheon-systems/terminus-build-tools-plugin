@@ -59,23 +59,6 @@ class ProjectConvertCommand extends BuildToolsBase {
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
 
-        if ($this->conversion_type == self::CONVERSION_TYPE_PROVIDER) {
-            $ci_provider_class_or_alias = $this->selectCIProvider($this->git_provider->getServiceName(), $input->getOption('ci'));
-        }
-        else {
-            $ci_provider_class_or_alias = $this->selectCIProvider($git_provider_class_or_alias, $input->getOption('ci'));
-        }
-
-        // Create the providers via the provider manager.
-        // Each provider that is created is also registered, so
-        // when we call `credentialManager()->ask()` et. al.,
-        // each will be called in turn.
-        $this->createProviders(
-          $git_provider_class_or_alias,
-          $ci_provider_class_or_alias,
-          'pantheon'
-        );
-
         // @TODO -- inferring providers here duplicates them in the provider manager and corrupts the credentials.
 
         // First things first, we need to figure out if we have a Pantheon site or a Git site.
@@ -113,6 +96,23 @@ class ProjectConvertCommand extends BuildToolsBase {
                 throw new TerminusException('The site name {site_name} is already taken on Pantheon.', compact('site_name'));
             }
         }
+
+        if ($this->conversion_type == self::CONVERSION_TYPE_PROVIDER) {
+            $ci_provider_class_or_alias = $this->selectCIProvider($this->git_provider->getServiceName(), $input->getOption('ci'));
+        }
+        else {
+            $ci_provider_class_or_alias = $this->selectCIProvider($git_provider_class_or_alias, $input->getOption('ci'));
+        }
+
+        // Create the providers via the provider manager.
+        // Each provider that is created is also registered, so
+        // when we call `credentialManager()->ask()` et. al.,
+        // each will be called in turn.
+        $this->createProviders(
+          $git_provider_class_or_alias,
+          $ci_provider_class_or_alias,
+          'pantheon'
+        );
 
         // Assign variables back to $input after filling in defaults.
         $input->setArgument('source', $source);
@@ -214,7 +214,7 @@ class ProjectConvertCommand extends BuildToolsBase {
               // Create a repository
               ->progressMessage('Create Git repository {target}', ['target' => $target])
               ->addCode(
-                function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility) {
+                function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility, $site) {
 
                     $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org, $visibility);
 
@@ -222,6 +222,8 @@ class ProjectConvertCommand extends BuildToolsBase {
 
                     $this->log()->notice('The target is {target}', ['target' => $target_project]);
                     $repositoryAttributes->setProjectId($target_project);
+
+                    $state['has-multidev-capability'] = $this->siteHasMultidevCapability($site);
                 })
                 ->progressMessage('Adding existing Pantheon site as remote')
                 ->addCode(
