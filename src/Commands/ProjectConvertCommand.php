@@ -272,6 +272,15 @@ class ProjectConvertCommand extends BuildToolsBase {
                 });
         }
 
+        $upstream = $this->autodetectUpstream($siteDir);
+        if ($upstream == "empty-wordpress") {
+            $framework = "wordpress";
+        }
+        else {
+            $framework = "drupal";
+        }
+        $rootDirectory = is_dir($siteDir . '/web') ? $siteDir . '/web' : $siteDir;
+
         // Update composer-drupal to use our template files.
         $builder
             ->progressMessage('Update composerize tool to use Pantheon template files.')
@@ -294,7 +303,6 @@ class ProjectConvertCommand extends BuildToolsBase {
                   ];
                   $composer_json->extra->{"merge-plugin"} = $merge_object;
                   file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
-                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$home_dir}/vendor/grasmash/composerize-drupal/template.gitignore");
               }
             );
 
@@ -309,6 +317,9 @@ class ProjectConvertCommand extends BuildToolsBase {
                   $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.circleci");
                   $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
                   $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
+                  // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$siteDir}/.gitignore");
+
               }
             );
 
@@ -319,6 +330,43 @@ class ProjectConvertCommand extends BuildToolsBase {
             ->addCode(
               function ($state) use ($target, $siteDir) {
                   $this->composerizeSite($siteDir);
+              }
+            );
+
+        // Move custom items.
+        $builder
+            ->progressMessage("Moving custom plugins, modules, and themes.")
+            ->addCode(
+              function ($state) use ($siteDir, $framework, $rootDirectory) {
+                  if ($framework == "drupal") {
+                      $siteDirToUse = $rootDirectory;
+                      $this->passthru("mv {$siteDirToUse}/modules/custom {$siteDir}/web/modules/custom");
+                      $this->passthru("mv {$siteDirToUse}/themes/custom {$siteDir}/web/themes/custom");
+                  }
+              }
+            );
+
+        // Remove legacy files/directories
+        $builder
+            ->progressMessage("Removing legacy site artifacts.")
+            ->addCode(
+              function ($state) use ($siteDir) {
+                  $drupal_directories = [
+                      $siteDir . '/core',
+                      $siteDir . '/libraries',
+                      $siteDir . '/modules',
+                      $siteDir . '/profiles',
+                      $siteDir . '/sites',
+                      $siteDir . '/themes',
+                  ];
+                  $wordpress_directories = [
+
+                  ];
+                  // @TODO -- Wordpress
+                  $directories = $drupal_directories;
+                  foreach ($directories as $directory) {
+                      $this->passthru("rm -rf $directory");
+                  }
               }
             );
 
