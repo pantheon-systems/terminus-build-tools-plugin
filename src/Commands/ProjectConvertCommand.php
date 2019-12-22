@@ -59,20 +59,18 @@ class ProjectConvertCommand extends BuildToolsBase {
         $site_name = $input->getOption('pantheon-site');
         $source = $input->getArgument('source');
 
-        // @TODO -- inferring providers here duplicates them in the provider manager and corrupts the credentials.
-
         // First things first, we need to figure out if we have a Pantheon site or a Git site.
         // ssh://codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9@codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9.drush.in:2222/~/repository.git
-//        if ($source_provider = $this->providerManager()->inferProvider($source, GitProvider::class)) {
-//            $this->conversion_type = self::CONVERSION_TYPE_PROVIDER;
-//            $this->git_provider = $source_provider;
-//        }
-//        elseif ($source_provider = $this->providerManager()->inferProvider($source, SiteProvider::class)) {
+        if ($source_provider = $this->providerManager()->inferProvider($source, GitProvider::class, false)) {
+            $this->conversion_type = self::CONVERSION_TYPE_PROVIDER;
+            $this->git_provider = $this->providerManager()->inferProvider($source, GitProvider::class);
+        }
+        elseif ($source_provider = $this->providerManager()->inferProvider($source, SiteProvider::class, false)) {
             $this->conversion_type = self::CONVERSION_TYPE_PANTHEON;
-//        }
-//        else {
-//            throw new TerminusException("Unable to determine source repository provider. Please check your GIT URL.");
-//        }
+        }
+        else {
+            throw new TerminusException("Unable to determine source repository provider. Please check your GIT URL.");
+        }
 
         // Validate that appropriate options were set depending on the conversion type.
         if ($this->conversion_type == self::CONVERSION_TYPE_PANTHEON) {
@@ -210,7 +208,6 @@ class ProjectConvertCommand extends BuildToolsBase {
                 $target = $site->getName();
             }
             $builder
-
               // Create a repository
               ->progressMessage('Create Git repository {target}', ['target' => $target])
               ->addCode(
@@ -240,7 +237,6 @@ class ProjectConvertCommand extends BuildToolsBase {
         else {
             // We need to create the Pantheon site.
             $builder
-
               ->progressMessage('Create Pantheon site {site}', ['site' => $target])
               ->addCode(
                 function ($state) use ($target, $label, $team, $siteDir, $region) {
@@ -274,99 +270,131 @@ class ProjectConvertCommand extends BuildToolsBase {
 
         $upstream = $this->autodetectUpstream($siteDir);
         if ($upstream == "empty-wordpress") {
-            $framework = "wordpress";
+          $framework = "wordpress";
         }
         else {
-            $framework = "drupal";
+          $framework = "drupal";
         }
         $rootDirectory = is_dir($siteDir . '/web') ? $siteDir . '/web' : $siteDir;
 
-        // Update composer-drupal to use our template files.
-        $builder
+        if ($framework == "drupal") {
+          // Update composer-drupal to use our template files.
+          $builder
             ->progressMessage('Update composerize tool to use Pantheon template files.')
             ->addCode(
               function ($state) {
-                  $home_dir = $this->exec("composer global config home -q");
-                  $home_dir = $home_dir[0];
-                  if (!file_exists($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json')) {
-                      throw new TerminusException("Composerize Drupal does not appear to be installed.");
-                  }
-                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/composer.json -O {$home_dir}/vendor/grasmash/composerize-drupal/template.composer.json");
-                  $composer_json = json_decode(file_get_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json'));
-                  $merge_object = new \stdClass();
-                  $merge_object = [
-                    'include' => [
-                      'web/modules/custom/*/composer.json',
-                    ],
-                      'replace' => FALSE,
-                      'ignore-duplicates' => FALSE,
-                  ];
-                  $composer_json->extra->{"merge-plugin"} = $merge_object;
-                  file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
+                $home_dir = $this->exec("composer global config home -q");
+                $home_dir = $home_dir[0];
+                if (!file_exists($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json')) {
+                  throw new TerminusException("Composerize Drupal does not appear to be installed.");
+                }
+                $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/composer.json -O {$home_dir}/vendor/grasmash/composerize-drupal/template.composer.json");
+                $composer_json = json_decode(file_get_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json'));
+                $merge_object = new \stdClass();
+                $merge_object = [
+                  'include' => [
+                    'web/modules/custom/*/composer.json',
+                  ],
+                  'replace' => FALSE,
+                  'ignore-duplicates' => FALSE,
+                ];
+                $composer_json->extra->{"merge-plugin"} = $merge_object;
+                file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
               }
             );
 
-        // Github doesn't allow us to pull down directories via git archive so we abuse svn instead.
-        $builder
-          ->progressMessage("Download required files from example repository")
-            ->addCode(
-              function ($state) use ($siteDir) {
-                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/scripts");
-                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/tests");
-                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.ci");
-                  $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.circleci");
-                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
-                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
-                  // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
-                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$siteDir}/.gitignore");
+            // Github doesn't allow us to pull down directories via git archive so we abuse svn instead.
+            $builder
+              ->progressMessage("Download required files from example repository")
+              ->addCode(
+                function ($state) use ($siteDir) {
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/scripts");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/tests");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.ci");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.circleci");
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
+                    // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$siteDir}/.gitignore");
 
-              }
-            );
+                }
+              );
+        }
+        else {
+            $builder
+              ->progressMessage("Download required files from example repository")
+              ->addCode(
+                function ($state) use ($siteDir) {
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/scripts");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/tests");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/.ci");
+                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/.circleci");
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
+                    // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
+                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/.gitignore -O {$siteDir}/.gitignore");
+
+                }
+              );
+        }
+
 
         // Now that we have our sites created, we need to composerize them.
         $builder
-
-            ->progressMessage('Composerize website')
-            ->addCode(
-              function ($state) use ($target, $siteDir) {
-                  $this->composerizeSite($siteDir);
-              }
-            );
+          ->progressMessage('Composerize website')
+          ->addCode(
+            function ($state) use ($target, $siteDir) {
+              $this->composerizeSite($siteDir);
+            }
+          );
 
         // Move custom items.
         $builder
-            ->progressMessage("Moving custom plugins, modules, and themes.")
-            ->addCode(
-              function ($state) use ($siteDir, $framework, $rootDirectory) {
-                  if ($framework == "drupal") {
-                      $siteDirToUse = $rootDirectory;
-                      $this->passthru("mv {$siteDirToUse}/modules/custom {$siteDir}/web/modules/custom");
-                      $this->passthru("mv {$siteDirToUse}/themes/custom {$siteDir}/web/themes/custom");
-                  }
+          ->progressMessage("Moving custom plugins, modules, and themes.")
+          ->addCode(
+            function ($state) use ($siteDir, $framework, $rootDirectory) {
+              if ($framework == "drupal") {
+                $siteDirToUse = $rootDirectory;
+                $this->passthru("mv {$siteDirToUse}/modules/custom {$siteDir}/web/modules/custom");
+                $this->passthru("mv {$siteDirToUse}/themes/custom {$siteDir}/web/themes/custom");
               }
-            );
+              else {
+                $siteDirToUse = $rootDirectory;
+                $this->passthru("mv {$siteDirToUse}/wp-content/plugins {$siteDir}/web/wp-content/plugins");
+                $this->passthru("mv {$siteDirToUse}/wp-content/themes {$siteDir}/web/wp-content/themes");
+              }
+            }
+          );
+
 
         // Remove legacy files/directories
         $builder
             ->progressMessage("Removing legacy site artifacts.")
             ->addCode(
-              function ($state) use ($siteDir) {
-                  $drupal_directories = [
-                      $siteDir . '/core',
-                      $siteDir . '/libraries',
-                      $siteDir . '/modules',
-                      $siteDir . '/profiles',
-                      $siteDir . '/sites',
-                      $siteDir . '/themes',
-                  ];
-                  $wordpress_directories = [
+              function ($state) use ($siteDir, $framework) {
+                $drupal_directories = [
+                  $siteDir . '/core',
+                  $siteDir . '/libraries',
+                  $siteDir . '/modules',
+                  $siteDir . '/profiles',
+                  $siteDir . '/sites',
+                  $siteDir . '/themes',
+                ];
+                $wordpress_directories = [
+                  $siteDir . '/wp-content',
+                  $siteDir . '/wp-includes',
+                  $siteDir . '/wp-admin',
+                ];
 
-                  ];
-                  // @TODO -- Wordpress
+                if ($framework == "drupal") {
                   $directories = $drupal_directories;
-                  foreach ($directories as $directory) {
-                      $this->passthru("rm -rf $directory");
-                  }
+                }
+                else {
+                  $directories = $wordpress_directories;
+                }
+                foreach ($directories as $directory) {
+                  $this->passthru("rm -rf $directory");
+                }
               }
             );
 
@@ -405,29 +433,23 @@ class ProjectConvertCommand extends BuildToolsBase {
           ->progressmessage('Set build secrets')
           ->addCode(
             function ($state) use ($site_name, $siteDir) {
-                $secretValues = $this->git_provider->getSecretValues();
-                $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
-                // Remember the initial commit sha
-                $state['initial_commit'] = $this->getHeadCommit($siteDir);
+              $secretValues = $this->git_provider->getSecretValues();
+              $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+              // Remember the initial commit sha
+              $state['initial_commit'] = $this->getHeadCommit($siteDir);
             }
           )
 
-          /*
-          ->taskRepositoryPush()
-              ->provider($this->git_provider)
-              ->target($this->target_project)
-              ->dir($siteDir)
-          */
           // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
           ->progressMessage('Build assets for {site}', ['site' => $label])
           ->addCode(
             function ($state) use ($siteDir, $source, $label) {
-                $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
-                exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
-                if (!$status) {
-                    $this->log()->notice('Building assets for {site}', ['site' => $label]);
-                    $this->passthru("composer --working-dir=$siteDir build-assets");
-                }
+              $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
+              exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
+              if (!$status) {
+                $this->log()->notice('Building assets for {site}', ['site' => $label]);
+                $this->passthru("composer --working-dir=$siteDir build-assets");
+              }
             }
           )
 
@@ -436,19 +458,13 @@ class ProjectConvertCommand extends BuildToolsBase {
           ->progressMessage('Push code to Pantheon site {site}', ['site' => $label])
           ->addCode(
             function ($state) use ($site_name, $siteDir) {
-                $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
-                // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
-                $this->resetToCommit($siteDir, $state['initial_commit']);
+              $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+              // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
+              $this->resetToCommit($siteDir, $state['initial_commit']);
             })
 
           // Push the local working repository to the server
           ->progressMessage('Push initial code to {target}', ['target' => $label])
-          /*
-          ->taskRepositoryPush()
-              ->provider($this->git_provider)
-              ->target($this->target_project)
-              ->dir($siteDir)
-          */
           ->addCode(
             function ($state) use ($ci_env, $siteDir) {
                 $repositoryAttributes = $ci_env->getState('repository');
@@ -464,36 +480,35 @@ class ProjectConvertCommand extends BuildToolsBase {
 
         // If the user specified --keep, then clone a local copy of the project
         if ($options['keep']) {
-            $builder
-              ->addCode(
-                function ($state) use ($siteDir) {
-                    $keepDir = basename($siteDir);
-                    $fs = new Filesystem();
-                    $fs->mirror($siteDir, $keepDir);
-                    $this->log()->notice('Keeping a local copy of new project at {dir}', ['dir' => $keepDir]);
-                }
-              );
+          $builder
+          ->addCode(
+            function ($state) use ($siteDir) {
+              $keepDir = basename($siteDir);
+              $fs = new Filesystem();
+              $fs->mirror($siteDir, $keepDir);
+              $this->log()->notice('Keeping a local copy of new project at {dir}', ['dir' => $keepDir]);
+            }
+          );
         }
 
         // Give a final status message with the project URL
         $builder->addCode(
           function ($state) use ($ci_env) {
-              $repositoryAttributes = $ci_env->getState('repository');
-              $target_project = $repositoryAttributes->projectId();
-              $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
+            $repositoryAttributes = $ci_env->getState('repository');
+            $target_project = $repositoryAttributes->projectId();
+            $this->log()->notice('Success! Visit your new site at {url}', ['url' => $this->git_provider->projectURL($target_project)]);
           });
 
-//        $builder = $this->collectionBuilder();
         return $builder;
     }
 
     private function composerizeSite($siteDir) {
         $upstream = $this->autodetectUpstream($siteDir);
         if ($upstream == "empty-wordpress") {
-            $command = "composerize-wordpress";
+          $command = "composerize-wordpress";
         }
         else {
-            $command = "composerize-drupal";
+          $command = "composerize-drupal";
         }
         $this->passthru("cd $siteDir && composer $command");
     }
