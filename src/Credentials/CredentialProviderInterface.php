@@ -2,8 +2,6 @@
 
 namespace Pantheon\TerminusBuildTools\Credentials;
 
-use Symfony\Component\Console\Style\SymfonyStyle;
-
 /**
  * The credential manager stores and fetches credentials from a cache.
  * When necessary, it will prompt the user to provide a needed credential.

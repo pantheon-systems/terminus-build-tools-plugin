@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta16
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
 ```
 
 ### Installing Build Tools 1.x:
@@ -106,8 +106,8 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 
 #### Limitations
 
-**BitBucket**
-- Automatic multidev deletion not working; test multidevs must be deleted manually
+**Bitbucket**
+- Composer Lock Updater isn't working quite yet.
 
 ## Commands
 
@@ -133,6 +133,7 @@ Additional options are available to further customize the `build:project:create`
  | --admin-email      | The email address to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
+ | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
  | --ci               | The CI provider to use. Defaults to "circleci" |
  | --git              | The git repository provider to use. Defaults to "github" |
  | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
@@ -156,6 +157,8 @@ Additional options are available to further customize the `build:project:repair`
 
 The `build:comment:add:commit` command is used to add a comment to a commit on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
 
+Either the `--message` and/or the `--site_url` options are required.
+
 #### Command Options
 
 Additional options are available to customize the `build:comment:add:commit` command:
@@ -165,7 +168,23 @@ Additional options are available to customize the `build:comment:add:commit` com
  | --sha            | The SHA hash of the commit to add the comment to |
  | --message        | The message to post to the commit |
  | --site_url       | If provided, will include a "Visit Site" link at the start of the comment, linking to the provided site URL |
- 
+
+### terminus build:comment:add:pr
+
+The `build:comment:add:pr` command is used to add a comment to a pull request on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
+
+The `--pr_id` option and either the `--message` and/or the `--site_url` options are required.
+
+#### Command Options
+
+Additional options are available to customize the `build:comment:add:pr` command:
+
+ | Option           | Description      |
+ | ---------------- | ---------------- |
+ | --pr_id          | Required. The number of the pull request to add the comment to |
+ | --message        | The message to post to the pull request |
+ | --site_url       | If provided, will include a "Visit Site" link at the start of the pull request, linking to the provided site URL |
+
 ### build:credentials:clear
  
 The `build:credentials:clear` command is available to clear cached credentials from Build Tools. This is useful when developing Build Tools or trying to remove credentials from a machine.
@@ -350,6 +369,18 @@ command:
           team: My Pantheon Org
 ```
 
+#### Self-Hosted GitLab
+
+The GitLab URL used by Build Tools can be defined by updating the `build-tools:provider:git:gitlab:url` configuration value, as demonstrated by the example below. Note that you will need to replace `hostname` with the actual GitLab instance hostname.
+
+```
+build-tools:
+  provider:
+    git:
+      gitlab:
+        url: hostname
+```
+
 #### Starter Site Shortcuts
 
 If you often create sites based on certain common starter sites, you may also use your Terminus configuration file to define custom starter site shortcuts. The example below defines shortcuts for the Lightning and Contenta distributions:
@@ -416,6 +447,10 @@ This command will commit the generated artifacts to an existing multidev environ
 ### List Testing Multidevs
 
 `terminus build:env:list`
+
+### Commenting on a pull request or merge request
+
+`terminus build:comment:add:pr --pr_number=123 --message="Behat tests passed!"`
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.

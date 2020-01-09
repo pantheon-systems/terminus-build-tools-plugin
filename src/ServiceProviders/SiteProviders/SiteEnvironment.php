@@ -73,4 +73,13 @@ class SiteEnvironment extends ProviderEnvironment
         $this['GIT_EMAIL'] = $siteName;
         return $this;
     }
+
+    public function setComposerAuth($composerAuth) {
+      $this['COMPOSER_AUTH'] = $composerAuth;
+      return $this;
+    }
+
+    public function getComposerAuth() {
+      return $this['COMPOSER_AUTH'];
+    }
 }

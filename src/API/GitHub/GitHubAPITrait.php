@@ -2,15 +2,10 @@
 
 namespace Pantheon\TerminusBuildTools\API\GitHub;
 
-use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 /**
  * BitbucketAPITrait provides access to the BitbucketAPI, and manages

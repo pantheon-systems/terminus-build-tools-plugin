@@ -3,12 +3,8 @@
 namespace Pantheon\TerminusBuildTools\API\Bitbucket;
 
 use Pantheon\TerminusBuildTools\API\WebAPI;
-use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 /**
  * BitbucketAPI manages calls to the Bitbucket API.

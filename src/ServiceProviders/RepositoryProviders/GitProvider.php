@@ -42,10 +42,11 @@ interface GitProvider extends ProviderInterface
      * credentials for the push operation, and does not require a remote
      * be set for the target.
      *
-     * @param string $dir Local working copy of repository to push
-     * @param string $target_project Project to push to; usually org/projectname
+     * @param string  $dir Local working copy of repository to push
+     * @param string  $target_project Project to push to; usually org/projectname
+     * @param boolean $use_ssh Skip setting the remote and only 'git push'.
      */
-    public function pushRepository($dir, $target_project);
+    public function pushRepository($dir, $target_project, $use_ssh = false);
 
     /**
      * Delete a repository from the repository service.
@@ -102,5 +103,12 @@ interface GitProvider extends ProviderInterface
      * @return array
      */
     public function getSecretValues();
+
+    /**
+     * Verifies the repository can be connected to via SSH.
+     *
+     * @return boolean
+     */
+    public function verifySSHConnect();
 
 }
