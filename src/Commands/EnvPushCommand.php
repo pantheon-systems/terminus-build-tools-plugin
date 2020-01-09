@@ -29,8 +29,9 @@ class EnvPushCommand extends BuildToolsBase
         $options = [
           'label' => '',
           'message' => '',
+          'prepare-for-pantheon' => false,
         ])
     {
-        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message']);
+        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message'], $options['prepare-for-pantheon']);
     }
 }
