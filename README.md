@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta16
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
 ```
 
 ### Installing Build Tools 1.x:
@@ -106,8 +106,8 @@ $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-si
 
 #### Limitations
 
-**BitBucket**
-- Automatic multidev deletion not working; test multidevs must be deleted manually
+**Bitbucket**
+- Composer Lock Updater isn't working quite yet.
 
 ## Commands
 
@@ -133,6 +133,7 @@ Additional options are available to further customize the `build:project:create`
  | --admin-email      | The email address to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
+ | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
  | --ci               | The CI provider to use. Defaults to "circleci" |
  | --git              | The git repository provider to use. Defaults to "github" |
  | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
@@ -394,6 +395,18 @@ command:
         options:
           admin-password: secret-secret
           team: My Pantheon Org
+```
+
+#### Self-Hosted GitLab
+
+The GitLab URL used by Build Tools can be defined by updating the `build-tools:provider:git:gitlab:url` configuration value, as demonstrated by the example below. Note that you will need to replace `hostname` with the actual GitLab instance hostname.
+
+```
+build-tools:
+  provider:
+    git:
+      gitlab:
+        url: hostname
 ```
 
 #### Starter Site Shortcuts

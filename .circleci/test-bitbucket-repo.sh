@@ -3,6 +3,7 @@
 set -e
 
 SOURCE_COMPOSER_PROJECT="$1"
+EXTRA_ARGS="$2"
 
 BUILD_TOOLS_VERSION="dev-master"
 if [[ -n "$CIRCLE_BRANCH" ]]; then
@@ -14,7 +15,7 @@ TARGET_REPO=$BITBUCKET_USER/$TERMINUS_SITE
 CLONE_URL="https://$BITBUCKET_USER@bitbucket.org/${TARGET_REPO}.git"
 
 # Build a test project on bitbucket
-terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=bitbucket --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
+terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --git=bitbucket --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION" $EXTRA_ARGS
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 # Confirm that the Bitbucket project was created

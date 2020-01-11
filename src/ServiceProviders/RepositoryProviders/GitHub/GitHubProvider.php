@@ -2,20 +2,13 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPI;
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
-use Robo\Config\Config;
 
 /**
  * Holds state information destined to be registered with the CI service.
@@ -25,6 +18,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     use GitHubAPITrait;
 
     protected $serviceName = 'github';
+    protected $baseGitUrl = 'git@github.com';
     const GITHUB_URL = 'https://github.com';
 
     /** @var WebAPIInterface */
@@ -71,8 +65,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
-        // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@github.com:{$target_project}.git'");
+        $this->execGit($local_site_path, "remote add origin '{$this->getBaseGitUrl()}:{$target_project}.git'");
 
         return $target_project;
     }
@@ -80,9 +73,13 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function pushRepository($dir, $target_project)
+    public function pushRepository($dir, $target_project, $use_ssh = false)
     {
-        $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
+        if ($use_ssh){
+            $this->execGit($dir, 'push --progress origin master');
+        } else {
+            $this->execGit($dir, 'push --progress https://{token}:x-oauth-basic@github.com/{target}.git master', ['token' => $this->token(), 'target' => $target_project], ['token']);
+        }
     }
 
     /**
@@ -125,7 +122,7 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     /**
      * @inheritdoc
      */
-    public function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         if (!in_array($state, ['open', 'closed', 'all']))
             throw new TerminusException("branchesForPullRequests - state must be one of: open, closed, all");
@@ -147,5 +144,15 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     {
         $isClosed = ($data['state'] == 'closed');
         return new PullRequestInfo($data['number'], $isClosed, $data['head']['ref']);
+    }
+
+    /**
+     * GitHub returns 1 (not 0) for a successful connection.
+     *
+     * @return boolean
+     */
+    public function verifySSHConnect(){
+        passthru(sprintf('ssh -T %s', $this->baseGitUrl), $result);
+        return $result === 1;
     }
 }
