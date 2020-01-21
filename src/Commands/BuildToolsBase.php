@@ -520,7 +520,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->log()->notice("Skipping clone since environments are the same.");
             return;
         }
-        
+
         $from_name = $from_env->getName();
 
         // Clone files if we're only doing files, or if "only do db" is not set.
@@ -807,7 +807,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        $this->passthru("git -C $repositoryDir add --force -A .");
+        if ($this->respectGitignore($repositoryDir)) {
+            // In "Integrated Composer" mode, we will not commit ignored files
+            $this->passthru("git -C $repositoryDir add .");
+        }
+        else {
+            $this->passthru("git -C $repositoryDir add --force -A .");
+        }
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
@@ -833,6 +839,33 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         return $metadata;
+    }
+
+    /**
+     * respectGitignore determines if we should respoect the .gitignore
+     * file (rather than use 'git add --force). This is experimental.
+     */
+    protected function respectGitignore($repositoryDir)
+    {
+        return $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.yml")
+            || $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.upstream.yml");
+    }
+
+    /**
+     * isIntegratedComposerEnabled checks if the build step switch is on
+     * in just one (pantheon.yml or pantheon.upstream.yml) config file.
+     */
+    private function isIntegratedComposerEnabled($pantheonYmlPath)
+    {
+        if (!file_exists($pantheonYmlPath)) {
+            return false;
+        }
+        $contents = file_get_contents($pantheonYmlPath);
+
+        // build_step_demo: true
+        //  - or -
+        // build_step: true
+        return preg_match('#^build_step(_demo)?: true$#', $contents);
     }
 
     /**
