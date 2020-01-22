@@ -870,7 +870,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // build_step_demo: true
         //  - or -
         // build_step: true
-        return preg_match("#^build_step(_demo)?: $expected\$#", $contents);
+        return preg_match("#^build_step(_demo)?: $expected\$#m", $contents);
     }
 
     /**
