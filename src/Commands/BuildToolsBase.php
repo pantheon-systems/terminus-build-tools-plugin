@@ -850,12 +850,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if ($this->checkIntegratedComposerSetting("$repositoryDir/pantheon.yml", false)) {
             return false;
         }
-        return $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.yml", true)
-            || $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.upstream.yml", true);
+        return $this->checkIntegratedComposerSetting("$repositoryDir/pantheon.yml", true)
+            || $this->checkIntegratedComposerSetting("$repositoryDir/pantheon.upstream.yml", true);
     }
 
     /**
-     * isIntegratedComposerEnabled checks if the build step switch is on
+     * checkIntegratedComposerSetting checks if the build step switch is on
      * in just one (pantheon.yml or pantheon.upstream.yml) config file.
      */
     private function checkIntegratedComposerSetting($pantheonYmlPath, $desiredValue)
