@@ -847,25 +847,30 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function respectGitignore($repositoryDir)
     {
-        return $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.yml")
-            || $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.upstream.yml");
+        if ($this->checkIntegratedComposerSetting("$repositoryDir/pantheon.yml", false)) {
+            return false;
+        }
+        return $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.yml", true)
+            || $this->isIntegratedComposerEnabled("$repositoryDir/pantheon.upstream.yml", true);
     }
 
     /**
      * isIntegratedComposerEnabled checks if the build step switch is on
      * in just one (pantheon.yml or pantheon.upstream.yml) config file.
      */
-    private function isIntegratedComposerEnabled($pantheonYmlPath)
+    private function checkIntegratedComposerSetting($pantheonYmlPath, $desiredValue)
     {
         if (!file_exists($pantheonYmlPath)) {
             return false;
         }
         $contents = file_get_contents($pantheonYmlPath);
 
+        $expected = $desiredValue ? 'true' : 'false';
+
         // build_step_demo: true
         //  - or -
         // build_step: true
-        return preg_match('#^build_step(_demo)?: true$#', $contents);
+        return preg_match("#^build_step(_demo)?: $expected\$#", $contents);
     }
 
     /**
