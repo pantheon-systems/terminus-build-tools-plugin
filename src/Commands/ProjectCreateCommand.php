@@ -332,6 +332,13 @@ class ProjectCreateCommand extends BuildToolsBase
 
                     file_put_contents("$siteDir/README.md", $readme);
 
+                    // If a README.template.md file exists in the template repository append its contents to the new README.md.
+                    if ( file_exists( "$siteDir/README.template.md" ) ) {
+                        $readme_template = file_get_contents( "$siteDir/README.template.md" );
+                        file_put_contents( "$siteDir/README.md", $readme_template, FILE_APPEND );
+                        unlink( "$siteDir/README.template.md" );
+                    }
+
                     // If this site cannot create multidev environments, then configure
                     // it to always run tests on the dev environment.
                     $state['has-multidev-capability'] = $this->siteHasMultidevCapability($site);
