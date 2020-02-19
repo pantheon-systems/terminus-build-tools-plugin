@@ -334,8 +334,9 @@ class ProjectCreateCommand extends BuildToolsBase
 
                     // If a README.template.md file exists in the template repository append its contents to the new README.md.
                     if ( file_exists( "$siteDir/README.template.md" ) ) {
-                        $readme_template = file_get_contents( "$siteDir/README.template.md" );
-                        file_put_contents( "$siteDir/README.md", $readme_template, FILE_APPEND );
+                        $readme = "\n\n" . file_get_contents( "$siteDir/README.template.md" );
+                        $readme = str_replace( '%SITE_NAME%', $site_name, $readme );
+                        file_put_contents( "$siteDir/README.md", $readme, FILE_APPEND );
                         unlink( "$siteDir/README.template.md" );
                     }
 
