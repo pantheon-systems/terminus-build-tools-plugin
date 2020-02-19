@@ -53,7 +53,7 @@ jobs:
 
     test_drupal_7_github:
         <<: *defaults
-        resource_class: large
+        resource_class: medium
         steps:
             - checkout
             - run:
@@ -78,7 +78,7 @@ jobs:
     # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
-        resource_class: large
+        resource_class: medium
         steps:
             - checkout
             - run:
@@ -115,7 +115,7 @@ jobs:
 
     test_drupal_8_gitlab:
         <<: *defaults
-        resource_class: large
+        resource_class: medium
         steps:
             - checkout
             - run:
@@ -163,7 +163,7 @@ jobs:
     # elsewhere in the interest of saving testing time.
     test_wordpress_github:
         <<: *defaults
-        resource_class: large
+        resource_class: medium
         steps:
             - checkout
             - run:
@@ -200,7 +200,7 @@ jobs:
 
     test_wordpress_gitlab:
         <<: *defaults
-        resource_class: large
+        resource_class: medium
         steps:
             - checkout
             - run:
