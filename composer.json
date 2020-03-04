@@ -18,7 +18,7 @@
         "symfony/polyfill-ctype": "v1.11.0",
         "symfony/yaml": "v3.4.26",
         "webmozart/assert": "1.4.0",
-        "phpspec/prophecy": "1.8.0"
+        "phpspec/prophecy": "1.10.1"
     },
     "scripts": {
         "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
