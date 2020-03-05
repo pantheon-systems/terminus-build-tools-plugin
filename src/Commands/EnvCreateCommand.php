@@ -26,7 +26,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option label What to name the environment in commit comments
      * @option clone-content Run terminus env:clone-content if the environment is re-used
      * @option db-only Only clone the database when runing env:clone-content
-     * @option notify If TRUE, post a comment on commit or PR. Otherwise, skip notification. Defaults to TRUE.
+     * @option notify To suppress comment on commit or PR, use "--notify=0". Defaults to true.
      * @option message Commit message to include when committing assets to Pantheon
      * @option pr-id Post notification comment to a specific PR instead of the commit hash.
      */
