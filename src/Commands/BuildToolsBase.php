@@ -807,6 +807,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
+
         if ($this->respectGitignore($repositoryDir)) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
@@ -814,6 +815,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         else {
             $this->passthru("git -C $repositoryDir add --force -A .");
         }
+
+      $this->passthru("git -C $repositoryDir update-index --chmod=+x vendor/drush/drush/drush  > /dev/null 2>&1");
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
