@@ -816,7 +816,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->passthru("git -C $repositoryDir add --force -A .");
         }
 
-      $this->passthru("git -C $repositoryDir update-index --chmod=+x vendor/drush/drush/drush.launcher");
+      $this->passthru("git -C $repositoryDir update-index --chmod=+x vendor/drush/drush/drush  > /dev/null 2>&1");
 
         // Now that everything is ready, commit the build artifacts.
         $this->passthru($this->interpolate("git -C {repositoryDir} commit -q -m [[message]]", ['repositoryDir' => $repositoryDir, 'message' => $message]));
