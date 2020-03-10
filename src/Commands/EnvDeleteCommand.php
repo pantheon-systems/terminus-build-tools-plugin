@@ -9,20 +9,7 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
-use Consolidation\OutputFormatters\StructuredData\PropertyList;
-use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
-use Pantheon\Terminus\Commands\TerminusCommand;
 use Pantheon\Terminus\Exceptions\TerminusException;
-use Pantheon\Terminus\Site\SiteAwareInterface;
-use Pantheon\Terminus\Site\SiteAwareTrait;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
-use Consolidation\AnnotatedCommand\AnnotationData;
-use Consolidation\AnnotatedCommand\CommandData;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\Utility\MultiDevRetention;
 
 /**
@@ -128,7 +115,14 @@ class EnvDeleteCommand extends BuildToolsBase
 
         // Bail if there is a URL mismatch
         if (!empty($remoteUrlFromGit) && ($this->projectFromRemoteUrl($remoteUrlFromGit) != $this->projectFromRemoteUrl($remoteUrl))) {
-            throw new TerminusException('Remote repository mismatch: local repository, {gitrepo} is different than the repository {metadatarepo} associated with the site {site}.', ['gitrepo' => $this->projectFromRemoteUrl($remoteUrlFromGit), 'metadatarepo' => $this->projectFromRemoteUrl($remoteUrl), 'site' => $site_id]);
+            $proceed = $this->confirm(
+                'Remote repository mismatch: local repository, {gitrepo} is different than the repository {metadatarepo} associated with the site {site}. Would you like to proceed?',
+                ['gitrepo' => $this->projectFromRemoteUrl($remoteUrlFromGit), 'metadatarepo' => $this->projectFromRemoteUrl($remoteUrl), 'site' => $site_id]
+            );
+            
+            if (!$proceed) {
+                return;
+            }
         }
 
         // Create a git repository service provider appropriate to the URL and ensure credentials are present

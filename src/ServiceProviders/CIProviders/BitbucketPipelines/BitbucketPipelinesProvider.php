@@ -4,18 +4,11 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BitbucketPipe
 
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BaseCIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\KeyPairReciever;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-use Robo\Common\ConfigAwareTrait;
-use Robo\Config\Config;
 
 /**
  * Manages the configuration of a project to be tested on BitbucketPipelines.
@@ -109,7 +102,29 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // Temporary: catch and eat errors without stopping the command
         try
         {
+            // Enable Pipelines for the project.
             $this->api()->request("$repoApiUrl/pipelines_config", $data, 'PUT');
+        } catch (\Exception $e) {
+            $this->logger->error($e->getMessage());
+        }
+
+        // @TODO: verify that the custom "clu" task exists in yml first?
+        $data = [
+          'enabled' => true,
+          'cron_pattern' => '0 0 4 * * ? *',
+          'target' => [
+            'type' => 'pipeline_ref_target',
+            'ref_type' => 'branch',
+            'ref_name' => 'master',
+            'selector' => [
+              'type' => 'custom',
+              'pattern' => 'clu'
+            ]
+          ]
+        ];
+        try {
+            // Enable CLU scheduled task.
+            $this->api()->request("$repoApiUrl/pipelines_config/schedules/", $data, 'POST');
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
         }

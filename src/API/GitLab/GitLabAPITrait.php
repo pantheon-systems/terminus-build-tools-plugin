@@ -3,15 +3,10 @@
 namespace Pantheon\TerminusBuildTools\API\GitLab;
 
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
-use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 /**
  * GitLabAPITrait provides access to the GitLabAPI, and manages
@@ -71,7 +66,7 @@ trait GitLabAPITrait
    */
   public function credentialRequests()
   {
-    $instructions = "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api' (required) scopes.";
+    $instructions = "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api', 'read_repository', and 'write_repository' (required) scopes.";
 
     $validation_message = 'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.';
 
@@ -82,7 +77,7 @@ trait GitLabAPITrait
     $gitlabTokenRequest = (new CredentialRequest($this->tokenKey()))
         ->setInstructions($instructions)
         ->setPrompt("Enter GitLab personal access token: ")
-        ->setValidateRegEx('#^[0-9a-zA-Z\-]{20}$#')
+        ->setValidateRegEx('#^[0-9a-zA-Z\-_]{20}$#')
         ->setValidationErrorMessage($validation_message)
         ->setValidationCallbackErrorMessage($could_not_authorize)
         ->setValidateFn(

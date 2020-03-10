@@ -2,9 +2,8 @@
 
 namespace Pantheon\TerminusBuildTools\API;
 
-use Pantheon\TerminusBuildTools\API\WebAPI;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
@@ -26,9 +25,9 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
     abstract protected function apiClient();
 
-    abstract protected function isPagedResponse($headers);
+    abstract protected function isPagedResponse(ResponseInterface $res);
 
-    abstract protected function getPagerInfo($headers);
+    abstract protected function getPagerInfo(ResponseInterface $res);
 
     abstract protected function isLastPage($page_link, $pager_info);
 
@@ -49,19 +48,19 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         $queryParams = $this->alterPagedRequestQueryParams($queryParams);
         $res = $this->sendRequest($uri, $queryParams, 'GET');
 
-        $resultData = json_decode($res->getBody(), true);
+        $resultData = $this->getResultData($res);
         $httpCode = $res->getStatusCode();
 
         // Remember all of the collected data in $accumulatedData
         $accumulatedData = $resultData;
+        // Check with the calling method to see if we need to iterate.
         $isDone = !$this->checkPagedCallback($resultData, $callback);
 
         // The request may be against a paged collection. If that is the case, traverse the "next" links sequentially
         // (since it's simpler and PHP doesn't have non-blocking I/O) until the end and accumulate the results.
-        $headers = $res->getHeaders();
         // Check if the array is numeric. Otherwise we can't consider this a collection.
-        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($headers)) {
-            $pager_info = $this->getPagerInfo($headers);
+        if ($this->isSequentialArray($resultData) && $this->isPagedResponse($res)) {
+            $pager_info = $this->getPagerInfo($res);
             while (($httpCode == 200) && !$isDone) {
                 $isDone = $this->isLastPage($uri, $pager_info);
                 $next = $this->getNextPageUri($pager_info);
@@ -73,7 +72,9 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                     // $uri already has $queryParams, as altered in the $pager_info
                     $res = $this->sendRequest($uri, [], 'GET');
                     $httpCode = $res->getStatusCode();
-                    $resultData = json_decode($res->getBody(), true);
+                    $resultData = $this->getResultData($res);
+                    // Check with the calling method to see if we need to *continue*
+                    // to iterate.
                     $isDone = !$this->checkPagedCallback($resultData, $callback);
 
                     if (!is_null($resultData))
@@ -115,6 +116,18 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
         return $client->request($method, $uri, $guzzleParams);
     }
 
+    /**
+     * Runs a provided callback on the result set, allowing outside logic
+     * to control whether the paging logic should continue to iterate.
+     *
+     * As an example, Pantheon\TerminusBuildTools\Utility\MultiDevRetention
+     * uses this feature to only iterate pull requests until all pull requests
+     * associated with a multidev environment have been seen.
+     *
+     * @param array    $resultData Result data from the current API request.
+     * @param callback $callback   Some callable function.
+     * @return boolean
+     */
     protected function checkPagedCallback($resultData, $callback)
     {
         if (!$callback) {
@@ -161,5 +174,10 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
             }
         }
         return TRUE;
+    }
+
+    protected function getResultData(ResponseInterface $res)
+    {
+        return json_decode($res->getBody(), true);
     }
 }

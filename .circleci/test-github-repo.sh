@@ -3,6 +3,7 @@
 set -e
 
 SOURCE_COMPOSER_PROJECT="$1"
+EXTRA_ARGS="$2"
 
 BUILD_TOOLS_VERSION="dev-master"
 if [[ -n "$CIRCLE_BRANCH" ]]; then
@@ -13,8 +14,11 @@ TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM
 TARGET_REPO=$GITHUB_USER/$TERMINUS_SITE
 CLONE_URL="https://github.com/${TARGET_REPO}.git"
 
+# Clear Composer cache before running build:project:create
+composer clear-cache
+
 # Build a test project on github
-terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION"
+terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION" $EXTRA_ARGS
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 # Confirm that the Github project was created

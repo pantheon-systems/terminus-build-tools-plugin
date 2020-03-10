@@ -7,17 +7,11 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPI;
 use Pantheon\TerminusBuildTools\API\GitLab\GitLabAPITrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider;
 use Pantheon\TerminusBuildTools\Task\Ssh\PrivateKeyReciever;
-use Pantheon\TerminusBuildTools\Task\Ssh\PublicKeyReciever;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
-use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
-use Robo\Common\ConfigAwareTrait;
 use Robo\Config\Config;
 
 /**
@@ -138,8 +132,16 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
     }
 
-    public function startTesting(CIState $ci_env) {
-        // Do nothing...it starts automatically.
+    public function startTesting(CIState $ci_env)
+    {
+        // We use this opportunity to set up our scheduled job for automated updates.
+        $uri = $this->apiUri($ci_env, 'pipeline_schedules');
+        $data = [
+            'ref' => 'master',
+            'description' => 'Automated composer updates.',
+            'cron' => '0 4 * * *'
+        ];
+        $this->api()->request($uri, $data);
     }
 
     public function addPrivateKey(CIState $ci_env, $privateKey)

@@ -3,11 +3,8 @@
 namespace Pantheon\TerminusBuildTools\API\Bitbucket;
 
 use Pantheon\TerminusBuildTools\API\WebAPI;
-use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * BitbucketAPI manages calls to the Bitbucket API.
@@ -44,23 +41,40 @@ class BitbucketAPI extends WebAPI
         );
     }
 
-    protected function isPagedResponse($headers)
+    protected function isPagedResponse(ResponseInterface $res)
     {
-        return true;
+        $responseBody = json_decode($res->getBody(), true);
+        if (!empty($responseBody['next']) || ! empty($responseBody['previous'])) {
+            return true;
+        }
+        return false;
     }
 
-    protected function getPagerInfo($links)
+    protected function getPagerInfo(ResponseInterface $res)
     {
-        return [];
+        $responseBody = json_decode($res->getBody(), true);
+        $pagerInfo = [];
+        foreach (['next', 'previous'] as $type) {
+            if (isset($responseBody[$type])) {
+                $pagerInfo[$type] = $responseBody[$type];
+            }
+        }
+        return $pagerInfo;
     }
 
     protected function isLastPage($page_link, $pager_info)
     {
-        return true;
+        return empty($pager_info['next']);
     }
 
     protected function getNextPageUri($pager_info)
     {
-        return null;
+        return !empty($pager_info['next']) ? $pager_info['next'] : NULL;
+    }
+
+    protected function getResultData(ResponseInterface $res)
+    {
+        $resultData = json_decode($res->getBody(), true);
+        return isset( $resultData['values'] ) ? $resultData['values'] : [];
     }
 }

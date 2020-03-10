@@ -9,20 +9,10 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
-use Consolidation\OutputFormatters\StructuredData\PropertyList;
-use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
-use Pantheon\Terminus\Commands\TerminusCommand;
-use Pantheon\Terminus\Exceptions\TerminusException;
-use Pantheon\Terminus\Site\SiteAwareInterface;
-use Pantheon\Terminus\Site\SiteAwareTrait;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
 use Consolidation\AnnotatedCommand\AnnotationData;
 use Consolidation\AnnotatedCommand\CommandData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Composer\Semver\Comparator;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -162,10 +152,8 @@ class ProjectRepairCommand extends BuildToolsBase
 
             ->addCode(
                 function ($state) use ($site_name) {
-                    $secretValues = [
-                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
-                    ];
-                    $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                  $secretValues = $this->git_provider->getSecretValues();
+                  $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
                 }
             );
 

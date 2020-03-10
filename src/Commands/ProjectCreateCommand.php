@@ -9,24 +9,13 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
-use Consolidation\OutputFormatters\StructuredData\PropertyList;
-use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
-use Pantheon\Terminus\Commands\TerminusCommand;
 use Pantheon\Terminus\Exceptions\TerminusException;
-use Pantheon\Terminus\Site\SiteAwareInterface;
-use Pantheon\Terminus\Site\SiteAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
 use Consolidation\AnnotatedCommand\AnnotationData;
 use Consolidation\AnnotatedCommand\CommandData;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Composer\Semver\Comparator;
-use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCIProvider;
+use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
@@ -176,6 +165,9 @@ class ProjectCreateCommand extends BuildToolsBase
      * GitLab/GitLabCI configuration:
      *   export GITLAB_TOKEN=gitlab_personal_access_token
      *
+     * Composer authentication details (if necessary):
+     *   export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
+     *
      * Secrets that are not exported will be prompted.
      *
      * @authorize
@@ -186,9 +178,22 @@ class ProjectCreateCommand extends BuildToolsBase
      * @param string $target Simple name of project to create.
      * @option org Organization for the new project (defaults to authenticated user)
      * @option team Pantheon team
+     * @option label The friendly name to use for the Pantheon site (defaults to the name of the Git site).
      * @option pantheon-site Name of Pantheon site to create (defaults to 'target' argument)
      * @option email email address to place in ssh-key
+     * @option test-site-name The name to use when installing the test site.
+     * @option admin-email The email address to use for the CMS admin.
+     * @option admin-password The password to use for the CMS admin when installing the test site.
      * @option stability Minimum allowed stability for template project.
+     * @option git Specify a git provider. Options are github (default), gitlab, and bitbucket.
+     * @option ci Specify a CI provider. Options are circleci, gitlab-pipelines, and bitbucket-pipelines. If not provided, CI will be assigned based on git provider choice.
+     * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
+     * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
+     * @option region Specify a data residency region. See https://pantheon.io/docs/regions#available-regions for the current region options.
+     * @option preserve-local-repository If given, use the repository in the existing source directory. Otherwise, use composer create-project to create a new local copy of the source project.
+     * @option keep If given, clone a local copy of the project.
+     * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
+
      */
     public function createProject(
         $source,
@@ -206,8 +211,11 @@ class ProjectCreateCommand extends BuildToolsBase
             'env' => [],
             'preserve-local-repository' => false,
             'keep' => false,
+            'use-ssh' => false,
             'ci' => '',
             'git' => 'github',
+            'visibility' => 'public',
+            'region' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -218,6 +226,9 @@ class ProjectCreateCommand extends BuildToolsBase
         $team = $options['team'];
         $label = $options['label'];
         $stability = $options['stability'];
+        $visibility = $options['visibility'];
+        $region = $options['region'];
+        $use_ssh = $options['use-ssh'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -239,32 +250,35 @@ class ProjectCreateCommand extends BuildToolsBase
         // Add the environment variables from the site provider to the CI environment.
         $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
+        // Set the COMPOSER_AUTH environment variable if there's one defined in config.
+        // We might need it to check out any private dependencies.
+        $composerAuth = Config_Utility::getComposerAuthJson($this->site_provider->session());
+        $backupAuth   = null;
+        if ($composerAuth) {
+            $backupAuth = getenv('COMPOSER_AUTH');
+            putenv('COMPOSER_AUTH=' . $composerAuth);
+        }
+
+        // If using SSH, verify authentication works as expected.
+        if ($use_ssh){
+          if (!$this->git_provider->verifySSHConnect()) {
+            throw new TerminusException('Unable to connect to {git} via SSH. Try `ssh -T {baseGitUrl}` to test the connection.', ['git' => $options['git'], 'baseGitUrl' => $this->git_provider->getBaseGitUrl()]);
+          }
+          $this->log()->notice('Verified SSH connection to Git provider');
+        }
+
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
         $siteDir = $this->createFromSource($source, $target, $stability, $options);
 
+        // Restore COMPOSER_AUTH if necessary.
+        if (!is_null($backupAuth)) {
+            putenv('COMPOSER_AUTH=' . $backupAuth);
+        }
+
         $builder = $this->collectionBuilder();
 
         // $builder->setStateValue('ci-env', $ci_env)
-
-        $this->log()->notice('Determine whether build-assets exists for {project}', ['project' => $target_label]);
-
-/*
-        // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
-        exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
-        if (!$status) {
-            $this->log()->notice('build-assets command exists for {project}', ['project' => $target_label]);
-            $builder
-                // Run build assets
-                ->progressMessage('Run build assets for project')
-                ->addCode(
-                    function ($state) use ($siteDir) {
-                            $this->log()->notice('Building assets for project');
-                            $this->passthru("composer --working-dir=$siteDir build-assets");
-                        }
-                );
-        }
-*/
 
         $builder
 
@@ -278,9 +292,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $target, $target_org, $siteDir) {
+                function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility) {
 
-                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org);
+                    $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org, $visibility);
 
                     $repositoryAttributes = $ci_env->getState('repository');
                     // $github_token = $repositoryAttributes->token();
@@ -295,13 +309,13 @@ class ProjectCreateCommand extends BuildToolsBase
             // Create a Pantheon site
             ->progressMessage('Create Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $label, $team, $target, $siteDir) {
+                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region) {
                     // Look up our upstream.
                     $upstream = $this->autodetectUpstream($siteDir);
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
-                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team]);
+                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team, 'region' => $region]);
 
                     $siteInfo = $site->serialize();
                     $site_uuid = $siteInfo['id'];
@@ -358,11 +372,11 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->provider($this->git_provider, $this->ci_provider)
             ->progressmessage('Set build secrets')
             ->addCode(
-                function ($state) use ($site_name) {
-                    $secretValues = [
-                        'token' => $this->git_provider->token($this->git_provider->tokenKey())
-                    ];
+                function ($state) use ($site_name, $siteDir) {
+                    $secretValues = $this->git_provider->getSecretValues();
                     $this->writeSecrets("{$site_name}.dev", $secretValues, false, 'tokens.json');
+                   // Remember the initial commit sha
+                    $state['initial_commit'] = $this->getHeadCommit($siteDir);
                 }
             )
 
@@ -372,20 +386,27 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->target($this->target_project)
                 ->dir($siteDir)
             */
+            // Add a task to run the 'build assets' step, if possible. Do nothing if it does not exist.
+            ->progressMessage('Build assets for {site}', ['site' => $site_name])
+            ->addCode(
+                function ($state) use ($siteDir, $source, $site_name) {
+                  $this->log()->notice('Determine whether build-assets exists for {source}', ['source' => $source]);
+                  exec("composer --working-dir=$siteDir help build-assets", $outputLines, $status);
+                  if (!$status) {
+                    $this->log()->notice('Building assets for {site}', ['site' => $site_name]);
+                    $this->passthru("composer --working-dir=$siteDir build-assets");
+                  }
+                }
+            )
 
             // Push code to newly-created project.
             // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($site_name, $siteDir) {
-                    // Remember the initial commit sha
-                    $initial_commit = $this->getHeadCommit($siteDir);
-
-                    // TODO: build assets should happen here
-
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
-                    $this->resetToCommit($siteDir, $initial_commit);
+                    $this->resetToCommit($siteDir, $state['initial_commit']);
                 })
 
             // Install our site and export configuration.
@@ -421,9 +442,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 ->dir($siteDir)
             */
             ->addCode(
-                function ($state) use ($ci_env, $siteDir) {
+                function ($state) use ($ci_env, $siteDir, $use_ssh) {
                     $repositoryAttributes = $ci_env->getState('repository');
-                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId());
+                    $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
                 })
 
             // Tell the CI server to start testing our project

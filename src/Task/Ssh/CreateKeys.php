@@ -3,7 +3,6 @@ namespace Pantheon\TerminusBuildTools\Task\Ssh;
 
 use Robo\Result;
 use Robo\Task\BaseTask;
-use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 
 /**
  * Create a public / private key pair for testing, and add them to

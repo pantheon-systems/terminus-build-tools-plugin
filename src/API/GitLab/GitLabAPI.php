@@ -3,11 +3,8 @@
 namespace Pantheon\TerminusBuildTools\API\GitLab;
 
 use Pantheon\TerminusBuildTools\API\WebAPI;
-use Pantheon\TerminusBuildTools\API\WebAPIInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Pantheon\TerminusBuildTools\ServiceProviders\ServiceTokenStorage;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
+use Psr\Http\Message\ResponseInterface;
 use Robo\Config\Config;
 
 /**
@@ -75,8 +72,9 @@ class GitLabAPI extends WebAPI
         $this->GITLAB_URL = $gitlab_url;
     }
 
-    protected function isPagedResponse($headers)
+    protected function isPagedResponse(ResponseInterface $res)
     {
+        $headers = $res->getHeaders();
         if (empty($headers['Link'])) {
           return FALSE;
         }
@@ -88,8 +86,9 @@ class GitLabAPI extends WebAPI
         return !empty($pager_headers);
     }
 
-    protected function getPagerInfo($headers)
+    protected function getPagerInfo(ResponseInterface $res)
     {
+        $headers = $res->getHeaders();
         $links = $headers['Link'];
         // Find a link header that contains a "rel" type set to "next" or "last".
         $pager_headers = array_filter($links, function ($link) {

@@ -2,20 +2,14 @@
 
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
-use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Pantheon\TerminusBuildTools\API\PullRequestInfo;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
-use Pantheon\TerminusBuildTools\Utility\ExecWithRedactionTrait;
-use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\RepositoryEnvironment;
-use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
-
-use GuzzleHttp\Client;
 
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
@@ -25,6 +19,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     use BitbucketAPITrait;
 
     protected $serviceName = 'bitbucket';
+    protected $baseGitUrl = 'git@bitbucket.org';
     const BITBUCKET_URL = 'https://bitbucket.org';
 
     private $bitbucketClient;
@@ -37,7 +32,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    public function createRepository($local_site_path, $target, $org = '')
+    public function createRepository($local_site_path, $target, $org = '', $visibility = "public")
     {
         // repository id must be lower case.
         $target = strtolower($target);
@@ -51,7 +46,11 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $result = $this->api()->request("repositories/$target_project", [], 'PUT');
+        $postData = [];
+        if ($visibility != 'public') {
+          $postData['is_private'] = TRUE;
+        }
+        $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
 
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
@@ -60,19 +59,22 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         if (!is_dir("$local_site_path/.git")) {
             $this->execGit($local_site_path, 'init');
         }
-        // TODO: maybe in the future we will not need to set this?
-        $this->execGit($local_site_path, "remote add origin 'git@bitbucket.org:{$target_project}.git'");
+        $this->execGit($local_site_path, "remote add origin '{$this->getBaseGitUrl()}:{$target_project}.git'");
         return $target_project;
     }
 
     /**
      * @inheritdoc
      */
-    public function pushRepository($dir, $target_project)
+    public function pushRepository($dir, $target_project, $use_ssh = false)
     {
-        $bitbucket_token = $this->token();
-        $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
-        $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        if ($use_ssh) {
+            $this->execGit($dir, 'push --progress origin master');
+        } else {
+            $bitbucket_token = $this->token();
+            $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
+            $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
+        }
     }
 
     /**
@@ -95,6 +97,19 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
+    public function commentOnPullRequest($target_project, $pr_id, $message)
+    {
+        $body = [
+            'content' => [
+                'raw' => $message,
+            ],
+        ];
+        $result = $this->api()->request("repositories/$target_project/pullrequests/$pr_id/comments", $body);
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function commentOnCommit($target_project, $commit_hash, $message)
     {
         $body = [
@@ -109,7 +124,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     /**
      * @inheritdoc
      */
-    function branchesForPullRequests($target_project, $state, $callback = null)
+    public function branchesForPullRequests($target_project, $state, $callback = null, $return_key = null)
     {
         $stateParameters = [
             'open' => ['OPEN'],
@@ -127,7 +142,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
                 $branch_name = $item['source']['branch']['name'];
                 return [$pr_number, $branch_name];
             },
-            $data['values']
+            $data
         ), 1, 0);
 
         return $branchList;
@@ -138,4 +153,12 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         $isClosed = ($data['state'] != 'OPEN');
         return new PullRequestInfo($data['id'], $isClosed, $data['source']['branch']['name']);
     }
+
+    public function getSecretValues() {
+      return parent::getSecretValues() + [
+        'user' => $this->getBitBucketUser(),
+        'password' => $this->getBitBucketPassword(),
+      ];
+    }
+
 }
