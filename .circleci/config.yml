@@ -56,6 +56,7 @@ jobs:
         resource_class: large
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
@@ -81,6 +82,7 @@ jobs:
         resource_class: large
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
@@ -118,6 +120,7 @@ jobs:
         resource_class: large
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
@@ -139,6 +142,7 @@ jobs:
         <<: *defaults
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
@@ -166,6 +170,7 @@ jobs:
         resource_class: large
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
@@ -203,6 +208,7 @@ jobs:
         resource_class: large
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
@@ -227,6 +233,7 @@ jobs:
         <<: *defaults
         steps:
             - checkout
+            - run: composer install -n
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
