@@ -98,7 +98,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         $adminEmailRequest = (new CredentialRequest('ADMIN_EMAIL'))
             ->setRequired(false);
 
-        $adminEmailRequest = (new CredentialRequest('ADMIN_USERNAME'))
+        $adminUsernameRequest = (new CredentialRequest('ADMIN_USERNAME'))
             ->setRequired(false);
 
         $adminPasswordRequest = (new CredentialRequest('ADMIN_PASSWORD'))
