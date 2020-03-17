@@ -16,7 +16,7 @@
         "doctrine/instantiator": "1.0.5",
         "phpdocumentor/reflection-docblock": "3.2.2",
         "symfony/polyfill-ctype": "v1.10.0",
-        "symfony/yaml": "v3.4.26",
+        "symfony/yaml": "v3.4.22",
         "webmozart/assert": "1.4.0",
         "phpspec/prophecy": "1.8.0"
     },
