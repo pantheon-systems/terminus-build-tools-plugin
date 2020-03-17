@@ -394,7 +394,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $info = $this->autodetectApplication($siteDir);
 
         if ($info) {
-            return $info;
+            return $info['framework'];
         }
 
         // For backwards compatibility, assume "Empty".
