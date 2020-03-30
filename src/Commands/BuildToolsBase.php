@@ -80,7 +80,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Setting the Known Hosts File to /dev/null and the LogLevel to quiet prevents
         // this from persisting for a user regularly as well as the warning about adding
         // the SSH key to the known hosts file.
-        if (getenv('GIT_SSH_COMMAND') !== false) {
+        if (getenv('GIT_SSH_COMMAND') === false) {
             putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
         }
     }
