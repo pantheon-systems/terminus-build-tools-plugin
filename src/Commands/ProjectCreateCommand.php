@@ -183,6 +183,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option email email address to place in ssh-key
      * @option test-site-name The name to use when installing the test site.
      * @option admin-email The email address to use for the CMS admin.
+     * @option admin-username The username to use for the CMS admin.
      * @option admin-password The password to use for the CMS admin when installing the test site.
      * @option stability Minimum allowed stability for template project.
      * @option git Specify a git provider. Options are github (default), gitlab, and bitbucket.
@@ -207,6 +208,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'test-site-name' => '',
             'admin-password' => '',
             'admin-email' => '',
+            'admin-username' => '',
             'stability' => '',
             'env' => [],
             'preserve-local-repository' => false,
@@ -428,7 +430,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     // Install the site.
                     $site_install_options = [
                         'account-mail' => $siteAttributes->adminEmail(),
-                        'account-name' => 'admin',
+                        'account-name' => $siteAttributes->adminUsername(),
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
