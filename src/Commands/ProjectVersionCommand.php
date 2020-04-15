@@ -9,6 +9,8 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
+use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
+
 /**
  * Project Version Command
  */
@@ -28,12 +30,14 @@ class ProjectVersionCommand extends BuildToolsBase
         $info = $this->autodetectApplication(getcwd());
 
         if ($info) {
-            $this->log()->notice("Found application with application {application}, version {version}, major version {major_version}, and framework {framework}.", [
-                'application' => $info['application'],
-                'version' => $info['version'],
-                'major_version' => $info['major_version'],
-                'framework' => $info['framework'],
-            ]);
+            $data = [
+              'application' => $info['application'],
+              'version' => $info['version'],
+              'major_version' => $info['major_version'],
+              'framework' => $info['framework'],
+            ];
+
+            return new RowsOfFields([$data]);
         } else {
             $this->log()->notice("Unable to determine version.");
         }
