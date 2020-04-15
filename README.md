@@ -318,9 +318,17 @@ The `build:project:info` command displays information about a site created by th
 
 There are no additional command options for this command.
 
+### build:project:version
+
+The `build:project:version` command displays information about a code base to identify the framework used, version, and the upstream that should be used.
+
+#### Command Options
+
+There are no additional command options for this command.
+
 ### build:secrets:delete
 
-The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
