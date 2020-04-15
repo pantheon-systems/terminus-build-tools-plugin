@@ -21,7 +21,7 @@ class UrlParsing
             array_pop($path_components);
             return count($path_components) > 1 ? implode('/', $path_components) : $path_components[0];
         }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
+        return preg_match('/^(\w+)@(\w+\.)?\w+\.(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[4] : '';
     }
 
     /**
@@ -36,7 +36,7 @@ class UrlParsing
             $path_components = explode('/', substr(str_replace('.git', '', $parsed_url['path']), 1));
             return array_pop($path_components);
         }
-        return preg_match('/^(\w+)@(\w+).(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
+        return preg_match('/^(\w+)@(\w+\.)?\w+\.(\w+):(.+)\/(.+)(.git)$/', $url, $matches) ? $matches[5] : '';
     }
 
 

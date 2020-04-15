@@ -384,6 +384,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return false;
     }
 
+    protected function autodetectApplicationName($siteDir)
+    {
+        $info = $this->autodetectApplication($siteDir);
+
+        if ($info) {
+            return $info['application'];
+        }
+var_dump("USING DEFAULT");
+        // For backwards compatibility, return "Drupal"
+        return "Drupal";
+    }
+
     /**
      * Detect the upstream to use based on the contents of the source repository.
      * Upstream is irrelevant, save for the fact that this is the only way to

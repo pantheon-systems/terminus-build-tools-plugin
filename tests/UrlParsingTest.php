@@ -36,6 +36,7 @@ final class UrlParsingTest extends TestCase
             ['https://gitlab-ci-token:redactedtoken@custom-git-host.com/rvtraveller/subgroup/smokey.git', 'rvtraveller/subgroup', 'smokey'],
             ['https://bitbucket.org/pantheon-systems/example-drops-8-composer', 'pantheon-systems', 'example-drops-8-composer'],
             ['git@bitbucket.org:pantheon-systems/example-wordpress-composer.git', 'pantheon-systems', 'example-wordpress-composer'],
+            ['git@git.mycustomhost.com:rvtraveller/brian-example-repo.git', 'rvtraveller', 'brian-example-repo'],
         ];
     }
 

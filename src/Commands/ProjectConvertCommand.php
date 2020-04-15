@@ -199,6 +199,8 @@ class ProjectConvertCommand extends BuildToolsBase {
 
         $builder = $this->collectionBuilder();
 
+        $framework = "";
+
         // Do we have a Git Provider? If not, create one.
         if ($this->conversion_type == self::CONVERSION_TYPE_PANTHEON) {
             // Determine if the site has multidev capability
@@ -235,13 +237,24 @@ class ProjectConvertCommand extends BuildToolsBase {
                 );
         }
         else {
+            // Pull the site locally.
+            $builder
+              ->progressMessage('Cloning site for local development.')
+              ->addCode(
+                function ($state) use ($siteDir, $source) {
+                    $this->passthru("git -C $siteDir clone $source .");
+                }
+              );
+
             // We need to create the Pantheon site.
             $builder
               ->progressMessage('Create Pantheon site {site}', ['site' => $target])
               ->addCode(
-                function ($state) use ($target, $label, $team, $siteDir, $region) {
+                function ($state) use ($target, $label, $team, $siteDir, $region, &$framework) {
                     // Look up our upstream.
-                    $upstream = $this->autodetectUpstream($siteDir);
+                    $applicationInfo = $this->autodetectApplication($siteDir);
+                    $upstream = $applicationInfo['framework'];
+                    $framework = $applicationInfo['application'];
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $target, 'team' => $team, 'upstream' => $upstream]);
 
@@ -260,7 +273,13 @@ class ProjectConvertCommand extends BuildToolsBase {
                     $siteBadge = "[![Dev Site {$target}](https://img.shields.io/badge/site-{$badgeTargetLabel}-blue.svg)](http://dev-{$target}.pantheonsite.io/)";
                     $readme = "# $target\n\n$ciPlaceholder\n$pantheonBadge\n$siteBadge";
 
-                    file_put_contents("$siteDir/README.md", $readme);
+                    if (file_exists("$siteDir/README.md")) {
+                        file_put_contents("$siteDir/README.md", $readme, FILE_APPEND);
+                    }
+                    else {
+                        file_put_contents("$siteDir/README.md", $readme);
+                    }
+
 
                     // If this site cannot create multidev environments, then configure
                     // it to always run tests on the dev environment.
@@ -268,46 +287,38 @@ class ProjectConvertCommand extends BuildToolsBase {
                 });
         }
 
-        $upstream = $this->autodetectUpstream($siteDir);
-        if ($upstream == "empty-wordpress") {
-          $framework = "wordpress";
-        }
-        else {
-          $framework = "drupal";
-        }
-        $rootDirectory = is_dir($siteDir . '/web') ? $siteDir . '/web' : $siteDir;
-
-        if ($framework == "drupal") {
-          // Update composer-drupal to use our template files.
-          $builder
-            ->progressMessage('Update composerize tool to use Pantheon template files.')
-            ->addCode(
-              function ($state) {
-                $home_dir = $this->exec("composer global config home -q");
-                $home_dir = $home_dir[0];
-                if (!file_exists($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json')) {
-                  throw new TerminusException("Composerize Drupal does not appear to be installed.");
-                }
-                $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/composer.json -O {$home_dir}/vendor/grasmash/composerize-drupal/template.composer.json");
-                $composer_json = json_decode(file_get_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json'));
-                $merge_object = new \stdClass();
-                $merge_object = [
-                  'include' => [
-                    'web/modules/custom/*/composer.json',
-                  ],
-                  'replace' => FALSE,
-                  'ignore-duplicates' => FALSE,
-                ];
-                $composer_json->extra->{"merge-plugin"} = $merge_object;
-                file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
+      $builder
+        ->progressMessage('Update composerize tool to use Pantheon template files.')
+        ->addCode(
+          function ($state) use ($framework) {
+              if ($framework == "Drupal") {
+                  $home_dir = $this->exec("composer global config home -q");
+                  $home_dir = $home_dir[0];
+                  if (!file_exists($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json')) {
+                      throw new TerminusException("Composerize Drupal does not appear to be installed.");
+                  }
+                  $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/composer.json -O {$home_dir}/vendor/grasmash/composerize-drupal/template.composer.json");
+                  $composer_json = json_decode(file_get_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json'));
+                  $merge_object = new \stdClass();
+                  $merge_object = [
+                    'include' => [
+                      'web/modules/custom/*/composer.json',
+                    ],
+                    'replace' => FALSE,
+                    'ignore-duplicates' => FALSE,
+                  ];
+                  $composer_json->extra->{"merge-plugin"} = $merge_object;
+                  file_put_contents($home_dir . '/vendor/grasmash/composerize-drupal/template.composer.json', json_encode($composer_json, JSON_PRETTY_PRINT));
               }
-            );
+          }
+        );
 
-            // Github doesn't allow us to pull down directories via git archive so we abuse svn instead.
-            $builder
-              ->progressMessage("Download required files from example repository")
-              ->addCode(
-                function ($state) use ($siteDir) {
+        // Github doesn't allow us to pull down directories via git archive so we abuse svn instead.
+        $builder
+          ->progressMessage("Download required files from example repository")
+          ->addCode(
+            function ($state) use ($siteDir, $framework) {
+                if ($framework == "Drupal") {
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/scripts");
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/tests");
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.ci");
@@ -316,15 +327,8 @@ class ProjectConvertCommand extends BuildToolsBase {
                     $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
                     // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
                     $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$siteDir}/.gitignore");
-
                 }
-              );
-        }
-        else {
-            $builder
-              ->progressMessage("Download required files from example repository")
-              ->addCode(
-                function ($state) use ($siteDir) {
+                else {
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/scripts");
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/tests");
                     $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/.ci");
@@ -335,9 +339,9 @@ class ProjectConvertCommand extends BuildToolsBase {
                     $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/.gitignore -O {$siteDir}/.gitignore");
 
                 }
-              );
-        }
 
+            }
+          );
 
         // Now that we have our sites created, we need to composerize them.
         $builder
@@ -352,16 +356,23 @@ class ProjectConvertCommand extends BuildToolsBase {
         $builder
           ->progressMessage("Moving custom plugins, modules, and themes.")
           ->addCode(
-            function ($state) use ($siteDir, $framework, $rootDirectory) {
-              if ($framework == "drupal") {
-                $siteDirToUse = $rootDirectory;
-                $this->passthru("mv {$siteDirToUse}/modules/custom {$siteDir}/web/modules/custom");
-                $this->passthru("mv {$siteDirToUse}/themes/custom {$siteDir}/web/themes/custom");
+            function ($state) use ($siteDir, $framework) {
+              $this->passthru("ls $siteDir");
+              if ($framework == "Drupal") {
+                if (is_dir($siteDir . '/modules/custom')) {
+                  $this->passthru("mv {$siteDir}/modules/custom {$siteDir}/web/modules/custom");
+                }
+                if (is_dir($siteDir . '/themes/custom')) {
+                  $this->passthru("mv {$siteDir}/themes/custom {$siteDir}/web/themes/custom");
+                }
               }
               else {
-                $siteDirToUse = $rootDirectory;
-                $this->passthru("mv {$siteDirToUse}/wp-content/plugins {$siteDir}/web/wp-content/plugins");
-                $this->passthru("mv {$siteDirToUse}/wp-content/themes {$siteDir}/web/wp-content/themes");
+                if (is_dir($siteDir . '/wp-content/plugins')) {
+                  $this->passthru("mv {$siteDir}/wp-content/plugins {$siteDir}/web/wp-content/plugins");
+                }
+                if (is_dir($siteDir . '/wp-content/themes')) {
+                  $this->passthru("mv {$siteDir}/wp-content/themes {$siteDir}/web/wp-content/themes");
+                }
               }
             }
           );
@@ -386,7 +397,7 @@ class ProjectConvertCommand extends BuildToolsBase {
                   $siteDir . '/wp-admin',
                 ];
 
-                if ($framework == "drupal") {
+                if ($framework == "Drupal") {
                   $directories = $drupal_directories;
                 }
                 else {
@@ -503,8 +514,8 @@ class ProjectConvertCommand extends BuildToolsBase {
     }
 
     private function composerizeSite($siteDir) {
-        $upstream = $this->autodetectUpstream($siteDir);
-        if ($upstream == "empty-wordpress") {
+        $application = $this->autodetectApplicationName($siteDir);
+        if ($application == "WordPress") {
           $command = "composerize-wordpress";
         }
         else {
