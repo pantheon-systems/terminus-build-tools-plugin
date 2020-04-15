@@ -80,7 +80,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Setting the Known Hosts File to /dev/null and the LogLevel to quiet prevents
         // this from persisting for a user regularly as well as the warning about adding
         // the SSH key to the known hosts file.
-        putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
+        if (getenv('GIT_SSH_COMMAND') === false) {
+            putenv("GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET");
+        }
     }
 
     public function providerManager()
@@ -385,8 +387,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     {
         if (is_dir($source)) {
             return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
-        }
-        else {
+        } else {
             return $this->createFromSourceProject($source, $target, $stability);
         }
     }
@@ -397,8 +398,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             if (!is_dir("$source/.git")) {
                 throw new TerminusException('Specified --preserve-local-repository, but the directory {source} does not contains a .git directory.', compact('$source'));
             }
-        }
-        else {
+        } else {
             if (is_dir("$source/.git")) {
                 throw new TerminusException('The directory {source} already contains a .git directory. Use --preserve-local-repository if you wish to use this existing repository.', compact('$source'));
             }
@@ -559,8 +559,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'account-pass' => '',
             'site-mail' => '',
             'site-name' => ''
-        ])
-    {
+        ]
+    ) {
         $command_template = $this->getInstallCommandTemplate($composer_json);
         return $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Install site", $site_install_options);
     }
@@ -578,7 +578,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->connectionSet($env, 'sftp');
 
         foreach ((array)$command_templates as $command_template) {
-            $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $options);
+            $metadata = array_map(function ($item) {
+                return $this->escapeArgument($item);
+            }, $options);
             $command_line = $this->interpolate($command_template, $metadata);
             $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
             $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
@@ -609,7 +611,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         return $this->getContainer()->get(LocalMachineHelper::class)->execute(
             $ssh_command,
             function ($type, $buffer) {
-                },
+            },
             false
         );
     }
@@ -728,8 +730,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $multidev = '',
         $repositoryDir = '',
         $label = '',
-        $message = '')
-    {
+        $message = ''
+    ) {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
         $env_id = $env->getName();
@@ -780,8 +782,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $default_dir = "$repositoryDir/" . (is_dir("$repositoryDir/web") ? 'web/sites/default' : 'sites/default');
         $settings_file = "$default_dir/settings.php";
         if (is_dir($default_dir) && !is_file($settings_file)) {
-          file_put_contents($settings_file, "<?php\n");
-          $this->log()->notice('Created empty settings.php file {settingsphp}.', ['settingsphp' => $settings_file]);
+            file_put_contents($settings_file, "<?php\n");
+            $this->log()->notice('Created empty settings.php file {settingsphp}.', ['settingsphp' => $settings_file]);
         }
 
         // Remove any .git directories added by composer from the set of files
@@ -792,7 +794,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $finder = new Finder();
         $fs = new Filesystem();
         $fs->remove(
-          $finder
+            $finder
             ->directories()
             ->in("$repositoryDir")
             ->ignoreDotFiles(false)
@@ -810,8 +812,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if ($this->respectGitignore($repositoryDir)) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
-        }
-        else {
+        } else {
             $this->passthru("git -C $repositoryDir add --force -A .");
         }
 
@@ -1004,7 +1005,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         $startWaiting = time();
-        while(time() - $startWaiting < $maxWaitInSeconds) {
+        while (time() - $startWaiting < $maxWaitInSeconds) {
             $workflow = $this->getLatestWorkflow($site);
             $workflowCreationTime = $workflow->get('created_at');
             $workflowDescription = $workflow->get('description');
@@ -1014,8 +1015,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 if ($workflow->isSuccessful()) {
                     return;
                 }
-            }
-            else {
+            } else {
                 $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
             }
             // Wait a bit, then spin some more
@@ -1088,8 +1088,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 if (!empty($metadata['url'])) {
                     return $metadata['url'];
                 }
-            }
-            catch(\Exception $e) {
+            } catch (\Exception $e) {
             }
         }
         return '';
@@ -1191,8 +1190,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $status = 0;
         $command = "rsync -rlIvz --ipv4 --exclude=.git -e 'ssh -p 2222 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=QUIET' $src $dest >/dev/null 2>&1";
         passthru($command, $status);
-        if (!$ignoreIfNotExists && in_array($status, [0, 23]))
-        {
+        if (!$ignoreIfNotExists && in_array($status, [0, 23])) {
             throw new TerminusException('Command `{command}` failed with exit code {status}', ['command' => $command, 'status' => $status]);
         }
 
@@ -1264,8 +1262,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $workdir = $this->tempdir();
         $this->rsync($site_env_id, ":files/" . self::SECRETS_REMOTE_DIRECTORY . "/$filename", $workdir, true);
 
-        if (file_exists("$workdir/$filename"))
-        {
+        if (file_exists("$workdir/$filename")) {
             $secrets = file_get_contents("$workdir/$filename");
             $secretValues = json_decode($secrets, true);
             return $secretValues;
@@ -1289,8 +1286,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function writeSecrets($site_env_id, $secretValues, $clear, $file)
     {
         $values = [];
-        if (!$clear)
-        {
+        if (!$clear) {
             $values = $this->downloadSecrets($site_env_id, $file);
         }
 
@@ -1302,8 +1298,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function deleteSecrets($site_env_id, $key, $file)
     {
         $secretValues = [];
-        if (!empty($key))
-        {
+        if (!empty($key)) {
             $secretValues = $this->downloadSecrets($site_env_id, $file);
             unset($secretValues[$key]);
         }
@@ -1311,7 +1306,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     // Create a temporary directory
-    public function tempdir($prefix='php', $dir=FALSE)
+    public function tempdir($prefix = 'php', $dir = false)
     {
         $this->registerCleanupFunction();
         $tempfile=tempnam($dir ? $dir : sys_get_temp_dir(), $prefix ? $prefix : '');
