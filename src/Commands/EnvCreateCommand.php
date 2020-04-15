@@ -91,7 +91,7 @@ class EnvCreateCommand extends BuildToolsBase
             $doNotify = true;
         }
 
-        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
+        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message']);
 
         // Create a new environment for this test.
         if (!$environmentExists && !$createBeforePush) {

@@ -183,6 +183,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option email email address to place in ssh-key
      * @option test-site-name The name to use when installing the test site.
      * @option admin-email The email address to use for the CMS admin.
+     * @option admin-username The username to use for the CMS admin.
      * @option admin-password The password to use for the CMS admin when installing the test site.
      * @option stability Minimum allowed stability for template project.
      * @option git Specify a git provider. Options are github (default), gitlab, and bitbucket.
@@ -207,6 +208,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'test-site-name' => '',
             'admin-password' => '',
             'admin-email' => '',
+            'admin-username' => '',
             'stability' => '',
             'env' => [],
             'preserve-local-repository' => false,
@@ -332,6 +334,14 @@ class ProjectCreateCommand extends BuildToolsBase
 
                     file_put_contents("$siteDir/README.md", $readme);
 
+                    // If a README.template.md file exists in the template repository append its contents to the new README.md.
+                    if ( file_exists( "$siteDir/README.template.md" ) ) {
+                        $readme = "\n\n" . file_get_contents( "$siteDir/README.template.md" );
+                        $readme = str_replace( '%SITE_NAME%', $site_name, $readme );
+                        file_put_contents( "$siteDir/README.md", $readme, FILE_APPEND );
+                        unlink( "$siteDir/README.template.md" );
+                    }
+
                     // If this site cannot create multidev environments, then configure
                     // it to always run tests on the dev environment.
                     $state['has-multidev-capability'] = $this->siteHasMultidevCapability($site);
@@ -420,7 +430,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     // Install the site.
                     $site_install_options = [
                         'account-mail' => $siteAttributes->adminEmail(),
-                        'account-name' => 'admin',
+                        'account-name' => $siteAttributes->adminUsername(),
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
