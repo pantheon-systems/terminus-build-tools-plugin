@@ -110,6 +110,7 @@ class ProjectRepairCommand extends BuildToolsBase
             'test-site-name' => '',
             'admin-password' => '',
             'admin-email' => '',
+            'admin-username' => '',
             'env' => [],
             'ci' => '',
         ])

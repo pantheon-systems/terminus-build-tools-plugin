@@ -98,6 +98,9 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         $adminEmailRequest = (new CredentialRequest('ADMIN_EMAIL'))
             ->setRequired(false);
 
+        $adminUsernameRequest = (new CredentialRequest('ADMIN_USERNAME'))
+            ->setRequired(false);
+
         $adminPasswordRequest = (new CredentialRequest('ADMIN_PASSWORD'))
             ->setInstructions(self::PASSWORD_INSTRUCTIONS)
             ->setPrompt(self::PASSWORD_PROMPT)
@@ -128,6 +131,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         $test_site_name = $credentials_provider->fetch('TEST_SITE_NAME');
         $git_email = $credentials_provider->fetch('GIT_USER_EMAIL');
         $admin_email = $credentials_provider->fetch('ADMIN_EMAIL');
+        $admin_username = $credentials_provider->fetch('ADMIN_USERNAME');
         $adminPassword = $credentials_provider->fetch('ADMIN_PASSWORD');
 
         // We should always have a site name by the time we get here,
@@ -151,6 +155,11 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             $admin_email = $git_email;
         }
 
+        // If no admin username was provided, use 'admin'
+        if (empty($admin_username)) {
+            $admin_username = 'admin';
+        }
+
         // If no admin password was provided, generate a random one
         if (empty($adminPassword)) {
             $adminPassword = mt_rand();
@@ -171,6 +180,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             ->setTestSiteName($test_site_name)
             ->setAdminPassword($adminPassword)
             ->setAdminEmail($admin_email)
+            ->setAdminUsername($admin_username)
             ->setGitEmail($git_email);
 
         // Assign COMPOSER_AUTH if defined in config.yml or environment.
