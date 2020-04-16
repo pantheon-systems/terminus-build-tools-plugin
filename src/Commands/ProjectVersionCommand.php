@@ -33,7 +33,7 @@ class ProjectVersionCommand extends BuildToolsBase
             $data = [
               'application' => $info['application'],
               'version' => $info['version'],
-              'major_version' => $info['major_version'],
+              'major-version' => $info['major_version'],
               'framework' => $info['framework'],
             ];
 
