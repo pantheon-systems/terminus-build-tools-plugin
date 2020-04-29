@@ -130,6 +130,7 @@ Additional options are available to further customize the `build:project:create`
  | --test-site-name   | The name to use when installing the test site |
  | --admin-password   | The password to use for the admin when installing the test site |
  | --admin-email      | The email address to use for the admin |
+ | --admin-username   | The username to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
  | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
