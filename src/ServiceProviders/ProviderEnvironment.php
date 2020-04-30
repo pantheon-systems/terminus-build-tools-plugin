@@ -44,6 +44,9 @@ class ProviderEnvironment extends \ArrayObject implements ServiceTokenStorage
         if (!$key) {
             $key = $this->token_key;
         }
+        if (!isset($this[$key])) {
+            return NULL;
+        }
         return $this[$key];
     }
 
