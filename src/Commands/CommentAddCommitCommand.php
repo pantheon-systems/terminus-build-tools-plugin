@@ -46,7 +46,7 @@ class CommentAddCommitCommand extends BuildToolsBase
 
         // Compile message
         if (!empty($options['site_url'])) {
-            $message = "[![Visit Site](https://raw.githubusercontent.com/pantheon-systems/terminus-build-tools-plugin/master/assets/images/visit-site-36.png)](".$options['site_url'].")\n\n".$options['message'];
+            $message = "[![Visit Site](https://github.com/pantheon-systems/terminus-build-tools-plugin/blob/0ed8d86b5fe681a2ddbace5bbd5094b4e8a24a04/assets/images/visit-site-36.png)](".$options['site_url'].")\n\n".$options['message'];
         } else {
             $message = $options['message'];
         }
