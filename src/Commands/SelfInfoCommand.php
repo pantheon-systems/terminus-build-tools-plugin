@@ -55,23 +55,29 @@ class SelfInfoCommand extends BuildToolsBase
 
         $supportedProviders = [];
         foreach ($providerManager->getProviders() as $provider) {
-            $credentialRequests = $provider->credentialRequests();
-            foreach ($credentialRequests as $credentialRequest) {
-                $this->providerManager()->credentialManager()->addRequest($credentialRequest);
-                $provider->setCredentials($this->providerManager()->credentialManager());
-            }
-            $secretValues = $provider->getSecretValues();
-            $validProvider = TRUE;
-            foreach ($secretValues as $value) {
-                if (strlen($value) > 1) {
-                    continue;
+            try {
+                $credentialRequests = $provider->credentialRequests();
+                foreach ($credentialRequests as $credentialRequest) {
+                    $this->providerManager()->credentialManager()->addRequest($credentialRequest);
+                    $provider->setCredentials($this->providerManager()->credentialManager());
                 }
-                else {
-                    $validProvider = FALSE;
+                $secretValues = $provider->getSecretValues();
+                $validProvider = TRUE;
+                foreach ($secretValues as $value) {
+                    if (strlen($value) > 1) {
+                        continue;
+                    }
+                    else {
+                        $validProvider = FALSE;
+                    }
+                }
+                if ($validProvider) {
+                    $supportedProviders[] = $provider->getServiceName();
                 }
             }
-            if ($validProvider) {
-                $supportedProviders[] = $provider->getServiceName();
+            catch (\Exception $e) {
+                // Some providers like to throw a fatal error if they don't have credentials.
+                // Catch it here and just keep oging, since they shouldn't be on our list anyway.
             }
         }
 
