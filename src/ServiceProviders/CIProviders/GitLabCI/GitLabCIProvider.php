@@ -150,4 +150,44 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         $vars = ['SSH_PRIVATE_KEY' => file_get_contents($privateKey)];
         $this->setGitLabEnvVars($ci_env, $vars);
     }
+
+    public function getMostRecentPipelineId(CIState $ci_env, $branchName)
+    {
+        // Can't query pipelines based on branch name so need to get the commit SHA.
+        $uri = $this->apiUri($ci_env, sprintf('repository/branches/%s', $branchName));
+        $branch = $this->api()->request($uri, [], 'GET');
+        if (empty($branch)) {
+            return FALSE;
+        }
+        $uri = $this->apiUri($ci_env, 'pipelines');
+        $pipelines = $this->api()->request($uri,['sha' => $branch['commit']['id']], 'GET');
+        if (empty($pipelines)) {
+            return FALSE;
+        }
+        return $pipelines[0]['id'];
+    }
+
+    /**
+     * @return string Must be one of 'success', 'pending', or 'failed'.
+     */
+    public function getPipelineStatus(CIState $ci_env, $pipelineId)
+    {
+        $uri = $this->apiUri($ci_env, sprintf('pipelines/%d', $pipelineId));
+        $pipeline = $this->api()->request($uri, [], 'GET');
+        if (empty($pipeline)) {
+            return FALSE;
+        }
+        switch ($pipeline['status']) {
+            case 'running':
+            case 'pending':
+                return 'pending';
+            case 'canceled':
+            case 'skipped':
+            case 'success':
+                return 'success';
+            case 'failed':
+                return 'failed';
+        }
+        return false;
+    }
 }

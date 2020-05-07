@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:2.x
+    - image: quay.io/pantheon-public/php-ci:3.x
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -14,12 +14,14 @@ defaults: &defaults
     # TERMINUS_SITE:  Name of the Pantheon site to run tests on, e.g. my_site
     # TERMINUS_TOKEN: The Pantheon machine token
     # TERMINUS_ORG:   Name of Pantheon Agency / Team
+    # GITLAB_USER:    GitLab User
+    # GITLAB_TOKEN:   GitLab Token
     # CIRCLE_TOKEN:   Circle CI Token
     # GITHUB_TOKEN:   The GitHub personal access token
     # GITHUB_USER:    The GitHub username
     # GIT_EMAIL:      The email address to use when making commits
-    # BITBUCKET_USER: The Bitbucket Username
-    # BITBUCKET_PASS: The Bitbucket app specific password
+    # BITBUCKET_USER: The BitBucket Username
+    # BITBUCKET_PASS: The BitBucket app specific password
     #
     # TEST_SITE_NAME: The name of the test site to provide when installing.
     # ADMIN_PASSWORD: The admin password to use when installing.
@@ -51,31 +53,6 @@ jobs:
                 name: Run unit tests
                 command: composer run unit-test
 
-    test_drupal_7_github:
-        <<: *defaults
-        resource_class: large
-        steps:
-            - checkout
-            - run:
-                name: Configure globals
-                command: ./.circleci/set-up-globals.sh
-            - run:
-                name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
-            - run:
-                name: Watch CircleCI tests
-                command: ./.circleci/watch-circle.sh
-            - run:
-                name: Clean up D7 GitHub fixtures after pass
-                command: ./.circleci/cleanup-fixtures.sh ok
-            - run:
-                name: Clean up D7 GitHub fixtures after failure
-                when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh fail
-
-    # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
-    # We test creating a PR and merging it to master here, but omit those tests
-    # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
         resource_class: large
@@ -85,31 +62,43 @@ jobs:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Check Terminus version
-                command: terminus --version
-            - run:
                 name: Test D8 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                command: ./.circleci/test-github-repo.sh d8 --use-ssh
             - run:
-                name: Watch CircleCI tests after build:project:create
-                command: ./.circleci/watch-circle.sh
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test secrets can be set and removed
                 command: ./.circleci/test-secrets.sh
             - run:
-                name: Test build:project:repair
-                command: ./.circleci/test-github-repair.sh
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
-                name: Test merge to master
-                command: ./.circleci/test-merge-master.sh
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
             - run:
-                name: Clean up D8 GitHub fixtures after pass
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up D8 GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 GitHub fixtures after failure
+                name: Clean up D8 GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -119,14 +108,41 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+                name: Test D8 with GitLab
+                command: ./.circleci/test-gitlab-repo.sh d8 --use-ssh
+            - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch GitLab CI tests
-                command: ./.circleci/watch-gitlabci.sh
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
+            - run:
+                name: Watch GitLab CI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch GitLab CI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -137,6 +153,7 @@ jobs:
 
     test_drupal_8_bitbucket:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
@@ -144,23 +161,45 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D8 with BitBucket
-                command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                command: ./.circleci/test-bitbucket-repo.sh d8 --use-ssh
             - run:
-                name: Watch CircleCI tests
-                command: echo "Skipping the watch-cicle step too"
-                #command: ./.circleci/watch-circle.sh
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Watch BitBucket CI tests
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh bitbucket
+            - run:
+                name: Watch BitBucket CI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch BitBucket CI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up D8 BitBucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up D8 BitBucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    # Note that we do more work on the WordPress + GitHub test than in other permutations.
-    # We test creating a PR and merging it to master here, but omit those tests
-    # elsewhere in the interest of saving testing time.
     test_wordpress_github:
         <<: *defaults
         resource_class: large
@@ -170,26 +209,38 @@ jobs:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
-            - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
+                command: ./.circleci/test-github-repo.sh wp --visibility=private
             - run:
-                name: Watch CircleCI tests after build:project:create
-                command: ./.circleci/watch-circle.sh
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch CircleCI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
                 name: Test secrets can be set and removed
                 command: ./.circleci/test-secrets.sh
             - run:
-                name: Test build:project:repair
-                command: ./.circleci/test-github-repair.sh
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
             - run:
                 name: Watch CircleCI tests after build:project:repair
-                command: ./.circleci/watch-circle.sh
+                command: ./.circleci/watch-ci.sh test-after-repair
             - run:
-                name: Test merge to master
-                command: ./.circleci/test-merge-master.sh
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch CircleCI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
             - run:
                 name: Clean up WordPress GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -204,17 +255,41 @@ jobs:
         steps:
             - checkout
             - run:
-                name: dependencies
+                name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
-            - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh wp --visibility=private
+            - run:
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
                 name: Watch GitLab CI tests
-                command: ./.circleci/watch-gitlabci.sh
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh
+            - run:
+                name: Watch GitLab CI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch GitLab CI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
             - run:
                 name: Clean up WordPress GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -225,27 +300,50 @@ jobs:
 
     test_wordpress_bitbucket:
         <<: *defaults
+        resource_class: large
         steps:
             - checkout
             - run:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Disable strict SSH host checking to prevent SSH connect issues
-                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+                name: Test WordPress with BitBucket
+                command: ./.circleci/test-bitbucket-repo.sh wp --visibility=private
             - run:
-                name: Test D8 with BitBucket
-                command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
+                name: Wait for the the CI pipeline to start
+                command: sleep 30
             - run:
-                name: Watch CircleCI tests
-                command: echo "Skipping the watch-cicle step too"
-                #command: ./.circleci/watch-circle.sh
+                name: Watch BitBucket CI tests
+                command: ./.circleci/watch-ci.sh master
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Test secrets can be set and removed
+                command: ./.circleci/test-secrets.sh
+            - run:
+                name: Test multidev to PR and build:project:repair
+                command: ./.circleci/test-pr-to-multidev.sh bitbucket
+            - run:
+                name: Watch BitBucket CI tests after build:project:repair
+                command: ./.circleci/watch-ci.sh test-after-repair
+            - run:
+                name: Test multidev created from PR
+                command: ./.circleci/test-multidev-created.sh
+            - run:
+                name: Test merging multidev branch to master
+                command: ./.circleci/test-multidev-merge-to-master.sh
+            - run:
+                name: Wait for the merge to register and the CI pipeline to start
+                command: sleep 30
+            - run:
+                name: Watch BitBucket CI tests after merging multidev to master
+                command: ./.circleci/watch-ci.sh master
+            - run:
+                name: Test multidev deleted
+                command: ./.circleci/test-multidev-deleted-after-merge.sh
+            - run:
+                name: Clean up WordPress BitBucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up WordPress BitBucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -255,9 +353,6 @@ workflows:
         jobs:
             - unit
             - test_drupal_8_github:
-                requires:
-                   - unit
-            - test_drupal_7_github:
                 requires:
                    - unit
             - test_wordpress_github:
@@ -272,16 +367,6 @@ workflows:
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
-                   - test_wordpress_github
-                   - test_wordpress_gitlab
             - test_wordpress_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
-                   - test_wordpress_github
-                   - test_wordpress_gitlab

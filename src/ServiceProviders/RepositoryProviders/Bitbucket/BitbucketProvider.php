@@ -46,11 +46,13 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $postData = [];
+        $postData = [
+            'scm' => 'git',
+        ];
         if ($visibility != 'public') {
-          $postData['is_private'] = TRUE;
+            $postData['is_private'] = TRUE;
         }
-        $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
+        $result = $this->api()->request("repositories/$target_project", $postData, 'POST');
 
         // Create a git repository. Add an origin just to have the data there
         // when collecting the build metadata later. We use the 'pantheon'
@@ -154,11 +156,11 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         return new PullRequestInfo($data['id'], $isClosed, $data['source']['branch']['name']);
     }
 
-    public function getSecretValues() {
-      return parent::getSecretValues() + [
-        'user' => $this->getBitBucketUser(),
-        'password' => $this->getBitBucketPassword(),
-      ];
+    public function getSecretValues()
+    {
+        return parent::getSecretValues() + [
+            'user' => $this->getBitBucketUser(),
+            'password' => $this->getBitBucketPassword(),
+        ];
     }
-
 }

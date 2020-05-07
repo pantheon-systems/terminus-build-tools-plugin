@@ -1,5 +1,10 @@
 #!/bin/bash
 
+BUILD_TOOLS_VERSION="dev-master"
+if [[ -n "$CIRCLE_BRANCH" ]]; then
+    BUILD_TOOLS_VERSION="dev-${CIRCLE_BRANCH}"
+fi
+
 #=====================================================================================================================
 # EXPORT needed environment variables
 #
@@ -10,17 +15,24 @@
 # See: https://discuss.circleci.com/t/circle-2-0-global-environment-variables/8681
 #=====================================================================================================================
 (
-  echo 'export PATH=$PATH:$HOME/bin'
-  echo 'export TARGET_REPO_WORKING_COPY=$HOME/system-under-test'
+  echo "export PATH=$PATH:$HOME/bin"
+  echo "export TARGET_REPO_WORKING_COPY=$HOME/system-under-test"
+  echo "export TERMINUS_SITE=build-tools-$CIRCLE_BUILD_NUM"
+  echo "export TEST_BRANCH_NAME=test-after-repair"
+  echo "export TEST_MULTIDEV_ENV=pr-1"
+  echo "export BUILD_TOOLS_VERSION='$BUILD_TOOLS_VERSION'"
 ) >> $BASH_ENV
 source $BASH_ENV
 
 set -ex
 
 cd ~/terminus_build_tools_plugin
-mkdir -p $HOME/.terminus/plugins
-ln -s $(pwd) $HOME/.terminus/plugins
+TERMINUS_PLUGINS_DIR=${TERMINUS_PLUGINS_DIR:-$HOME/.terminus/plugins}
+echo -e "\nThe Setting up Build Tools in the Terminus plugin directory: $TERMINUS_PLUGINS_DIR"
+mkdir -p $TERMINUS_PLUGINS_DIR
+ln -s $(pwd) $TERMINUS_PLUGINS_DIR
 terminus list -n build
+terminus list -n project
 terminus --version
 
 set +ex
@@ -30,3 +42,6 @@ git config --global user.email "$GIT_EMAIL"
 git config --global user.name "Circle CI"
 # Ignore file permissions.
 git config --global core.fileMode false
+
+# Disable strict SSH host checking to prevent SSH connect issues
+echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
