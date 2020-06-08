@@ -729,7 +729,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $repositoryDir = '',
         $label = '',
         $message = '',
-        $gitForce = FALSE)
+        $gitForce = TRUE)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');

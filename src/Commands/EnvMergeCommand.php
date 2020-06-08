@@ -51,8 +51,7 @@ class EnvMergeCommand extends BuildToolsBase
 
         // Replace the entire contents of the master branch with the branch we just tested.
         $this->passthru('git fetch pantheon');
-        $forceFlag = $gitForce ? "--force" : "";
-        $this->passthru("git push $forceFlag -q pantheon pantheon/$env_id:master");
+        $this->passthru("git push --force -q pantheon pantheon/$env_id:master");
 
         // Wait for the dev environment to finish syncing after the merge.
         $this->waitForCodeSync($preCommitTime, $site, 'dev');

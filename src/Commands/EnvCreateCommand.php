@@ -29,6 +29,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
      * @option message Commit message to include when committing assets to Pantheon
      * @option pr-id Post notification comment to a specific PR instead of the commit hash.
+     * @option no-git-force set this flag to omit the --force flag from 'git add' and 'git push'
      */
     public function createBuildEnv(
         $site_env_id,
@@ -40,6 +41,7 @@ class EnvCreateCommand extends BuildToolsBase
             'db-only' => false,
             'message' => '',
             'pr-id' =>  '',
+            'no-git-force' =>  false,
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -55,7 +57,7 @@ class EnvCreateCommand extends BuildToolsBase
         if ('dev' === $multidev) {
             $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
             // Run build:env:push.
-            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label);
+            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], $options['git-force']);
             return;
         }
 
@@ -91,7 +93,7 @@ class EnvCreateCommand extends BuildToolsBase
             $doNotify = true;
         }
 
-        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message']);
+        $metadata = $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], $options['git-force']);
 
         // Create a new environment for this test.
         if (!$environmentExists && !$createBeforePush) {
