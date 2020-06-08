@@ -728,7 +728,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $multidev = '',
         $repositoryDir = '',
         $label = '',
-        $message = '')
+        $message = '',
+        $gitForce = FALSE)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
@@ -807,7 +808,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        if ($this->respectGitignore($repositoryDir)) {
+        if ($this->respectGitignore($repositoryDir) || $gitForce === FALSE) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
         }
@@ -827,7 +828,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $forceFlag = $gitForce ? "--force" : "";
+        $this->passthru("git -C $repositoryDir push $forceFlag -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
