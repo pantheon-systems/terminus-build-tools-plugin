@@ -22,6 +22,10 @@ class EnvPushCommand extends BuildToolsBase
      *
      * @param string $site_env_id Site and environment to push to. May be any dev or multidev environment.
      * @param string $repositoryDir Code to push. Defaults to cwd.
+     * @option label What to name the environment in commit comments
+     * @option message Commit message to include when committing assets to Pantheon
+     * @option no-git-force set this flag to omit the --force flag from 'git add' and 'git push'
+     *
      */
     public function pushCode(
         $site_env_id,
@@ -29,8 +33,9 @@ class EnvPushCommand extends BuildToolsBase
         $options = [
           'label' => '',
           'message' => '',
+          'no-git-force' =>  false,
         ])
     {
-        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message']);
+        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message'], $options['git-force']);
     }
 }
