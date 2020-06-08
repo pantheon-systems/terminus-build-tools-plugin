@@ -25,7 +25,6 @@ class EnvPushCommand extends BuildToolsBase
      * @option label What to name the environment in commit comments
      * @option message Commit message to include when committing assets to Pantheon
      * @option no-git-force set this flag to omit the --force flag from 'git add' and 'git push'
-     *
      */
     public function pushCode(
         $site_env_id,
