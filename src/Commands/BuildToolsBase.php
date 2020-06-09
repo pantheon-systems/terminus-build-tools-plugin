@@ -808,7 +808,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        if ($this->respectGitignore($repositoryDir) || $gitForce === FALSE) {
+        if ($this->respectGitignore($repositoryDir) || $gitForce == FALSE) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
         }
