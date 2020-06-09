@@ -32,9 +32,9 @@ class EnvPushCommand extends BuildToolsBase
         $options = [
           'label' => '',
           'message' => '',
-          'no-git-force' =>  false,
+          'no-git-force' => FALSE,
         ])
     {
-        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message'], $options['git-force']);
+        return $this->pushCodeToPantheon($site_env_id, '', $repositoryDir, $options['label'], $options['message'], $options['no-git-force']);
     }
 }
