@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0
 ```
 
 ### Installing Build Tools 1.x:
