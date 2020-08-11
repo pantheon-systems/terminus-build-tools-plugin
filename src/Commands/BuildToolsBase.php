@@ -999,14 +999,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 60)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 180)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on \"$env_name\"";
         }
 
         $startWaiting = time();
-        while(time() - $startWaiting < $maxWaitInSeconds) {
+        while(true) {
             $workflow = $this->getLatestWorkflow($site);
             $workflowCreationTime = $workflow->get('created_at');
             $workflowDescription = $workflow->get('description');
@@ -1014,6 +1014,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
                 $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
                 if ($workflow->isSuccessful()) {
+                    $this->log()->notice("Workflow succeeded");
                     return;
                 }
             }
@@ -1022,6 +1023,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             }
             // Wait a bit, then spin some more
             sleep(5);
+
+            if (time() - $startWaiting >= $maxWaitInSeconds) {
+                $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
+                break;
+            }
         }
     }
 
