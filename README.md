@@ -206,6 +206,7 @@ The `build:env:create` command creates the specified multidev environment on the
  | --clone-content  | Clone the content from the dev environment to the new multidev environment |
  | --db-only        | When cloning content, whether to only clone the database (by default, both the database and files are cloned |
  | --message        | The commit message to use when committing the built assets to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:env:delete:ci
 
@@ -281,6 +282,7 @@ The `build:env:push` command pushes code in the current directory to an existing
  | ---------------- | ---------------- |
  | --label          | The name of the site when referred to in commit comments. |
  | --message        | The commit message to use when committing built code to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:project:info
  
