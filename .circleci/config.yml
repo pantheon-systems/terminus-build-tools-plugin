@@ -61,7 +61,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-main"
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
             - run:
                 name: Watch CircleCI tests
                 command: ./.circleci/watch-circle.sh
@@ -74,7 +74,7 @@ jobs:
                 command: ./.circleci/cleanup-fixtures.sh fail
 
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
-    # We test creating a PR and merging it to main here, but omit those tests
+    # We test creating a PR and merging it to master here, but omit those tests
     # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
@@ -91,7 +91,7 @@ jobs:
                 command: terminus --version
             - run:
                 name: Test D8 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-main"
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
             - run:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
@@ -105,8 +105,8 @@ jobs:
                 name: Watch CircleCI tests after build:project:repair
                 command: ./.circleci/watch-circle.sh
             - run:
-                name: Test merge to main
-                command: ./.circleci/test-merge-main.sh
+                name: Test merge to master
+                command: ./.circleci/test-merge-master.sh
             - run:
                 name: Clean up D8 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -127,7 +127,7 @@ jobs:
                 command: ./.circleci/set-up-globals.sh
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-main" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
@@ -149,7 +149,7 @@ jobs:
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-main"
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
             - run:
                 name: Watch CircleCI tests
                 command: echo "Skipping the watch-cicle step too"
@@ -163,7 +163,7 @@ jobs:
                 command: ./.circleci/cleanup-fixtures.sh fail
 
     # Note that we do more work on the WordPress + GitHub test than in other permutations.
-    # We test creating a PR and merging it to main here, but omit those tests
+    # We test creating a PR and merging it to master here, but omit those tests
     # elsewhere in the interest of saving testing time.
     test_wordpress_github:
         <<: *defaults
@@ -178,7 +178,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test WordPress with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-main" --use-ssh
+                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
             - run:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
@@ -192,8 +192,8 @@ jobs:
                 name: Watch CircleCI tests after build:project:repair
                 command: ./.circleci/watch-circle.sh
             - run:
-                name: Test merge to main
-                command: ./.circleci/test-merge-main.sh
+                name: Test merge to master
+                command: ./.circleci/test-merge-master.sh
             - run:
                 name: Clean up WordPress GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
@@ -215,7 +215,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-main" gitlabci
+                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
@@ -240,7 +240,7 @@ jobs:
             - run:
                 name: Test D8 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-main"
+                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
                 name: Watch CircleCI tests
                 command: echo "Skipping the watch-cicle step too"
