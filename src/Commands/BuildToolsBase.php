@@ -1051,7 +1051,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     public function getBuildMetadata($repositoryDir)
     {
         $buildMetadata = [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'         => $this->sanitizeUrl(exec("git -C $repositoryDir config --get remote.origin.url")),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
@@ -1064,6 +1064,17 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         return $buildMetadata;
+    }
+
+    /**
+     * Sanitize a build url: if http[s] is used, strip any token that exists.
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function sanitizeUrl($url)
+    {
+        return preg_replace('#://[^@/]*@#', '://', $url);
     }
 
     /**
