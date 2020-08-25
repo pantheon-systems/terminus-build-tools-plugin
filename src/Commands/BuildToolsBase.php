@@ -764,7 +764,8 @@ var_dump("USING DEFAULT");
         $multidev = '',
         $repositoryDir = '',
         $label = '',
-        $message = '')
+        $message = '',
+        $noGitForce = FALSE)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
@@ -843,7 +844,7 @@ var_dump("USING DEFAULT");
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        if ($this->respectGitignore($repositoryDir)) {
+        if ($this->respectGitignore($repositoryDir) || $noGitForce === TRUE) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
         }
@@ -863,7 +864,8 @@ var_dump("USING DEFAULT");
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $forceFlag = $noGitForce ? "" : "--force";
+        $this->passthru("git -C $repositoryDir push $forceFlag -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
@@ -1033,14 +1035,14 @@ var_dump("USING DEFAULT");
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 60)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 180)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on \"$env_name\"";
         }
 
         $startWaiting = time();
-        while(time() - $startWaiting < $maxWaitInSeconds) {
+        while(true) {
             $workflow = $this->getLatestWorkflow($site);
             $workflowCreationTime = $workflow->get('created_at');
             $workflowDescription = $workflow->get('description');
@@ -1048,6 +1050,7 @@ var_dump("USING DEFAULT");
             if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
                 $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
                 if ($workflow->isSuccessful()) {
+                    $this->log()->notice("Workflow succeeded");
                     return;
                 }
             }
@@ -1056,6 +1059,11 @@ var_dump("USING DEFAULT");
             }
             // Wait a bit, then spin some more
             sleep(5);
+
+            if (time() - $startWaiting >= $maxWaitInSeconds) {
+                $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
+                break;
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:2.x
+    - image: quay.io/pantheon-public/php-ci:4.x
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -79,6 +79,8 @@ jobs:
     # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
+        docker:
+          - image: quay.io/pantheon-public/php-ci:4.x
         resource_class: large
         steps:
             - checkout
@@ -117,6 +119,8 @@ jobs:
 
     test_drupal_8_gitlab:
         <<: *defaults
+        docker:
+          - image: quay.io/pantheon-public/php-ci:4.x
         resource_class: large
         steps:
             - checkout

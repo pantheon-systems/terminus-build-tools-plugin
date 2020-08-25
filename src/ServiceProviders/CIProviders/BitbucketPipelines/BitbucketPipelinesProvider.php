@@ -39,7 +39,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         $url = $this->projectUrl($ci_env);
         $repositoryAttributes = $ci_env->getState('repository');
         $projectId = $repositoryAttributes->projectId();
-        return "[![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/$projectId.svg]($url/addon/pipelines/home)";
+        return "[![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/$projectId.svg)]($url/addon/pipelines/home)";
     }
 
     /**
