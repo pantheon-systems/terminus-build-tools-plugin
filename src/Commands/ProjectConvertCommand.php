@@ -60,7 +60,6 @@ class ProjectConvertCommand extends BuildToolsBase {
         $source = $input->getArgument('source');
 
         // First things first, we need to figure out if we have a Pantheon site or a Git site.
-        // ssh://codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9@codeserver.dev.4c378f81-a3d6-407b-a116-c4b1b0c4c4a9.drush.in:2222/~/repository.git
         if ($source_provider = $this->providerManager()->inferProvider($source, GitProvider::class, false)) {
             $this->conversion_type = self::CONVERSION_TYPE_PROVIDER;
             $this->git_provider = $this->providerManager()->inferProvider($source, GitProvider::class);
@@ -290,7 +289,10 @@ class ProjectConvertCommand extends BuildToolsBase {
       $builder
         ->progressMessage('Update composerize tool to use Pantheon template files.')
         ->addCode(
-          function ($state) use ($framework) {
+          function ($state) use ($siteDir, $framework) {
+              $applicationInfo = $this->autodetectApplication($siteDir);
+              $upstream = $applicationInfo['framework'];
+              $framework = $applicationInfo['application'];
               if ($framework == "Drupal") {
                   $home_dir = $this->exec("composer global config home -q");
                   $home_dir = $home_dir[0];
@@ -318,28 +320,40 @@ class ProjectConvertCommand extends BuildToolsBase {
           ->progressMessage("Download required files from example repository")
           ->addCode(
             function ($state) use ($siteDir, $framework) {
+                $applicationInfo = $this->autodetectApplication($siteDir);
+                $upstream = $applicationInfo['framework'];
+                $framework = $applicationInfo['application'];
+
+                $directories = [
+                    'scripts',
+                    'tests',
+                    '.ci',
+                    '.circleci',
+                ];
+                $files = [
+                    '.gitlab-ci.yml',
+                    'bitbucket-pipelines.yml',
+                    '.gitignore',
+                ];
+
                 if ($framework == "Drupal") {
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/scripts");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/tests");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.ci");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-drops-8-composer/trunk/.circleci");
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
-                    // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master/.gitignore -O {$siteDir}/.gitignore");
+                    $codeRepo = "https://github.com/pantheon-systems/example-drops-8-composer";
+                    $archiveRepo = $codeRepo . "/archive/master.tar.gz";
+                    $rawRepo = "https://raw.githubusercontent.com/pantheon-systems/example-drops-8-composer/master";
+                    $repoName = "example-drops-8-composer-master";
                 }
                 else {
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/scripts");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/tests");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/.ci");
-                    $this->passthru("cd $siteDir && svn checkout https://github.com/pantheon-systems/example-wordpress-composer/trunk/.circleci");
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/.gitlab-ci.yml -O {$siteDir}/.gitlab-ci.yml");
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/bitbucket-pipelines.yml -O {$siteDir}/.bitbucket-pipelines.yml");
-                    // We manually set the gitignore here because the composerize commands try to merge and we want to replace.
-                    $this->passthru("wget https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master/.gitignore -O {$siteDir}/.gitignore");
-
+                    $codeRepo = "https://github.com/pantheon-systems/example-wordpress-composer";
+                    $archiveRepo = $codeRepo . "/archive/master.tar.gz";
+                    $rawRepo = "https://raw.githubusercontent.com/pantheon-systems/example-wordpress-composer/master";
+                    $repoName = "example-wordpress-composer-master";
                 }
-
+                foreach ($directories as $directory) {
+                    $this->downloadRemoteFile($archiveRepo, $repoName . "/" . $directory, $siteDir, TRUE);
+                }
+                foreach ($files as $file) {
+                    $this->downloadRemoteFile($rawRepo . "/" . $file, $siteDir . "/" . $file, $siteDir, FALSE);
+                }
             }
           );
 
@@ -357,6 +371,9 @@ class ProjectConvertCommand extends BuildToolsBase {
           ->progressMessage("Moving custom plugins, modules, and themes.")
           ->addCode(
             function ($state) use ($siteDir, $framework) {
+              $applicationInfo = $this->autodetectApplication($siteDir);
+              $upstream = $applicationInfo['framework'];
+              $framework = $applicationInfo['application'];
               $this->passthru("ls $siteDir");
               if ($framework == "Drupal") {
                 if (is_dir($siteDir . '/modules/custom')) {
@@ -383,6 +400,9 @@ class ProjectConvertCommand extends BuildToolsBase {
             ->progressMessage("Removing legacy site artifacts.")
             ->addCode(
               function ($state) use ($siteDir, $framework) {
+                $applicationInfo = $this->autodetectApplication($siteDir);
+                $upstream = $applicationInfo['framework'];
+                $framework = $applicationInfo['application'];
                 $drupal_directories = [
                   $siteDir . '/core',
                   $siteDir . '/libraries',
@@ -469,7 +489,7 @@ class ProjectConvertCommand extends BuildToolsBase {
           ->progressMessage('Push code to Pantheon site {site}', ['site' => $label])
           ->addCode(
             function ($state) use ($site_name, $siteDir) {
-              $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+              $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir, '', '', FALSE, ['converted' => TRUE]);
               // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
               $this->resetToCommit($siteDir, $state['initial_commit']);
             })
@@ -534,6 +554,18 @@ class ProjectConvertCommand extends BuildToolsBase {
         $this->passthru("git -C $repositoryDir add .");
         $this->passthru("git -C $repositoryDir commit -m 'Convert site to be composer managed'");
         return $this->getHeadCommit($repositoryDir);
+    }
+
+    /**
+     * Download files from remote repositories that we need locally.
+     */
+    protected function downloadRemoteFile($url, $destination, $siteDir, $isDirectory=TRUE) {
+        if ($isDirectory) {
+            $this->passthru('cd ' . $siteDir . ' && wget -O - ' . $url . ' | tar -xz --strip=1 "' . $destination . '"');
+        }
+        else {
+            $this->passthru("wget {$url} -O {$destination}");
+        }
     }
 
 }

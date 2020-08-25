@@ -391,7 +391,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if ($info) {
             return $info['application'];
         }
-var_dump("USING DEFAULT");
         // For backwards compatibility, return "Drupal"
         return "Drupal";
     }
@@ -765,7 +764,8 @@ var_dump("USING DEFAULT");
         $repositoryDir = '',
         $label = '',
         $message = '',
-        $noGitForce = FALSE)
+        $noGitForce = FALSE,
+        $extraBuildMetadata = [])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
@@ -810,6 +810,7 @@ var_dump("USING DEFAULT");
 
         // Record the metadata for this build
         $metadata = $this->getBuildMetadata($repositoryDir);
+        $metadata += $extraBuildMetadata;
         $this->recordBuildMetadata($metadata, $repositoryDir);
 
         // Drupal 7: Drush requires a settings.php file. Add one to the
