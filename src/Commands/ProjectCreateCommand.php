@@ -194,7 +194,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option preserve-local-repository If given, use the repository in the existing source directory. Otherwise, use composer create-project to create a new local copy of the source project.
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
-
+     * @option extra Specify any additional provider-specific options. For example, --extra='bitbucket-project=TEAM' to provide the "bitbucket-project" option with value of "TEAM".
      */
     public function createProject(
         $source,
@@ -218,6 +218,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'git' => 'github',
             'visibility' => 'public',
             'region' => '',
+            'extra' => [],
         ])
     {
         $this->warnAboutOldPhp();
@@ -231,6 +232,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
+        $this->validateExtraOptions();
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -268,6 +270,9 @@ class ProjectCreateCommand extends BuildToolsBase
           }
           $this->log()->notice('Verified SSH connection to Git provider');
         }
+
+        // Grant service providers opportunity to add their own interactions just before creating project assets.
+        $this->providerManager()->addInteractions($this->input(), $this->output());
 
         // Pull down the source project
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
@@ -455,13 +460,17 @@ class ProjectCreateCommand extends BuildToolsBase
                 function ($state) use ($ci_env, $siteDir, $use_ssh) {
                     $repositoryAttributes = $ci_env->getState('repository');
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
-                })
+                });
 
-            // Tell the CI server to start testing our project
-            ->progressMessage('Beginning CI testing')
-            ->taskCIStartTesting()
-                ->provider($this->ci_provider)
-                ->environment($ci_env);
+        // Sleep for 10 seconds to allow the CI
+        // provider to recognize the project
+        sleep(10);
+
+        // Tell the CI server to start testing our project
+        $builder->progressMessage('Beginning CI testing')
+        ->taskCIStartTesting()
+            ->provider($this->ci_provider)
+            ->environment($ci_env);
 
 
         // If the user specified --keep, then clone a local copy of the project
@@ -500,6 +509,30 @@ class ProjectCreateCommand extends BuildToolsBase
         $this->passthru("git -C $repositoryDir add .");
         $this->passthru("git -C $repositoryDir commit -m 'Create new Pantheon site from $source'");
         return $this->getHeadCommit($repositoryDir);
+    }
+
+    /**
+     * Munge extra options into an associative array.
+     *
+     * @param array $options
+     *
+     * @throws \Pantheon\Terminus\Exceptions\TerminusException
+     *   If any given extra option overrides a first-class option.
+     */
+    protected function validateExtraOptions()
+    {
+        $extras = [];
+        foreach ($this->input()->getOption('extra') as $extra) {
+            list($key, $value) = explode('=', $extra, 2) + ['', ''];
+            if ($this->input->hasOption($key)) {
+                // Don't allow overriding first-class options with "extra" option injection.
+                throw new TerminusException('Invalid extra option "{key}".', ['key' => $key]);
+            }
+            if (!empty($key) && !empty($value)) {
+                $extras[$key] = $value;
+            }
+        }
+        $this->input()->setOption('extra', $extras);
     }
 
 }

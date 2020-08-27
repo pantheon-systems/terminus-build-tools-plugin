@@ -3,6 +3,7 @@
 namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket;
 
 use Pantheon\TerminusBuildTools\API\PullRequestInfo;
+use Pantheon\TerminusBuildTools\ServiceProviders\AdditionalInteractionsInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
 
@@ -10,16 +11,20 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
  */
-class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface
+class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAwareInterface, CredentialClientInterface, AdditionalInteractionsInterface
 {
     use BitbucketAPITrait;
 
     protected $serviceName = 'bitbucket';
     protected $baseGitUrl = 'git@bitbucket.org';
+    protected $project = '';
     const BITBUCKET_URL = 'https://bitbucket.org';
 
     private $bitbucketClient;
@@ -46,9 +51,14 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
         // Create a Bitbucket repository
         $this->logger->notice('Creating repository {repo}', ['repo' => $target_project]);
-        $postData = [];
+        $postData = [
+            'scm' => 'git'
+        ];
         if ($visibility != 'public') {
-          $postData['is_private'] = TRUE;
+            $postData['is_private'] = TRUE;
+        }
+        if (!empty($this->project)) {
+            $postData['project']['uuid'] = $this->project;
         }
         $result = $this->api()->request("repositories/$target_project", $postData, 'PUT');
 
@@ -154,11 +164,97 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         return new PullRequestInfo($data['id'], $isClosed, $data['source']['branch']['name']);
     }
 
-    public function getSecretValues() {
-      return parent::getSecretValues() + [
-        'user' => $this->getBitBucketUser(),
-        'password' => $this->getBitBucketPassword(),
-      ];
+    public function getSecretValues()
+    {
+        return parent::getSecretValues() + [
+            'user' => $this->getBitBucketUser(),
+            'password' => $this->getBitBucketPassword(),
+        ];
     }
 
+    protected function getProjectOptions($org)
+    {
+        // Trailing slash is REQUIRED on this resource. See https://jira.atlassian.com/browse/BCLOUD-17211
+        $projects = $this->api()->pagedRequest("teams/$org/projects/");
+        if (empty($projects)) {
+            return [];
+        }
+        $options = [];
+        foreach ($projects as $value) {
+            $options[] = [
+                "name" => $value['name'],
+                "key" => $value['key'],
+                "uuid" => $value['uuid'],
+            ];
+        }
+        return $options;
+    }
+
+    /**
+     * Get a project UUID by name, key or UUID
+     * @param string $user_project the project name, key or UUID of the project to search for
+     * @param string $org the organization to search the projects of
+     *
+     * @return string|false the UUID of the project if found, false otherwise
+     */
+    protected function getProjectUUID($user_project, $org)
+    {
+        // Get all projects
+        $projects = $this->getProjectOptions($org);
+        foreach ($projects as $project) {
+            // Search name, key and UUID for a match
+            if (false !== array_search($user_project, $project)) {
+                // Return the match
+                $this->logger->notice('Found a match for {project}: {name} ({key}) {uuid}', [
+                    'project' => $user_project,
+                    'name' => $project['name'],
+                    'uuid' => $project['uuid'],
+                    'key' => $project['key'],
+                ]);
+                return $project['uuid'];
+            }
+        }
+        // Return false if no matches
+        $this->logger->notice('Did not find a match for the project {project} in the BitBucket organization {org}', [
+            'project' => $user_project,
+            'org' => $org
+        ]);
+        return false;
+    }
+
+    /**
+     * Add repository to a project, if bitbucket org supports it.
+     */
+    public function addInteractions(InputInterface $input, OutputInterface $output)
+    {
+        if (!$org = $input->getOption('org')) {
+            return;
+        }
+        $extras = $input->getOption('extra');
+        if (!empty($extras['bitbucket-project'])) {
+            $project_uuid = $this->getProjectUUID($extras['bitbucket-project'], $org);
+            if (false !== $project_uuid) {
+                $this->project = $project_uuid;
+                return;
+            }
+        }
+        if (!$projects = $this->getProjectOptions($org)) {
+            return;
+        }
+        $default = '(Do not assign a project)';
+        $project_options = [
+            $default
+        ];
+        foreach ($projects as $project) {
+            $project_options[] = $project['name'] . ' (' . $project['key'] . ')';
+        }
+        $io = new SymfonyStyle($input, $output);
+        $project = $io->choice('Select a project for the new repository', $project_options, $default);
+        // Remove the default value
+        array_shift($project_options);
+        $project_array_key = array_search($project, $project_options, true);
+        if ($project != $default && FALSE !== $project_array_key) {
+            $this->project = $projects[$project_array_key]['uuid'];
+        }
+    }
 }

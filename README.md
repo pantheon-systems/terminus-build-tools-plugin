@@ -86,11 +86,11 @@ Note: It is important to specify the name of your agency organization via the `-
 
 The `build:project:create` command supports services in the following combination: 
 
-| Git Host  | CI Service |
-| --------- | ---------- |
-| GitHub    | CircleCI   |
-| GitLab    | GitLabCI   |
-| BitBucket | CircleCI   |
+| Git Host  | CI Service          |
+| --------- | ------------------- |
+| GitHub    | CircleCI            |
+| GitLab    | GitLab CI           |
+| BitBucket | BitBucket Pipelines |
 
 ### Starting a new GitLab Project
 
@@ -139,9 +139,15 @@ Additional options are available to further customize the `build:project:create`
  | --git              | The git repository provider to use. Defaults to "github" |
  | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
  | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
- 
+
+The `--extra` option is also used to pass provider specific information. The are passed in the format of `--extra='key=value'`. Each additional extra option should be passed on its own by using `--extra` more than once. Valid `extra` options are:
+
+| Key | Description | Example |
+| --- | ----------- | ------- |
+| bitbucket-project | The BitBucket project name or key to associate the repository with. `org` must also be declared. | --extra='bitbucket-project=Test BB Project' |
+
 See `terminus help build:project:create` for more information.
- 
+
 ### build:project:repair
  
 The `build:project:repair` command is used to repair projects that were created with the Build Tools plugin. This is useful for rotating credentials, such as provider authentication tokens.
