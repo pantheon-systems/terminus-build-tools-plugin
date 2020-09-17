@@ -294,7 +294,7 @@ There are no additional command options for this command.
 
 ### build:secrets:delete
 
-The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -304,7 +304,7 @@ The `build:secrets:delete` command deletes a secret from Pantheon. These secrets
 
 ### build:secrets:list
 
-The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -314,7 +314,7 @@ The `build:secrets:list` command lists all secret from Pantheon. These secrets a
   
 ### build:secrets:set
 
-The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -326,7 +326,7 @@ The `build:secrets:set` command sets a secret in a Pantheon. These secrets are c
  
 ### build:secrets:show
 
-The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -357,7 +357,7 @@ See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on 
 
 ### Configuration
 
-Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would liike every site created within their Pantheon team.
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would like every site created within their Pantheon team.
 
 #### Default Values for Options
 
