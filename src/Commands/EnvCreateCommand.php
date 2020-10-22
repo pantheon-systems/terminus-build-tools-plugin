@@ -56,8 +56,8 @@ class EnvCreateCommand extends BuildToolsBase
         // Revert to build:env:push if build:env:create is run against dev.
         if ('dev' === $multidev) {
             $this->log()->notice('dev has been passed to the multidev option. Reverting to dev:env:push as dev is not a multidev environment.');
-            // Run build:env:push.
-            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], $options['git-force']);
+            // Run build:env:push. Note the double-negative on no-git-force.
+            $this->pushCodeToPantheon($site_env_id, $multidev, '', $env_label, $options['message'], !$options['git-force']);
             return;
         }
 
