@@ -41,7 +41,7 @@ class EnvCreateCommand extends BuildToolsBase
             'db-only' => false,
             'message' => '',
             'pr-id' =>  '',
-            'no-git-force' =>  false,
+            'git-force' =>  true,
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
