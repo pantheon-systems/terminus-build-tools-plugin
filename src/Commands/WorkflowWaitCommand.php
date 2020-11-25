@@ -9,6 +9,10 @@
 
 namespace Pantheon\TerminusBuildTools\Commands;
 
+use Consolidation\AnnotatedCommand\AnnotationData;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputOption;
+
 /**
  * Workflow Wait Command
  */
@@ -24,14 +28,12 @@ class WorkflowWaitCommand extends BuildToolsBase
      * @param $site_env_id The pantheon site to wait for.
      * @param $description The workflow description to wait for. Optional; default is code sync.
      * @option start Ignore any workflows started prior to the start time (epoch)
-     * @option max Maximum time in seconds to wait
      */
     public function workflowWait(
         $site_env_id,
         $description = '',
         $options = [
           'start' => 0,
-          'max' => 60,
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -42,5 +44,13 @@ class WorkflowWaitCommand extends BuildToolsBase
             $startTime = time() - 60;
         }
         $this->waitForWorkflow($startTime, $site, $env_name, $description, $options['max']);
+    }
+
+    /**
+     * @hook option build:workflow:wait
+     */
+    public function maxOption(Command $command, AnnotationData $annotationData)
+    {
+        $command->addOption('max', null, InputOption::VALUE_OPTIONAL, 'Maximum time in seconds to wait', BuildToolsBase::DEFAULT_WORKFLOW_TIMEOUT);
     }
 }

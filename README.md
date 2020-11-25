@@ -1,7 +1,7 @@
 # Terminus Build Tools Plugin
 
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
-[![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x)
+[![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/main)
 
 Build Tools is a Terminus Plugin that contains a collection of commands useful for projects making use of an external Git provider and Continuous Integration (CI) along with [Pantheon](https://www.pantheon.io).
 
@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0
 ```
 
 ### Installing Build Tools 1.x:
@@ -131,6 +131,7 @@ Additional options are available to further customize the `build:project:create`
  | --test-site-name   | The name to use when installing the test site |
  | --admin-password   | The password to use for the admin when installing the test site |
  | --admin-email      | The email address to use for the admin |
+ | --admin-username   | The username to use for the admin |
  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
  | --keep             | The ability to keep a project repository cloned after your project is created |
  | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
@@ -205,6 +206,7 @@ The `build:env:create` command creates the specified multidev environment on the
  | --clone-content  | Clone the content from the dev environment to the new multidev environment |
  | --db-only        | When cloning content, whether to only clone the database (by default, both the database and files are cloned |
  | --message        | The commit message to use when committing the built assets to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:env:delete:ci
 
@@ -280,6 +282,7 @@ The `build:env:push` command pushes code in the current directory to an existing
  | ---------------- | ---------------- |
  | --label          | The name of the site when referred to in commit comments. |
  | --message        | The commit message to use when committing built code to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:project:info
  
@@ -291,7 +294,7 @@ There are no additional command options for this command.
 
 ### build:secrets:delete
 
-The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -301,7 +304,7 @@ The `build:secrets:delete` command deletes a secret from Pantheon. These secrets
 
 ### build:secrets:list
 
-The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -311,7 +314,7 @@ The `build:secrets:list` command lists all secret from Pantheon. These secrets a
   
 ### build:secrets:set
 
-The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -323,7 +326,7 @@ The `build:secrets:set` command sets a secret in a Pantheon. These secrets are c
  
 ### build:secrets:show
 
-The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
