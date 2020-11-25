@@ -43,6 +43,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const DEFAULT_WORKFLOW_TIMEOUT = 180;
     const SECRETS_DIRECTORY = '.build-secrets';
     const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
@@ -999,10 +1000,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 180)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+        }
+
+        if (null === $maxWaitInSeconds) {
+            $maxWaitInSecondsEnv = getenv('TERMINUS_BUILD_TOOLS_WORKFLOW_TIMEOUT'); 
+            $maxWaitInSeconds = $maxWaitInSecondsEnv ? $maxWaitInSecondsEnv : self::DEFAULT_WORKFLOW_TIMEOUT; 
         }
 
         $startWaiting = time();
