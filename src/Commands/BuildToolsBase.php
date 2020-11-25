@@ -43,6 +43,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const DEFAULT_WORKFLOW_TIMEOUT = 180;
     const SECRETS_DIRECTORY = '.build-secrets';
     const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
@@ -728,7 +729,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $multidev = '',
         $repositoryDir = '',
         $label = '',
-        $message = '')
+        $message = '',
+        $noGitForce = FALSE)
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
         $dev_env = $site->getEnvironments()->get('dev');
@@ -807,7 +809,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // any unwanted files prior to the build step (e.g. after a clean
         // checkout in a CI environment.)
         $this->passthru("git -C $repositoryDir checkout -B $branch");
-        if ($this->respectGitignore($repositoryDir)) {
+        if ($this->respectGitignore($repositoryDir) || $noGitForce === TRUE) {
             // In "Integrated Composer" mode, we will not commit ignored files
             $this->passthru("git -C $repositoryDir add .");
         }
@@ -827,7 +829,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Push the branch to Pantheon
         $preCommitTime = time();
-        $this->passthru("git -C $repositoryDir push --force -q pantheon $branch");
+        $forceFlag = $noGitForce ? "" : "--force";
+        $this->passthru("git -C $repositoryDir push $forceFlag -q pantheon $branch");
 
         // If the environment already existed, then we risk encountering
         // a race condition, because the 'git push' above will fire off
@@ -997,14 +1000,19 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 60)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on \"$env_name\"";
         }
 
+        if (null === $maxWaitInSeconds) {
+            $maxWaitInSecondsEnv = getenv('TERMINUS_BUILD_TOOLS_WORKFLOW_TIMEOUT'); 
+            $maxWaitInSeconds = $maxWaitInSecondsEnv ? $maxWaitInSecondsEnv : self::DEFAULT_WORKFLOW_TIMEOUT; 
+        }
+
         $startWaiting = time();
-        while(time() - $startWaiting < $maxWaitInSeconds) {
+        while(true) {
             $workflow = $this->getLatestWorkflow($site);
             $workflowCreationTime = $workflow->get('created_at');
             $workflowDescription = $workflow->get('description');
@@ -1012,6 +1020,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
                 $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
                 if ($workflow->isSuccessful()) {
+                    $this->log()->notice("Workflow succeeded");
                     return;
                 }
             }
@@ -1020,6 +1029,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             }
             // Wait a bit, then spin some more
             sleep(5);
+
+            if (time() - $startWaiting >= $maxWaitInSeconds) {
+                $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
+                break;
+            }
         }
     }
 
@@ -1043,7 +1057,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     public function getBuildMetadata($repositoryDir)
     {
         $buildMetadata = [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'         => $this->sanitizeUrl(exec("git -C $repositoryDir config --get remote.origin.url")),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
@@ -1056,6 +1070,17 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         return $buildMetadata;
+    }
+
+    /**
+     * Sanitize a build url: if http[s] is used, strip any token that exists.
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function sanitizeUrl($url)
+    {
+        return preg_replace('#://[^@/]*@#', '://', $url);
     }
 
     /**
