@@ -1065,9 +1065,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'build-date'  => date("Y-m-d H:i:s O"),
         ];
 
-        if (isset($this->git_provider)) {
-            $this->git_provider->alterBuildMetadata($repositoryDir);
+        if (!isset($this->git_provider)) {
+            $this->git_provider = $this->inferGitProviderFromUrl($buildMetadata['url']);
         }
+        
+        $this->git_provider->alterBuildMetadata($buildMetadata);
 
         return $buildMetadata;
     }
