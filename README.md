@@ -64,7 +64,7 @@ The default template repositories are each assigned an abbreviation, as shown be
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
-More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
+More details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
@@ -78,7 +78,7 @@ This command will create:
 
 It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
 
-Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
+Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace", then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
 Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will be associated with your user and will not have the capability to create multidev environments.
 

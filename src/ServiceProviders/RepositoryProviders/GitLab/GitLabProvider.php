@@ -245,10 +245,8 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
 
     public function alterBuildMetadata(&$buildMetadata) {
         parent::alterBuildMetadata($buildMetadata);
-        // If we are running in CI, use CI Branch variable because Git Checkout is detached.
-        if (getenv('GITLABCI')) {
-            $buildMetadata['ref'] = getenv('CI_COMMIT_REF_NAME');
-        }
+        
+        $buildMetadata['ref'] = getenv('CI_COMMIT_REF_NAME');
     }
 
 }
