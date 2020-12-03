@@ -101,7 +101,7 @@ trait GitHubAPITrait
         $tokenKey = $this->tokenKey();
         $token = $credentials_provider->fetch($tokenKey);
         if (!$token) {
-            throw new \Exception('Could not determine authentication token for GitHub serivces. Please set ' . $tokenKey);
+            throw new \Exception('Could not determine authentication token for GitHub services. Please set ' . $tokenKey);
         }
         $this->setToken($token);
     }
