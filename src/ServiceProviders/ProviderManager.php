@@ -22,7 +22,7 @@ class ProviderManager implements LoggerAwareInterface
         $this->config = $config;
     }
 
-    protected function availableProviders()
+    public function availableProviders()
     {
         return [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
@@ -92,7 +92,7 @@ class ProviderManager implements LoggerAwareInterface
         return $this->initializeProvider($provider);
     }
 
-    protected function initializeProvider($provider)
+    public function initializeProvider($provider)
     {
         if ($provider instanceof LoggerAwareInterface) {
             $provider->setLogger($this->logger);
@@ -129,5 +129,10 @@ class ProviderManager implements LoggerAwareInterface
                 $provider->setCredentials($this->credential_manager);
             }
         }
+    }
+
+    public function getProviders()
+    {
+        return $this->providers;
     }
 }
