@@ -44,6 +44,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const DEFAULT_WORKFLOW_TIMEOUT = 180;
     const SECRETS_DIRECTORY = '.build-secrets';
     const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
@@ -1036,10 +1037,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 180)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+        }
+
+        if (null === $maxWaitInSeconds) {
+            $maxWaitInSecondsEnv = getenv('TERMINUS_BUILD_TOOLS_WORKFLOW_TIMEOUT'); 
+            $maxWaitInSeconds = $maxWaitInSecondsEnv ? $maxWaitInSecondsEnv : self::DEFAULT_WORKFLOW_TIMEOUT; 
         }
 
         $startWaiting = time();
@@ -1088,7 +1094,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     public function getBuildMetadata($repositoryDir)
     {
         $buildMetadata = [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'         => $this->sanitizeUrl(exec("git -C $repositoryDir config --get remote.origin.url")),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
@@ -1096,11 +1102,24 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'build-date'  => date("Y-m-d H:i:s O"),
         ];
 
-        if (isset($this->git_provider)) {
-            $this->git_provider->alterBuildMetadata($repositoryDir);
+        if (!isset($this->git_provider)) {
+            $this->git_provider = $this->inferGitProviderFromUrl($buildMetadata['url']);
         }
+        
+        $this->git_provider->alterBuildMetadata($buildMetadata);
 
         return $buildMetadata;
+    }
+
+    /**
+     * Sanitize a build url: if http[s] is used, strip any token that exists.
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function sanitizeUrl($url)
+    {
+        return preg_replace('#://[^@/]*@#', '://', $url);
     }
 
     /**

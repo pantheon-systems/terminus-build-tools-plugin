@@ -221,4 +221,13 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
         // Add the public key to Pantheon.
         $this->session()->getUser()->getSSHKeys()->addKey($publicKey);
     }
+
+    /**
+     * Retrieves this providers tokens.
+     */
+    public function getSecretValues() {
+        return [
+          'token' => $this->machineToken
+        ];
+    }
 }
