@@ -106,7 +106,7 @@ trait GitLabAPITrait
     $tokenKey = $this->tokenKey();
     $token = $credentials_provider->fetch($tokenKey);
     if (!$token) {
-      throw new \Exception('Could not determine authentication token for GitLab serivces. Please set ' . $tokenKey);
+      throw new \Exception('Could not determine authentication token for GitLab services. Please set ' . $tokenKey);
     }
     $this->setToken($token);
   }
