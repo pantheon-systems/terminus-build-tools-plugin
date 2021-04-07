@@ -23,7 +23,7 @@ class Setup extends Base
         $siteAttributes = $this->ci_env->getState('site');
         $site_name = $siteAttributes->siteName();
 
-        $readme = isset($this->dir) ? file_get_contents("{$this->dir}/README.md") : '';
+        $readme = isset($this->dir) && file_exists("{$this->dir}/README.md") ? file_get_contents("{$this->dir}/README.md") : '';
 
         $circleBadge = $this->provider->badge($this->ci_env);
 
