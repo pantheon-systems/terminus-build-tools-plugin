@@ -12,6 +12,13 @@
         }
     },
     "require-dev": {
+      "phpunit/phpunit": "4.8.36",
+      "doctrine/instantiator": "1.0.5",
+      "phpdocumentor/reflection-docblock": "3.2.2",
+      "symfony/polyfill-ctype": "v1.17.0",
+      "symfony/yaml": "v3.4.42",
+      "webmozart/assert": "1.9.0",
+      "phpspec/prophecy": "1.10.3"
     },
     "scripts": {
         "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
