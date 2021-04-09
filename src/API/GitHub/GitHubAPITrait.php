@@ -72,7 +72,7 @@ trait GitHubAPITrait
         $githubTokenRequest = (new CredentialRequest($this->tokenKey()))
             ->setInstructions($instructions)
             ->setPrompt($prompt)
-            ->setValidateRegEx('#^[0-9a-fA-F]{40}$#')
+            ->setValidateRegEx('#^[0-9a-zA-Z_]{40}$#')
             ->setValidationErrorMessage($validation_message)
             ->setValidationCallbackErrorMessage($could_not_authorize)
             ->setValidateFn(
