@@ -1013,19 +1013,20 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $startWaiting = time();
         while(true) {
-            $workflow = $this->getLatestWorkflow($site);
-            $workflowCreationTime = $workflow->get('created_at');
-            $workflowDescription = $workflow->get('description');
+            foreach ($this->getLatestWorkflow($site) as $workflow) {
+                $workflowCreationTime = $workflow->get('created_at');
+                $workflowDescription = $workflow->get('description');
 
-            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
-                if ($workflow->isSuccessful()) {
-                    $this->log()->notice("Workflow succeeded");
-                    return;
+                if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
+                    $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    if ($workflow->isSuccessful()) {
+                        $this->log()->notice("Workflow succeeded");
+                        return;
+                    }
                 }
-            }
-            else {
-                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+                else {
+                    $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+                }
             }
             // Wait a bit, then spin some more
             sleep(5);
@@ -1044,8 +1045,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function getLatestWorkflow($site)
     {
         $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
-        $workflow = array_shift($workflows);
-        $workflow->fetchWithLogs();
+        $workflow = [array_shift($workflows), array_shift($workflows)];
+        foreach ($workflow as $w) {
+            $w->fetchWithLogs();
+        }
         return $workflow;
     }
 
