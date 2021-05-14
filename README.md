@@ -141,6 +141,34 @@ Additional options are available to further customize the `build:project:create`
  | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
  
 See `terminus help build:project:create` for more information.
+
+### build:project:convert
+
+The `build:project:convert` command attempts to take an existing Drupal or WordPress website and convert it to the Git PR workflow. This functionality should be considered experimental. This command leverages the [Composerize Drupal](https://github.com/grasmash/composerize-drupal) and [Composerize Wordpress](https://github.com/rvtraveller/composerize-wordpress) projects.
+
+#### Command Options
+ 
+ Additional options are available to further customize the `build:project:convert` command:
+  
+  | Option             | Description    |
+  | ------------------ | -------------- |
+  | --pantheon-site    | The name to use for the Pantheon site (defaults to the name of the Git site) | 
+  | --team             | The Pantheon team to associate the site with |
+  | --org              | The Git organization to place the repository in (defaults to authenticated user) |
+  | --label            | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
+  | --email            | The git user email address to use when committing build results |
+  | --test-site-name   | The name to use when installing the test site |
+  | --admin-password   | The password to use for the admin when installing the test site |
+  | --admin-email      | The email address to use for the admin |
+  | --stability        | The stability to use with composer when creating the project (defaults to dev) |
+  | --keep             | The ability to keep a project repository cloned after your project is created |
+  | --ci               | The CI provider to use. Defaults to "circleci" |
+  | --git              | The git repository provider to use. Defaults to "github" |
+  | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
+  | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+  
+ See `terminus help build:project:convert` for more information.
+
  
 ### build:project:repair
  
@@ -287,6 +315,14 @@ The `build:env:push` command pushes code in the current directory to an existing
 ### build:project:info
  
 The `build:project:info` command displays information about a site created by the `build:project:create` command.
+
+#### Command Options
+
+There are no additional command options for this command.
+
+### build:project:version
+
+The `build:project:version` command displays information about a code base to identify the framework used, version, and the upstream that should be used.
 
 #### Command Options
 
@@ -454,6 +490,10 @@ This command will commit the generated artifacts to an existing multidev environ
 ### Commenting on a pull request or merge request
 
 `terminus build:comment:add:pr --pr_number=123 --message="Behat tests passed!"`
+
+### Convert a repository to the Git PR workflow
+
+`terminus build:project:convert <git url> --git=gitlab`
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.

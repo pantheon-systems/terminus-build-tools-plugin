@@ -35,7 +35,7 @@ class ProviderManager implements LoggerAwareInterface
         ];
     }
 
-    public function inferProvider($url, $expectedInterface)
+    public function inferProvider($url, $expectedInterface, $initializeProvider=true)
     {
         $available_providers = $this->availableProviders();
 
@@ -44,8 +44,13 @@ class ProviderManager implements LoggerAwareInterface
             if ($providerClass->implementsInterface($expectedInterface)) {
                 $providerInstance = new $provider($this->config);
                 if ($providerInstance->infer($url)) {
-                    $this->initializeProvider($providerInstance);
-                    return $providerInstance;
+                    if ($initializeProvider) {
+                        $this->initializeProvider($providerInstance);
+                        return $providerInstance;
+                    }
+                    else {
+                        return $provider;
+                    }
                 }
             }
         }
