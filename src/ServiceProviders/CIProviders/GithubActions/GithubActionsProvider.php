@@ -14,101 +14,34 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialProviderInterface;
 use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 
+use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
+
 /**
  * Manages the configuration of a project to be tested on Circle CI.
  */
 class GithubActionsProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
+    use GithubAPITrait;
 
-    const CIRCLE_TOKEN = 'CIRCLE_TOKEN';
-
-    protected $circle_token;
     protected $serviceName = 'githubactions';
 
     public function infer($url)
     {
-        return strpos($url, 'circleci.com') !== false;
-    }
-
-    /**
-     * Return 'true' if our token has been set yet.
-     */
-    public function hasToken()
-    {
-        return isset($this->circle_token);
-    }
-
-    /**
-     * Set our token. This will be called via 'setCredentials()', which is
-     * called by the provider manager.
-     */
-    public function setToken($circle_token)
-    {
-        $this->circle_token = $circle_token;
-    }
-
-    public function token()
-    {
-        return $this->circle_token;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function credentialRequests()
-    {
-        // Tell the credential manager that we require one credential: the
-        // CIRCLE_TOKEN that will be used to authenticate with the CircleCI server.
-        $circleTokenRequest = new CredentialRequest(
-            self::CIRCLE_TOKEN,
-            "Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started.",
-            "Enter Circle CI personal API token: ",
-            '#^[0-9a-fA-F]{40}$#',
-            'Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
-        );
-
-        $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the CircleCI service. Please re-enter your credential.';
-
-        $circleTokenRequest
-            ->setValidationCallbackErrorMessage($could_not_authorize)
-            ->setValidateFn(
-                function ($token) {
-                    $this->setToken($token);
-                    $url = "https://circleci.com/api/v1.1/me";
-                    $httpStatus = $this->circleCIAPI([], $url, 'GET');
-
-                    return ($httpStatus == 200);
-                }
-            );
-
-        return [ $circleTokenRequest ];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setCredentials(CredentialProviderInterface $credentials_provider)
-    {
-        // Since the `credentialRequests()` method declared that we need a
-        // CIRCLE_TOKEN credential, it will be available for us to copy from
-        // the credentials provider when this method is called.
-        $this->setToken($credentials_provider->fetch(self::CIRCLE_TOKEN));
+        return strpos($url, 'github.com') !== false;
     }
 
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
-        $projectRepositoryType = $this->remapRepositoryServiceName($repositoryAttributes->serviceName());
-        return "https://circleci.com/{$projectRepositoryType}/{$repositoryAttributes->projectId()}";
+        return "https://github.com/{$repositoryAttributes->projectId()}";
     }
 
     protected function apiUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
-        $apiRepositoryType = $repositoryAttributes->serviceName();
         $target_project = $repositoryAttributes->projectId();
 
-        return "https://circleci.com/api/v1.1/project/$apiRepositoryType/$target_project";
+        return "https://api.github.com/repos/$target_project";
     }
 
     /**
@@ -116,8 +49,8 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
      */
     public function badge(CIState $ci_env)
     {
-        $url = $this->projectUrl($ci_env);
-        return "[![CircleCI]($url.svg?style=shield)]($url)";
+        $url = $this->projectUrl($ci_env) . '/actions/workflows/build_deploy_and_test.yml';
+        return "[![Github Actions]($url/badge.svg)]($url)";
     }
 
     /**
@@ -128,36 +61,47 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
      */
     public function configureServer(CIState $ci_env)
     {
-        $this->logger->notice('Configure Circle CI');
-        $this->setCircleEnvironmentVars($ci_env);
-        $this->onlyBuildPullRequests($ci_env);
+        $this->logger->notice('Configure Github Actions');
+        $this->setGithubActionsSecrets($ci_env);
+        // @todo: Delete?
+        //$this->onlyBuildPullRequests($ci_env);
     }
 
-    protected function onlyBuildPullRequests($ci_env)
+    protected function getPublicKey(CIState $ci_env)
     {
-        $circle_url = $this->apiUrl($ci_env);
-        $data = ['feature_flags' => ['build-prs-only' => true]];
-        $this->circleCIAPI($data, "$circle_url/settings", 'PUT');
+        $repositoryAttributes = $ci_env->getState('repository');
+        $target_project = $repositoryAttributes->projectId();
+        $public_key = $this->api()->request("repos/${target_project}/actions/secrets/public-key");
+        return $public_key['key'];
     }
 
-    protected function setCircleEnvironmentVars(CIState $ci_env)
+    protected function encryptSecret($secret, $public_key) {
+      // @todo Encrypt secrets with libsodium.
+      // https://docs.github.com/en/actions/reference/encrypted-secrets
+      return $secret;
+    }
+
+    protected function setGithubActionsSecrets(CIState $ci_env)
     {
         $circle_url = $this->apiUrl($ci_env);
+        $public_key = $this->getPublicKey($ci_env);
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
-            $data = ['name' => $key, 'value' => $value];
+            $data = ['name' => $key, 'value' => $this->encryptSecret($value, $public_key)];
             if (empty($value)) {
                 $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
             } else {
-                $this->circleCIAPI($data, "$circle_url/envvar");
+                // @todo Store secret.
+                //$this->circleCIAPI($data, "$circle_url/envvar");
             }
         }
     }
 
     public function startTesting(CIState $ci_env)
     {
-        $circle_url = $this->apiUrl($ci_env);
-        $this->circleCIAPI([], "$circle_url/follow");
+        // @todo: Should I do something?
+        //$circle_url = $this->apiUrl($ci_env);
+        //$this->circleCIAPI([], "$circle_url/follow");
     }
 
     public function addPrivateKey(CIState $ci_env, $privateKey)
@@ -168,42 +112,7 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
             'hostname' => 'drush.in',
             'private_key' => $privateKeyContents,
         ];
-        $this->circleCIAPI($data, "$circle_url/ssh-key");
+        //$this->circleCIAPI($data, "$circle_url/ssh-key");
     }
 
-    protected function circleCIAPI($data, $url, $method = 'POST')
-    {
-        $this->logger->notice('Call CircleCI API: {uri}', ['uri' => $url]);
-
-        $headers = [
-            'Content-Type' => 'application/json',
-            'User-Agent' => ProviderEnvironment::USER_AGENT,
-            'Accept' => 'application/json',
-        ];
-
-        $client = new \GuzzleHttp\Client();
-        $res = $client->request($method, $url, [
-            'headers' => $headers,
-            'auth' => [$this->circle_token, ''],
-            'json' => $data,
-        ]);
-        return $res->getStatusCode();
-    }
-
-    /**
-     * CircleCI uses abreviations for service names in project page URLs.
-     * For example, 'github' is 'gh'. This conversion is NOT done in API URLs.
-     */
-    protected function remapRepositoryServiceName($serviceName)
-    {
-        $serviceMap = [
-            'github' => 'gh',
-            'bitbucket' => 'bb',
-        ];
-
-        if (isset($serviceMap[$serviceName])) {
-            return $serviceMap[$serviceName];
-        }
-        return $serviceName;
-    }
 }
