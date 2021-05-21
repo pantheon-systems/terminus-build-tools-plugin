@@ -72,7 +72,7 @@ trait GitHubAPITrait
         $githubTokenRequest = (new CredentialRequest($this->tokenKey()))
             ->setInstructions($instructions)
             ->setPrompt($prompt)
-            ->setValidateRegEx('#^[0-9a-fA-F]{40}$#')
+            ->setValidateRegEx('#^[0-9a-zA-Z_]{40}$#')
             ->setValidationErrorMessage($validation_message)
             ->setValidationCallbackErrorMessage($could_not_authorize)
             ->setValidateFn(
@@ -101,7 +101,7 @@ trait GitHubAPITrait
         $tokenKey = $this->tokenKey();
         $token = $credentials_provider->fetch($tokenKey);
         if (!$token) {
-            throw new \Exception('Could not determine authentication token for GitHub serivces. Please set ' . $tokenKey);
+            throw new \Exception('Could not determine authentication token for GitHub services. Please set ' . $tokenKey);
         }
         $this->setToken($token);
     }

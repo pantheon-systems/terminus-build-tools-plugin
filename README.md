@@ -1,7 +1,7 @@
 # Terminus Build Tools Plugin
 
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
-[![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x)
+[![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/main)
 
 Build Tools is a Terminus Plugin that contains a collection of commands useful for projects making use of an external Git provider and Continuous Integration (CI) along with [Pantheon](https://www.pantheon.io).
 
@@ -40,7 +40,7 @@ PHP `7.2` or greater is recommended.
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0-beta17
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0
 ```
 
 ### Installing Build Tools 1.x:
@@ -64,7 +64,7 @@ The default template repositories are each assigned an abbreviation, as shown be
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
-More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
+More details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
@@ -78,7 +78,7 @@ This command will create:
 
 It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
 
-Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
+Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace", then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
 Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will be associated with your user and will not have the capability to create multidev environments.
 
@@ -206,6 +206,7 @@ The `build:env:create` command creates the specified multidev environment on the
  | --clone-content  | Clone the content from the dev environment to the new multidev environment |
  | --db-only        | When cloning content, whether to only clone the database (by default, both the database and files are cloned |
  | --message        | The commit message to use when committing the built assets to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:env:delete:ci
 
@@ -281,6 +282,7 @@ The `build:env:push` command pushes code in the current directory to an existing
  | ---------------- | ---------------- |
  | --label          | The name of the site when referred to in commit comments. |
  | --message        | The commit message to use when committing built code to Pantheon |
+ | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
  
 ### build:project:info
  
@@ -310,7 +312,7 @@ The `build:secrets:delete` command deletes a secret from Pantheon. These secrets
 
 ### build:secrets:list
 
-The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -320,7 +322,7 @@ The `build:secrets:list` command lists all secret from Pantheon. These secrets a
   
 ### build:secrets:set
 
-The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -332,7 +334,7 @@ The `build:secrets:set` command sets a secret in a Pantheon. These secrets are c
  
 ### build:secrets:show
 
-The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -363,7 +365,7 @@ See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on 
 
 ### Configuration
 
-Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would liike every site created within their Pantheon team.
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would like every site created within their Pantheon team.
 
 #### Default Values for Options
 
