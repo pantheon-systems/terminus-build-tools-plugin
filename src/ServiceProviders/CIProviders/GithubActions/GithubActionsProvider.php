@@ -16,6 +16,8 @@ use Pantheon\TerminusBuildTools\Credentials\CredentialRequest;
 
 use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 
+use ParagonIE_Sodium_Compat;
+
 /**
  * Manages the configuration of a project to be tested on Circle CI.
  */
@@ -72,27 +74,32 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
         $repositoryAttributes = $ci_env->getState('repository');
         $target_project = $repositoryAttributes->projectId();
         $public_key = $this->api()->request("repos/${target_project}/actions/secrets/public-key");
-        return $public_key['key'];
+        return $public_key;
     }
 
     protected function encryptSecret($secret, $public_key) {
-      // @todo Encrypt secrets with libsodium.
-      // https://docs.github.com/en/actions/reference/encrypted-secrets
-      return $secret;
+        $encrypted = ParagonIE_Sodium_Compat::crypto_box_seal(utf8_encode($secret), base64_decode(utf8_encode($public_key)));
+        return utf8_decode(base64_encode($encrypted));
     }
 
     protected function setGithubActionsSecrets(CIState $ci_env)
     {
-        $circle_url = $this->apiUrl($ci_env);
+        $github_api_url = $this->apiUrl($ci_env);
         $public_key = $this->getPublicKey($ci_env);
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
-            $data = ['name' => $key, 'value' => $this->encryptSecret($value, $public_key)];
             if (empty($value)) {
                 $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
             } else {
-                // @todo Store secret.
-                //$this->circleCIAPI($data, "$circle_url/envvar");
+                $data = [
+                    'encrypted_value' => $this->encryptSecret($value, $public_key['key']),
+                    'key_id' => $public_key['key_id'],
+                ];
+                if ($key === 'GITHUB_TOKEN') {
+                    $key = 'GH_TOKEN';
+                }
+                $url = $github_api_url . '/actions/secrets/' . $key;
+                $this->api()->request($url, $data, 'PUT');
             }
         }
     }
@@ -106,13 +113,16 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
 
     public function addPrivateKey(CIState $ci_env, $privateKey)
     {
-        $circle_url = $this->apiUrl($ci_env);
+        $github_api_url = $this->apiUrl($ci_env);
+        $public_key = $this->getPublicKey($ci_env);
         $privateKeyContents = file_get_contents($privateKey);
         $data = [
-            'hostname' => 'drush.in',
-            'private_key' => $privateKeyContents,
+            'encrypted_value' => $this->encryptSecret($privateKeyContents, $public_key['key']),
+            'key_id' => $public_key['key_id'],
         ];
-        //$this->circleCIAPI($data, "$circle_url/ssh-key");
+        $url = $github_api_url . '/actions/secrets/SSH_PRIVATE_KEY';
+        $this->api()->request($url, $data, 'PUT');
+
     }
 
 }
