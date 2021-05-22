@@ -65,8 +65,16 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
     {
         $this->logger->notice('Configure Github Actions');
         $this->setGithubActionsSecrets($ci_env);
-        // @todo: Delete?
-        //$this->onlyBuildPullRequests($ci_env);
+        $repo_path = $ci_env->get('env', 'CURRENT_WORKDIR', '');
+        if ($repo_path) {
+            $this->moveGithubWorkflows($repo_path);
+        }
+    }
+
+    protected function moveGithubWorkflows($repo_path) {
+        passthru("mv {$repo_path}/.ci/.github {$repo_path}");
+        passthru("git -C {$repo_path} add -A .ci .github");
+        passthru("git -C {$repo_path} commit -m 'Move .github workflows to the right folder.'");
     }
 
     protected function getPublicKey(CIState $ci_env)
@@ -88,6 +96,9 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
         $public_key = $this->getPublicKey($ci_env);
         $env = $ci_env->getAggregateState();
         foreach ($env as $key => $value) {
+            if ($key === 'CURRENT_WORKDIR') {
+                continue;
+            }
             if (empty($value)) {
                 $this->logger->warning('Variable {key} empty: skipping.', ['key' => $key]);
             } else {
