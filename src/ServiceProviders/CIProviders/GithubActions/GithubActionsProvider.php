@@ -115,12 +115,7 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
         }
     }
 
-    public function startTesting(CIState $ci_env)
-    {
-        // @todo: Should I do something?
-        //$circle_url = $this->apiUrl($ci_env);
-        //$this->circleCIAPI([], "$circle_url/follow");
-    }
+    public function startTesting(CIState $ci_env) {}
 
     public function addPrivateKey(CIState $ci_env, $privateKey)
     {
