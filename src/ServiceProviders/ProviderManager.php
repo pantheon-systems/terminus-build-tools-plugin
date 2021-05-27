@@ -27,6 +27,7 @@ class ProviderManager implements LoggerAwareInterface
         return [
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CircleCI\CircleCIProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHub\GitHubProvider',
+            '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GithubActions\GithubActionsProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\Bitbucket\BitbucketProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\BitbucketPipelines\BitbucketPipelinesProvider',
             '\Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitLab\GitLabProvider',

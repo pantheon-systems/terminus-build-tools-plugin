@@ -2,6 +2,7 @@
 namespace Pantheon\TerminusBuildTools\Task\CI;
 
 use Robo\Result;
+use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\GithubActions\GithubActionsProvider;
 
 class Setup extends Base
 {
@@ -58,6 +59,9 @@ class Setup extends Base
         $env = $this->ci_env->getAggregateState();
         $this->logger()->notice('Define CI environment variables: {keys}', ['keys' => implode(',', array_keys($env))]);
 
+        if (isset($this->dir) && $this->provider instanceof GithubActionsProvider) {
+            $this->ci_env->set('env', 'CURRENT_WORKDIR', $this->dir);
+        }
         // Tell the provider to set the variables
         $this->provider->configureServer($this->ci_env);
 

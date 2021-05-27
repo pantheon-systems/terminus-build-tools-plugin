@@ -59,7 +59,7 @@ trait GitHubAPITrait
      */
     public function credentialRequests()
     {
-        $instructions = "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required) and 'delete-repo' (optional) scopes.";
+        $instructions = "Please generate a GitHub personal access token by visiting the page:\n\n    https://github.com/settings/tokens\n\n For more information, see:\n\n    https://help.github.com/articles/creating-an-access-token-for-command-line-use.\n\n Give it the 'repo' (required), 'workflow' (optional, needed if using Github Actions) and 'delete-repo' (optional) scopes.";
 
         $prompt = "Enter GitHub personal access token: ";
 
