@@ -30,6 +30,6 @@ class PullRequestInfo
 
     public function branchName()
     {
-        return $this->branchName();
+        return $this->branchName;
     }
 }
