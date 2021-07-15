@@ -388,7 +388,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
         }
         else {
-            return $this->createFromSourceProject($source, $target, $stability);
+            return $this->createFromSourceProject($source, $target, $stability, $options['composer-repository']);
         }
     }
 
@@ -410,7 +410,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Use composer create-project to create a new local copy of the source project.
      */
-    protected function createFromSourceProject($source, $target, $stability = '')
+    protected function createFromSourceProject($source, $target, $stability = '', $composer_repository = '')
     {
         $source_project = $this->sourceProjectFromSource($source);
 
@@ -427,7 +427,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
-        $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
+        $repository = '';
+
+        if ($composer_repository) {
+            $repository = ' --repository=' . $composer_repository;
+        }
+
+        $this->passthru("composer create-project --working-dir=$tmpsitedir $repository $source $target -n $stability_flag");
         $local_site_path = "$tmpsitedir/$target";
         return $local_site_path;
     }
