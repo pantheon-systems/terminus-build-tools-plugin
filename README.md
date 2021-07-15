@@ -151,7 +151,7 @@ export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
 
 or in ~/.terminus/config.yml file under build-tools.composer-auth.
 
-You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md) and [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
+You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md), [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md), [cli authentication](https://getcomposer.org/doc/03-cli.md#composer-auth) and [authentication methods](https://getcomposer.org/doc/articles/authentication-for-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
  
 ### build:project:repair
  
