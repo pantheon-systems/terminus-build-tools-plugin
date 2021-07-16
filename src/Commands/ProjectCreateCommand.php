@@ -195,6 +195,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
      * @option composer-repository Composer repository if package is hosted on a private registry.
+     * @option template-git-url Git url to template package (if no available as composer package).
 
      */
     public function createProject(
@@ -220,6 +221,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'composer-repository' => '',
+            'template-git-url' => '',
         ])
     {
         $this->warnAboutOldPhp();
