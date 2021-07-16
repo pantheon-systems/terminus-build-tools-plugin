@@ -194,8 +194,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option preserve-local-repository If given, use the repository in the existing source directory. Otherwise, use composer create-project to create a new local copy of the source project.
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
-     * @option composer-repository Composer repository if package is hosted on a private registry.
-     * @option template-git-url Git url to template package (if no available as composer package).
+     * @option template-repository Composer repository if package is hosted on a private registry or url to git.
 
      */
     public function createProject(
@@ -220,8 +219,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'git' => 'github',
             'visibility' => 'public',
             'region' => '',
-            'composer-repository' => '',
-            'template-git-url' => '',
+            'template-repository' => '',
         ])
     {
         $this->warnAboutOldPhp();

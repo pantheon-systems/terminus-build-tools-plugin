@@ -388,7 +388,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
         }
         else {
-            return $this->createFromSourceProject($source, $target, $stability, $options['composer-repository'], $options['template-git-url']);
+            return $this->createFromSourceProject($source, $target, $stability, $options['template-repository']);
         }
     }
 
@@ -410,7 +410,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Use composer create-project to create a new local copy of the source project.
      */
-    protected function createFromSourceProject($source, $target, $stability = '', $composer_repository = '', $template_git_url = '')
+    protected function createFromSourceProject($source, $target, $stability = '', $template_repository = '')
     {
         $source_project = $this->sourceProjectFromSource($source);
 
@@ -429,12 +429,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $repository = '';
 
-        if ($composer_repository) {
-            $repository = ' --repository=' . $composer_repository;
-        }
-
-        if ($template_git_url) {
-            $repository = ' --repository="{\"url\": \"' . $template_git_url . '\", \"type\": \"vcs\"}"';
+        if ($template_repository) {
+            if (substr($template_repository, -4) === '.git') {
+                // It's a git repository.
+                $repository = ' --repository="{\"url\": \"' . $template_repository . '\", \"type\": \"vcs\"}"';
+            }
+            else {
+                $repository = ' --repository=' . $template_repository;
+            }
         }
 
         $this->passthru("composer create-project --working-dir=$tmpsitedir $repository $source $target -n $stability_flag");
