@@ -139,7 +139,7 @@ Additional options are available to further customize the `build:project:create`
  | --git                 | The git repository provider to use. Defaults to "github" |
  | --visibility          | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
  | --region              | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
- | --template-repository | Private composer repository to download template or git url if no composer repository. |
+ | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
  
 See `terminus help build:project:create` for more information.
 
@@ -153,7 +153,7 @@ or in ~/.terminus/config.yml file under build-tools.composer-auth.
 
 You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md), [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md), [cli authentication](https://getcomposer.org/doc/03-cli.md#composer-auth) and [authentication methods](https://getcomposer.org/doc/articles/authentication-for-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
 
-If you want to use a git repository as template, it should include a composer.json file and you should have access to it from your terminal. For the template name, you should use the project name in the template composer.json file.
+If you want to use a git repository as template, it should include a composer.json file and you should have access to it from your terminal. For the template name, you could use the git repo url and this command will get the right project name.
  
 ### build:project:repair
  
