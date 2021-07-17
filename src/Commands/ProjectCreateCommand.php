@@ -170,8 +170,8 @@ class ProjectCreateCommand extends BuildToolsBase
         $ciTemplateDir = $this->tempdir('ci-template-dir');
         $this->passthru("git -C $ciTemplateDir clone $repo --depth 1 .");
 
-        $this->passthru("cp -r $ciTemplateDir/$cms_version/.ci $created_folder/");
-        $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$short_name/.* $created_folder/");
+        $this->passthru("cp -r $ciTemplateDir/$cms_version/.ci $created_folder");
+        $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$short_name/. $created_folder");
     }
 
     /**
