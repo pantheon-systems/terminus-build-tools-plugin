@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use VersionTool\VersionTool;
 
 /**
  * Project Create Command
@@ -319,8 +320,18 @@ class ProjectCreateCommand extends BuildToolsBase
         $builder = $this->collectionBuilder();
 
         if (!file_exists($siteDir . '/.ci')) {
-            // @todo: Define cms_version (currently hardcoded to d9).
-            $this->copyCiFiles($this->ci_provider, $siteDir);
+            $version_info = new VersionTool();
+            $info = $version_info->info($siteDir);
+            $app = $info->application();
+            $cms_version = 'd';
+            if ($app !== 'Drupal') {
+                $cms_version = 'wp';
+            }
+            else {
+                $version = $info->version();
+                $cms_version .= substr($version, 0, 1);
+            }
+            $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version);
         }
 
         // $builder->setStateValue('ci-env', $ci_env)
