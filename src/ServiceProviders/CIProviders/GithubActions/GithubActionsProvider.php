@@ -70,11 +70,11 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
     public function configureServer(CIState $ci_env)
     {
         $this->logger->notice('Configure Github Actions');
-        $this->setGithubActionsSecrets($ci_env);
-        $repo_path = $ci_env->get('env', 'CURRENT_WORKDIR', '');
+        $repo_path = $ci_env->get('temp_settings', 'CURRENT_WORKDIR', '');
         if ($repo_path) {
             $this->moveGithubWorkflows($repo_path);
         }
+        $this->setGithubActionsSecrets($ci_env);
     }
 
     /**
