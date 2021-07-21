@@ -486,9 +486,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $templateDir = $this->tempdir('template-dir');
             $this->passthru("git -C $templateDir clone $source --depth 1 .");
             $composer_json_contents = file_get_contents($templateDir . '/composer.json');
-            if (preg_match('/"name":\s"([A-Za-z0-9\-]+\/[A-Za-z0-9\-]+)"/', $composer_json_contents, $matches)) {
-                if (!empty($matches[1])) {
-                    $items['source'] = $matches[1];
+            if ($contents = json_decode($composer_json_contents)) {
+                if (!empty($contents->name)) {
+                    $items['source'] = $contents->name;
                 }
             }
         }
