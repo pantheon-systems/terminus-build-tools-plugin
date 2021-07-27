@@ -514,8 +514,9 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($ci_env, $site_name, $siteDir) {
-                    // Wait for 30 seconds to allow site preparation tasks to finish.
-                    sleep(30);
+                    // Wait for workflow to finish.
+                    // @todo: Is this command working as expected?
+                    $this->passthru("terminus workflow:wait $site_name.dev 'Change database version for an environment'");
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 
