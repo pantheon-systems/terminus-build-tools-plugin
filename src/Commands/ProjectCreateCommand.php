@@ -149,7 +149,7 @@ class ProjectCreateCommand extends BuildToolsBase
             case 'CircleCIProvider':
                 return 'circleci';
 
-            case 'GitlabCIProvider':
+            case 'GitLabCIProvider':
                 return 'gitlabci';
 
             case 'BitbucketPipelinesProvider':
@@ -173,6 +173,31 @@ class ProjectCreateCommand extends BuildToolsBase
 
         $this->passthru("cp -r $ciTemplateDir/$cms_version/.ci $created_folder");
         $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$short_name/. $created_folder");
+
+        if (!is_dir("$created_folder/tests") && is_dir("$ciTemplateDir/$cms_version/tests")) {
+            $this->passthru("cp -r $ciTemplateDir/$cms_version/tests $created_folder");
+        }
+
+        $composer_json = $this->getComposerJson($created_folder);
+        if (!isset($composer_json['scripts']['unit-test'])) {
+            $composer_json['scripts']['unit-test'] = "echo 'No unit test step defined.'";
+            $composer_json['scripts']['lint'] = "find web/modules/custom web/themes/custom -name '*.php' -exec php -l {} \\;";
+            $composer_json['scripts']['code-sniff'] = [
+                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+            ];
+            if ($cms_version === 'd8' || $cms_version === 'd9') {
+                $composer_json['extra']['build-env']['export-configuration'] = "drush config-export --yes";
+            }
+            file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT));
+        }
+        $this->passthru("mkdir $created_folder/web/modules/custom");
+        $this->passthru("touch $created_folder/web/modules/custom/.gitkeep");
+
+        $this->passthru("mkdir $created_folder/web/themes/custom");
+        $this->passthru("touch $created_folder/web/themes/custom/.gitkeep");
     }
 
     /**
@@ -332,6 +357,11 @@ class ProjectCreateCommand extends BuildToolsBase
                 $cms_version .= substr($version, 0, 1);
             }
             $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version);
+
+            // If folder does not exists, assume we need to install composer deps.
+            exec("composer --working-dir=$siteDir require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension drupal/drupal-extension drupal/drupal-driver genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
+            exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
         }
 
         // $builder->setStateValue('ci-env', $ci_env)
@@ -407,6 +437,12 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressMessage('Make initial commit')
             ->addCode(
                 function ($state) use ($siteDir, $source) {
+                    if (file_exists("$siteDir/web/modules/custom/.gitkeep")) {
+                        $this->passthru("git -C $siteDir add -f web/modules/custom/.gitkeep");
+                    }
+                    if (file_exists("$siteDir/web/themes/custom/.gitkeep")) {
+                        $this->passthru("git -C $siteDir add -f web/themes/custom/.gitkeep");
+                    }
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
@@ -478,6 +514,8 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
                 function ($state) use ($ci_env, $site_name, $siteDir) {
+                    // Wait for 30 seconds to allow site preparation tasks to finish.
+                    sleep(30);
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 
