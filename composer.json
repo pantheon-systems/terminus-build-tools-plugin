@@ -21,7 +21,8 @@
         "phpspec/prophecy": "1.8.0"
     },
     "scripts": {
-        "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
+        "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*",
+	"echo": "echo hello"
     },
     "require": {
         "paragonie/sodium_compat": "^1.16"
