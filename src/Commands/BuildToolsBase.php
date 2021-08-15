@@ -612,9 +612,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'account-pass' => '',
             'site-mail' => '',
             'site-name' => ''
-        ])
+        ],
+        $upstream = 'drupal')
     {
-        $command_template = $this->getInstallCommandTemplate($composer_json);
+        $command_template = $this->getInstallCommandTemplate($composer_json, $upstream);
         return $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Install site", $site_install_options);
     }
 
@@ -723,15 +724,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Determine the command to use to install the site.
      */
-    protected function getInstallCommandTemplate($composer_json)
+    protected function getInstallCommandTemplate($composer_json, $upstream)
     {
         if (isset($composer_json['extra']['build-env']['install-cms'])) {
             return $composer_json['extra']['build-env']['install-cms'];
         }
-        // TODO: Select a different default template based on the cms type (Drupal or WordPress).
-        $defaultTemplate = 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
-
-        return $defaultTemplate;
+        if ($upstream == 'empty-wordpress') {
+            return 'wp core install --url={site-url} --title="{site-name}" --admin_user={account-name} --admin_password={account-pass} --admin_email={account-mail}';
+        }
+        return 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
     }
 
     /**

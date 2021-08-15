@@ -275,6 +275,9 @@ class ProjectCreateCommand extends BuildToolsBase
         $this->log()->notice('Create a local working copy of {src}', ['src' => $source]);
         $siteDir = $this->createFromSource($source, $target, $stability, $options);
 
+        // Look up our upstream.
+        $upstream = $this->autodetectUpstream($siteDir);
+
         // Restore COMPOSER_AUTH if necessary.
         if (!is_null($backupAuth)) {
             putenv('COMPOSER_AUTH=' . $backupAuth);
@@ -313,9 +316,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Create a Pantheon site
             ->progressMessage('Create Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region) {
-                    // Look up our upstream.
-                    $upstream = $this->autodetectUpstream($siteDir);
+                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region, $upstream) {
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
@@ -425,7 +426,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir) {
+                function ($state) use ($ci_env, $site_name, $siteDir, $upstream) {
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 
@@ -438,7 +439,7 @@ class ProjectCreateCommand extends BuildToolsBase
                         'site-name' => $siteAttributes->testSiteName(),
                         'site-url' => "https://dev-{$site_name}.pantheonsite.io"
                     ];
-                    $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
+                    $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options, $upstream);
 
                     // Before any tests have been configured, export the
                     // configuration set up by the installer.
