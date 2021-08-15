@@ -30,6 +30,7 @@ use Pantheon\Terminus\Models\Environment;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
+use VersionTool\VersionTool;
 
 /**
  * Build Tool Base Command
@@ -343,39 +344,62 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     }
 
     /**
+     * Detect the application and version at a given directory.
+     *
+     * @todo Replace determining the framework from the upstream with this.
+     */
+    protected function autodetectApplication($siteDir)
+    {
+        $info = $this->autodetectApplicationAtDir("$siteDir/web");
+        if ($info) {
+            return $info;
+        }
+        $info = $this->autodetectApplicationAtDir($siteDir);
+        if ($info) {
+            return $info;
+        }
+
+        return false;
+    }
+
+    protected function autodetectApplicationAtDir($siteDir)
+    {
+        $version_info = new VersionTool();
+        $info = $version_info->info($siteDir);
+
+        if ($info) {
+            $application = $info->application();
+            $version = $info->version();
+            $major_version = explode(".", $version);
+            $framework = $application == "WordPress" ? "empty-wordpress" : (
+              $major_version[0] == 7 ? "empty-7" : "empty"
+            );
+            return [
+                'application' => $application,
+                'version' => $version,
+                'major_version' => $major_version[0],
+                'framework' => $framework,
+            ];
+        }
+
+        return false;
+    }
+
+    /**
      * Detect the upstream to use based on the contents of the source repository.
      * Upstream is irrelevant, save for the fact that this is the only way to
      * set the framework on Pantheon at the moment.
      */
     protected function autodetectUpstream($siteDir)
     {
-        $upstream = $this->autodetectUpstreamAtDir("$siteDir/web");
-        if ($upstream) {
-            return $upstream;
-        }
-        $upstream = $this->autodetectUpstreamAtDir($siteDir);
-        if ($upstream) {
-            return $upstream;
-        }
-        // Can't tell? Assume Drupal 8.
-        return 'Empty Upstream';
-    }
+        $info = $this->autodetectApplication($siteDir);
 
-    protected function autodetectUpstreamAtDir($siteDir)
-    {
-        $upstream_map = [
-          'core/misc/drupal.js' => 'empty', // Drupal 8
-          'misc/drupal.js' => 'empty-7', // Drupal 7
-          'wp-config.php' => 'empty-wordpress', // WordPress
-        ];
-
-        foreach ($upstream_map as $file => $upstream) {
-            if (file_exists("$siteDir/$file")) {
-                return $upstream;
-            }
+        if ($info) {
+            return $info['framework'];
         }
 
-        return false;
+        // For backwards compatibility, assume "Empty".
+        return "empty";
     }
 
     /**
