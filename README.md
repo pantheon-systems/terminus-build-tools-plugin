@@ -121,26 +121,39 @@ The `build:project:create` command is used to initialize projects within the Git
 
 Additional options are available to further customize the `build:project:create` command:
  
- | Option             | Description    |
- | ------------------ | -------------- |
- | --pantheon-site    | The name to use for the Pantheon site (defaults to the name of the Git site) | 
- | --team             | The Pantheon team to associate the site with |
- | --org              | The Git organization to place the repository in (defaults to authenticated user) |
- | --label            | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
- | --email            | The git user email address to use when committing build results |
- | --test-site-name   | The name to use when installing the test site |
- | --admin-password   | The password to use for the admin when installing the test site |
- | --admin-email      | The email address to use for the admin |
- | --admin-username   | The username to use for the admin |
- | --stability        | The stability to use with composer when creating the project (defaults to dev) |
- | --keep             | The ability to keep a project repository cloned after your project is created |
- | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
- | --ci               | The CI provider to use. Defaults to "circleci" |
- | --git              | The git repository provider to use. Defaults to "github" |
- | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
- | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+ | Option                | Description    |
+ | --------------------- | -------------- |
+ | --pantheon-site       | The name to use for the Pantheon site (defaults to the name of the Git site) |
+ | --team                | The Pantheon team to associate the site with |
+ | --org                 | The Git organization to place the repository in (defaults to authenticated user) |
+ | --label               | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
+ | --email               | The git user email address to use when committing build results |
+ | --test-site-name      | The name to use when installing the test site |
+ | --admin-password      | The password to use for the admin when installing the test site |
+ | --admin-email         | The email address to use for the admin |
+ | --admin-username      | The username to use for the admin |
+ | --stability           | The stability to use with composer when creating the project (defaults to dev) |
+ | --keep                | The ability to keep a project repository cloned after your project is created |
+ | --use-ssh             | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
+ | --ci                  | The CI provider to use. Defaults to "circleci" |
+ | --git                 | The git repository provider to use. Defaults to "github" |
+ | --visibility          | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
+ | --region              | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+ | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
  
 See `terminus help build:project:create` for more information.
+
+Note that if you want to use a private composer repository, you should provide the credentials like this:
+
+```
+export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
+```
+
+or in ~/.terminus/config.yml file under build-tools.composer-auth.
+
+You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md), [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md), [cli authentication](https://getcomposer.org/doc/03-cli.md#composer-auth) and [authentication methods](https://getcomposer.org/doc/articles/authentication-for-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
+
+If you want to use a git repository as template, it should include a composer.json file and you should have access to it from your terminal. For the template name, you could use the git repo url and this command will get the right project name.
  
 ### build:project:repair
  
