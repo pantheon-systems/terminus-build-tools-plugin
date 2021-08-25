@@ -143,14 +143,14 @@ class ProjectCreateCommand extends BuildToolsBase
     /**
      * Copy CI files from the given/default repo.
      */
-    public function copyCiFiles($ci_provider, $created_folder, $cms_version = 'd8', $repo = '') {
+    public function copyCiFiles($ci_provider, $created_folder, $cms_version, $ci_template = '') {
         $fs = new Filesystem();
         $service_name = $ci_provider->getServiceName();
-        if (!$repo) {
-            $repo = 'git@github.com:kporras07/tbt-ci-integrations.git';
+        if (!$ci_template) {
+            $ci_template = 'git@github.com:kporras07/tbt-ci-integrations.git';
         }
         $ciTemplateDir = $this->tempdir('ci-template-dir');
-        $this->passthru("git -C $ciTemplateDir clone $repo --depth 1 .");
+        $this->passthru("git -C $ciTemplateDir clone $ci_template --depth 1 .");
 
         $fs->mirror("$ciTemplateDir/$cms_version/.ci", "$created_folder/.ci");
         $fs->mirror("$ciTemplateDir/$cms_version/providers/$service_name/.", $created_folder);
@@ -237,10 +237,9 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
-
+     * @option ci-template Git repo that contains the CI scripts that will be copied if there is no ci in the source project.
      */
     public function createProject(
-        // @todo: Add ci-template option.
         $source,
         $target = '',
         $options = [
@@ -263,6 +262,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'template-repository' => '',
+            'ci-template' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -276,6 +276,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
+        $ci_template = $options['ci-template'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -337,7 +338,7 @@ class ProjectCreateCommand extends BuildToolsBase
                 $version = $info->version();
                 $cms_version .= substr($version, 0, 1);
             }
-            $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version);
+            $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version, $ci_template);
 
             // If folder does not exists, assume we need to install composer deps.
             exec("composer --working-dir=$siteDir require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
