@@ -141,30 +141,10 @@ class ProjectCreateCommand extends BuildToolsBase
     }
 
     /**
-     * Get CI short name based on the CI provider.
-     */
-    public function getCiShortName($ci_provider) {
-        $reflect = new \ReflectionClass($ci_provider);
-        switch ($reflect->getShortName()) {
-            case 'CircleCIProvider':
-                return 'circleci';
-
-            case 'GitLabCIProvider':
-                return 'gitlabci';
-
-            case 'BitbucketPipelinesProvider':
-                return 'bitbucket';
-
-            case 'GithubActionsProvider':
-                return 'github';
-        }
-    }
-
-    /**
      * Copy CI files from the given/default repo.
      */
     public function copyCiFiles($ci_provider, $created_folder, $cms_version = 'd8', $repo = '') {
-        $short_name = $this->getCiShortName($ci_provider);
+        $service_name = $ci_provider->getServiceName();
         if (!$repo) {
             $repo = 'git@github.com:kporras07/tbt-ci-integrations.git';
         }
@@ -172,7 +152,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $this->passthru("git -C $ciTemplateDir clone $repo --depth 1 .");
 
         $this->passthru("cp -r $ciTemplateDir/$cms_version/.ci $created_folder");
-        $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$short_name/. $created_folder");
+        $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$service_name/. $created_folder");
 
         if (!is_dir("$created_folder/tests") && is_dir("$ciTemplateDir/$cms_version/tests")) {
             $this->passthru("cp -r $ciTemplateDir/$cms_version/tests $created_folder");
