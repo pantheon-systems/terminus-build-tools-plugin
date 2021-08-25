@@ -143,12 +143,10 @@ class ProjectCreateCommand extends BuildToolsBase
     /**
      * Copy CI files from the given/default repo.
      */
-    public function copyCiFiles($ci_provider, $created_folder, $cms_version, $ci_template = '') {
+    public function copyCiFiles($ci_provider, $created_folder, $cms_version, $ci_template) {
         $fs = new Filesystem();
         $service_name = $ci_provider->getServiceName();
-        if (!$ci_template) {
-            $ci_template = 'git@github.com:kporras07/tbt-ci-integrations.git';
-        }
+
         $ciTemplateDir = $this->tempdir('ci-template-dir');
         $this->passthru("git -C $ciTemplateDir clone $ci_template --depth 1 .");
 
@@ -262,7 +260,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'template-repository' => '',
-            'ci-template' => '',
+            'ci-template' => 'git@github.com:kporras07/tbt-ci-integrations.git',
         ])
     {
         $this->warnAboutOldPhp();
