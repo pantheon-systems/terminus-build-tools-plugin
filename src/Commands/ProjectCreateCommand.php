@@ -343,6 +343,7 @@ class ProjectCreateCommand extends BuildToolsBase
             exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension drupal/drupal-extension drupal/drupal-driver genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
             exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
         }
+        $prePushTime = 0;
 
         // $builder->setStateValue('ci-env', $ci_env)
 
@@ -483,7 +484,8 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $siteDir) {
+                function ($state) use ($site_name, $siteDir, &$prePushTime) {
+                    $prePushTime = time();
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
                     $this->resetToCommit($siteDir, $state['initial_commit']);
@@ -493,10 +495,13 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir) {
+                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime) {
+                    if (!$prePushTime) {
+                        $prePushTime = time() - 1800;
+                    }
+                    list($site, $env) = $this->getSiteEnv("{$site_name}.dev");
                     // Wait for workflow to finish.
-                    // @todo: Is this command working as expected?
-                    $this->passthru("terminus workflow:wait $site_name.dev 'Change database version for an environment'");
+                    $this->waitForWorkflow($prePushTime, $site, $env, 'Change database version for an environment');
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 
