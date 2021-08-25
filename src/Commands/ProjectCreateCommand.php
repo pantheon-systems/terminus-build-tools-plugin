@@ -144,6 +144,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * Copy CI files from the given/default repo.
      */
     public function copyCiFiles($ci_provider, $created_folder, $cms_version = 'd8', $repo = '') {
+        $fs = new Filesystem();
         $service_name = $ci_provider->getServiceName();
         if (!$repo) {
             $repo = 'git@github.com:kporras07/tbt-ci-integrations.git';
@@ -151,11 +152,11 @@ class ProjectCreateCommand extends BuildToolsBase
         $ciTemplateDir = $this->tempdir('ci-template-dir');
         $this->passthru("git -C $ciTemplateDir clone $repo --depth 1 .");
 
-        $this->passthru("cp -r $ciTemplateDir/$cms_version/.ci $created_folder");
-        $this->passthru("cp -r $ciTemplateDir/$cms_version/providers/$service_name/. $created_folder");
+        $fs->mirror("$ciTemplateDir/$cms_version/.ci", "$created_folder/.ci");
+        $fs->mirror("$ciTemplateDir/$cms_version/providers/$service_name/.", $created_folder);
 
         if (!is_dir("$created_folder/tests") && is_dir("$ciTemplateDir/$cms_version/tests")) {
-            $this->passthru("cp -r $ciTemplateDir/$cms_version/tests $created_folder");
+            $fs->mirror("$ciTemplateDir/$cms_version/tests", "$created_folder/tests");
         }
 
         $composer_json = $this->getComposerJson($created_folder);
@@ -173,11 +174,11 @@ class ProjectCreateCommand extends BuildToolsBase
             }
             file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT));
         }
-        $this->passthru("mkdir $created_folder/web/modules/custom");
-        $this->passthru("touch $created_folder/web/modules/custom/.gitkeep");
+        $fs->mkdir("$created_folder/web/modules/custom");
+        $fs->touch("$created_folder/web/modules/custom/.gitkeep");
 
-        $this->passthru("mkdir $created_folder/web/themes/custom");
-        $this->passthru("touch $created_folder/web/themes/custom/.gitkeep");
+        $fs->mkdir("$created_folder/web/themes/custom");
+        $fs->touch("$created_folder/web/themes/custom/.gitkeep");
     }
 
     /**
