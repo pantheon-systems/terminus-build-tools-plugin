@@ -1064,41 +1064,40 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         $startWaiting = time();
+        $firstWorkflowDescription = null;
         while(true) {
-            $workflow = $this->getLatestWorkflow($site);
-            $workflowCreationTime = $workflow->get('created_at');
-            $workflowDescription = $workflow->get('description');
+            $index = 0;
+            $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
+            foreach ($workflows as $workflow) {
+                $workflowCreationTime = $workflow->get('created_at');
+                $workflowDescription = $workflow->get('description');
+                if ($index === 0) {
+                    $firstWorkflowDescription = $workflowDescription;
+                }
+                $index++;
 
-            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
-                if ($workflow->isSuccessful()) {
-                    $this->log()->notice("Workflow succeeded");
-                    return;
+                if ($workflowCreationTime < $startTime) {
+                    // We already passed the start time.
+                    break;
+                }
+
+                if (($expectedWorkflowDescription === $workflowDescription)) {
+                    $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    if ($workflow->isSuccessful()) {
+                        $this->log()->notice("Workflow succeeded");
+                        return;
+                    }
                 }
             }
-            else {
-                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
-            }
+            $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+
             // Wait a bit, then spin some more
             sleep(5);
-
             if (time() - $startWaiting >= $maxWaitInSeconds) {
                 $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
                 break;
             }
         }
-    }
-
-    /**
-     * Fetch the info about the currently-executing (or most recently completed)
-     * workflow operation.
-     */
-    protected function getLatestWorkflow($site)
-    {
-        $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
-        $workflow = array_shift($workflows);
-        $workflow->fetchWithLogs();
-        return $workflow;
     }
 
     /**
