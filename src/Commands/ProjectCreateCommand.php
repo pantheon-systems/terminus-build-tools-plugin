@@ -501,7 +501,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     }
                     list($site, $env) = $this->getSiteEnv("{$site_name}.dev");
                     // Wait for workflow to finish.
-                    $this->waitForWorkflow($prePushTime, $site, $env, 'Change database version for an environment');
+                    $this->waitForWorkflow($prePushTime, $site, $env, 'Change database version for an environment', null, 3);
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 

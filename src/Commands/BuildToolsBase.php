@@ -1052,7 +1052,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null, $maxNotFoundAttempts = null)
     {
         if (empty($expectedWorkflowDescription)) {
             $expectedWorkflowDescription = "Sync code on $env_name";
@@ -1065,6 +1065,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $startWaiting = time();
         $firstWorkflowDescription = null;
+        $notFoundAttempts = 0;
 
         while(true) {
             // Refresh env on each interation.
@@ -1096,7 +1097,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 }
             }
             if (!$found) {
+                $notFoundAttempts++;
                 $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+                if ($maxNotFoundAttempts && $notFoundAttempts === $maxNotFoundAttempts) {
+                    $this->log()->warning("Attempted '{max}' times, giving up waiting for workflow to be found", ['max' => $maxNotFoundAttempts]);
+                    break;
+                }
             }
             // Wait a bit, then spin some more
             sleep(5);
