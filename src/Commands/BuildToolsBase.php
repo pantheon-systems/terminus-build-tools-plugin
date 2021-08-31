@@ -1055,7 +1055,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
     {
         if (empty($expectedWorkflowDescription)) {
-            $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+            $expectedWorkflowDescription = "Sync code on $env_name";
         }
 
         if (null === $maxWaitInSeconds) {
@@ -1065,12 +1065,16 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         $startWaiting = time();
         $firstWorkflowDescription = null;
+
         while(true) {
+            // Refresh env on each interation.
             $index = 0;
             $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
+            $found = false;
             foreach ($workflows as $workflow) {
                 $workflowCreationTime = $workflow->get('created_at');
-                $workflowDescription = $workflow->get('description');
+
+                $workflowDescription = str_replace('"', '', $workflow->get('description'));
                 if ($index === 0) {
                     $firstWorkflowDescription = $workflowDescription;
                 }
@@ -1082,15 +1086,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 }
 
                 if (($expectedWorkflowDescription === $workflowDescription)) {
+                    $workflow->fetch();
                     $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    $found = true;
                     if ($workflow->isSuccessful()) {
                         $this->log()->notice("Workflow succeeded");
                         return;
                     }
                 }
             }
-            $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
-
+            if (!$found) {
+                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+            }
             // Wait a bit, then spin some more
             sleep(5);
             if (time() - $startWaiting >= $maxWaitInSeconds) {
