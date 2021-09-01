@@ -113,6 +113,7 @@ class ProjectRepairCommand extends BuildToolsBase
             'admin-username' => '',
             'env' => [],
             'ci' => '',
+            'clu-cron-pattern' => '',
         ])
     {
         // Get the environment variables to be stored in the CI server.
