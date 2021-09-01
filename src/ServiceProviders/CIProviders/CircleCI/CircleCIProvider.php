@@ -154,7 +154,7 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
     }
 
-    public function startTesting(CIState $ci_env)
+    public function startTesting(CIState $ci_env, $cluCronPattern = NULL)
     {
         $circle_url = $this->apiUrl($ci_env);
         $this->circleCIAPI([], "$circle_url/follow");

@@ -195,6 +195,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
+     * @options clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
 
      */
     public function createProject(
@@ -220,6 +221,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'template-repository' => '',
+            'clu-cron-pattern' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -233,6 +235,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
+        $cluCronPattern = $options['clu-cron-pattern'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -463,7 +466,8 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressMessage('Beginning CI testing')
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
-                ->environment($ci_env);
+                ->environment($ci_env)
+                ->setCluCronSchedule($cluCronPattern);
 
 
         // If the user specified --keep, then clone a local copy of the project

@@ -132,14 +132,14 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
     }
 
-    public function startTesting(CIState $ci_env)
+    public function startTesting(CIState $ci_env, $cluCronPattern = '0 4 * * *')
     {
         // We use this opportunity to set up our scheduled job for automated updates.
         $uri = $this->apiUri($ci_env, 'pipeline_schedules');
         $data = [
             'ref' => 'master',
             'description' => 'Automated composer updates.',
-            'cron' => '0 4 * * *'
+            'cron' => $cluCronPattern
         ];
         $this->api()->request($uri, $data);
     }

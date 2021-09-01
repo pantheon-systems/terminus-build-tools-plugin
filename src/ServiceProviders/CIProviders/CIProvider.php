@@ -27,5 +27,5 @@ interface CIProvider extends ProviderInterface
     /**
      * Begin testing the project once it has been configured.
      */
-    public function startTesting(CIState $ci_env);
+    public function startTesting(CIState $ci_env, $cluCronPattern = NULL);
 }

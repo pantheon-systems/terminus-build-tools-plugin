@@ -92,7 +92,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         return $this->api()->request("$repoApiUrl/pipelines_config/variables/");
     }
 
-    public function startTesting(CIState $ci_env)
+    public function startTesting(CIState $ci_env, $cluCronPattern = '0 0 4 * * ? *')
     {
         $repoApiUrl = $this->targetRepositoryBaseUrl($ci_env);
 
@@ -111,7 +111,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // @TODO: verify that the custom "clu" task exists in yml first?
         $data = [
           'enabled' => true,
-          'cron_pattern' => '0 0 4 * * ? *',
+          'cron_pattern' => $cluCronPattern,
           'target' => [
             'type' => 'pipeline_ref_target',
             'ref_type' => 'branch',
