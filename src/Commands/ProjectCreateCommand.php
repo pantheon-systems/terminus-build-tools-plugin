@@ -235,7 +235,6 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
-        $cluCronPattern = $options['clu-cron-pattern'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -250,6 +249,8 @@ class ProjectCreateCommand extends BuildToolsBase
 
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($options['env']);
+
+        $ci_env->set('ci', 'clu-cron-pattern', $options['clu-cron-pattern']);
 
         // Add the environment variables from the git provider to the CI environment.
         $ci_env->storeState('repository', $this->git_provider->getEnvironment());
@@ -462,12 +463,11 @@ class ProjectCreateCommand extends BuildToolsBase
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
                 })
 
-            // Tell the CI server to start testing our project
+            // Tell the CI StartTesting.phpserver to start testing our project
             ->progressMessage('Beginning CI testing')
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
-                ->environment($ci_env)
-                ->setCluCronSchedule($cluCronPattern);
+                ->environment($ci_env);
 
 
         // If the user specified --keep, then clone a local copy of the project

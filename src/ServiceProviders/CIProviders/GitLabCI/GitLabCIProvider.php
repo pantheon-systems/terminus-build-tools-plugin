@@ -21,6 +21,9 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
 {
     use GitLabAPITrait;
 
+    // Default cron pattern is to run CLU / testing jobs once per day.
+    const CLU_CRON_PATTERN = '0 4 * * *';
+
     // We make this modifiable as individuals can self-host GitLab.
     protected $GITLAB_URL;
 
@@ -132,14 +135,14 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         }
     }
 
-    public function startTesting(CIState $ci_env, $cluCronPattern = '0 4 * * *')
+    public function startTesting(CIState $ci_env)
     {
         // We use this opportunity to set up our scheduled job for automated updates.
         $uri = $this->apiUri($ci_env, 'pipeline_schedules');
         $data = [
             'ref' => 'master',
             'description' => 'Automated composer updates.',
-            'cron' => $cluCronPattern
+            'cron' => $ci_env->get('ci', 'clu-cron-pattern', static::CLU_CRON_PATTERN)
         ];
         $this->api()->request($uri, $data);
     }
