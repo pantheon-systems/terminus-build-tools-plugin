@@ -119,6 +119,7 @@ class ProjectRepairCommand extends BuildToolsBase
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($options['env']);
 
+        $ci_env->storeState('ci', $this->ci_provider->getEnvironment());
         $ci_env->set('ci', 'clu-cron-pattern', $options['clu-cron-pattern']);
 
         // Add the environment variables from the git provider to the CI environment.
