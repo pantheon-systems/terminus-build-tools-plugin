@@ -463,7 +463,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     $this->git_provider->pushRepository($siteDir, $repositoryAttributes->projectId(), $use_ssh);
                 })
 
-            // Tell the CI StartTesting.phpserver to start testing our project
+            // Tell the CI server to start testing our project
             ->progressMessage('Beginning CI testing')
             ->taskCIStartTesting()
                 ->provider($this->ci_provider)
