@@ -8,7 +8,7 @@
     },
     "extra": {
         "terminus": {
-            "compatible-version": "^2"
+            "compatible-version": "^3"
         }
     },
     "require-dev": {
@@ -22,5 +22,8 @@
     },
     "scripts": {
         "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
+    },
+    "require": {
+        "paragonie/sodium_compat": "^1.16"
     }
 }
