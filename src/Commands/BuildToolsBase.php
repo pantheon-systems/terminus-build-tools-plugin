@@ -1052,10 +1052,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null, $maxNotFoundAttempts = null)
     {
         if (empty($expectedWorkflowDescription)) {
-            $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+            $expectedWorkflowDescription = "Sync code on $env_name";
         }
 
         if (null === $maxWaitInSeconds) {
@@ -1064,41 +1064,53 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         $startWaiting = time();
-        while(true) {
-            $workflow = $this->getLatestWorkflow($site);
-            $workflowCreationTime = $workflow->get('created_at');
-            $workflowDescription = $workflow->get('description');
+        $firstWorkflowDescription = null;
+        $notFoundAttempts = 0;
 
-            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
-                if ($workflow->isSuccessful()) {
-                    $this->log()->notice("Workflow succeeded");
-                    return;
+        while(true) {
+            // Refresh env on each interation.
+            $index = 0;
+            $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
+            $found = false;
+            foreach ($workflows as $workflow) {
+                $workflowCreationTime = $workflow->get('created_at');
+
+                $workflowDescription = str_replace('"', '', $workflow->get('description'));
+                if ($index === 0) {
+                    $firstWorkflowDescription = $workflowDescription;
+                }
+                $index++;
+
+                if ($workflowCreationTime < $startTime) {
+                    // We already passed the start time.
+                    break;
+                }
+
+                if (($expectedWorkflowDescription === $workflowDescription)) {
+                    $workflow->fetch();
+                    $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    $found = true;
+                    if ($workflow->isSuccessful()) {
+                        $this->log()->notice("Workflow succeeded");
+                        return;
+                    }
                 }
             }
-            else {
-                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+            if (!$found) {
+                $notFoundAttempts++;
+                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+                if ($maxNotFoundAttempts && $notFoundAttempts === $maxNotFoundAttempts) {
+                    $this->log()->warning("Attempted '{max}' times, giving up waiting for workflow to be found", ['max' => $maxNotFoundAttempts]);
+                    break;
+                }
             }
             // Wait a bit, then spin some more
             sleep(5);
-
             if (time() - $startWaiting >= $maxWaitInSeconds) {
                 $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
                 break;
             }
         }
-    }
-
-    /**
-     * Fetch the info about the currently-executing (or most recently completed)
-     * workflow operation.
-     */
-    protected function getLatestWorkflow($site)
-    {
-        $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
-        $workflow = array_shift($workflows);
-        $workflow->fetchWithLogs();
-        return $workflow;
     }
 
     /**
