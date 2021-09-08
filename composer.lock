@@ -4,8 +4,61 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f0c3ac93fd309ff4fab8da265151f3ee",
+    "content-hash": "d7c977630668c4f7c6d0ecd51e3dc4be",
     "packages": [
+        {
+            "name": "consolidation/version-tool",
+            "version": "0.1.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/consolidation/version-tool.git",
+                "reference": "46939a0cfca5d1e63d1e48f3fbe808c73dde04fd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/consolidation/version-tool/zipball/46939a0cfca5d1e63d1e48f3fbe808c73dde04fd",
+                "reference": "46939a0cfca5d1e63d1e48f3fbe808c73dde04fd",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "consolidation/robo": "^1.3|^2",
+                "g1a/composer-test-scenarios": "^2",
+                "knplabs/github-api": "^2.7",
+                "php-http/guzzle6-adapter": "^1.1",
+                "phpunit/phpunit": "^6",
+                "satooshi/php-coveralls": "^2",
+                "squizlabs/php_codesniffer": "^2.8"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "VersionTool\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Greg Anderson",
+                    "email": "greg.1.anderson@greenknowe.org"
+                }
+            ],
+            "description": "Template project for PHP libraries.",
+            "support": {
+                "source": "https://github.com/consolidation/version-tool/tree/0.1.9"
+            },
+            "time": "2020-05-23T01:04:16+00:00"
+        },
         {
             "name": "paragonie/random_compat",
             "version": "v9.99.100",

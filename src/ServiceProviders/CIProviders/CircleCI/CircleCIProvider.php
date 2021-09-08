@@ -156,6 +156,8 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
 
     public function startTesting(CIState $ci_env)
     {
+        // Wait for 5 seconds to ensure the branch has reached CircleCI so that follow action work as expected.
+        sleep(5);
         $circle_url = $this->apiUrl($ci_env);
         $this->circleCIAPI([], "$circle_url/follow");
     }

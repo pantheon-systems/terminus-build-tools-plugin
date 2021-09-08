@@ -149,6 +149,7 @@ Additional options are available to further customize the `build:project:create`
  | --visibility          | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
  | --region              | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
  | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
+ | --ci-template | Git repo that contains the CI scripts that will be copied if there is no ci in the source project. |
  
 See `terminus help build:project:create` for more information.
 
