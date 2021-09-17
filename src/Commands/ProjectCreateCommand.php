@@ -18,6 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use VersionTool\VersionTool;
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 
 /**
  * Project Create Command
@@ -236,6 +237,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
      * @option ci-template Git repo that contains the CI scripts that will be copied if there is no ci in the source project.
+     * @option clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
      */
     public function createProject(
         $source,
@@ -261,6 +263,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'region' => '',
             'template-repository' => '',
             'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-integrations.git',
+            'clu-cron-pattern' => '',
         ])
     {
         $this->warnAboutOldPhp();
@@ -289,6 +292,12 @@ class ProjectCreateCommand extends BuildToolsBase
 
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($options['env']);
+
+        if (!empty($options['clu-cron-pattern'])) {
+            $clu_env = new ProviderEnvironment();
+            $clu_env['cron_pattern'] = $options['clu-cron-pattern'];
+            $ci_env->storeState('clu', $clu_env);
+        }
 
         // Add the environment variables from the git provider to the CI environment.
         $ci_env->storeState('repository', $this->git_provider->getEnvironment());
