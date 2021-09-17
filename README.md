@@ -61,6 +61,7 @@ It is recommended that you use one of the provided example projects as a templat
 The default template repositories are each assigned an abbreviation, as shown below:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-project): `d9`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
@@ -140,6 +141,7 @@ Additional options are available to further customize the `build:project:create`
  | --visibility          | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
  | --region              | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
  | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
+ | --ci-template | Git repo that contains the CI scripts that will be copied if there is no ci in the source project. |
  
 See `terminus help build:project:create` for more information.
 
@@ -478,6 +480,7 @@ Run `terminus list build` for a complete list of available commands. Use `termin
 In addition to the Terminus Build Tools Plugin, Pantheon maintains template repositories for:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer)
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-project)
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer)
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer)
 

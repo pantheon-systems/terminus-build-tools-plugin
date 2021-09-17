@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use VersionTool\VersionTool;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 
 /**
@@ -141,6 +142,45 @@ class ProjectCreateCommand extends BuildToolsBase
     }
 
     /**
+     * Copy CI files from the given/default repo.
+     */
+    public function copyCiFiles($ci_provider, $created_folder, $cms_version, $ci_template) {
+        $fs = new Filesystem();
+        $service_name = $ci_provider->getServiceName();
+
+        $ciTemplateDir = $this->tempdir('ci-template-dir');
+        $this->passthru("git -C $ciTemplateDir clone $ci_template --depth 1 .");
+
+        $fs->mirror("$ciTemplateDir/$cms_version/.ci", "$created_folder/.ci");
+        $fs->mirror("$ciTemplateDir/$cms_version/providers/$service_name/.", $created_folder);
+
+        if (!is_dir("$created_folder/tests") && is_dir("$ciTemplateDir/$cms_version/tests")) {
+            $fs->mirror("$ciTemplateDir/$cms_version/tests", "$created_folder/tests");
+        }
+
+        $composer_json = $this->getComposerJson($created_folder);
+        if (!isset($composer_json['scripts']['unit-test'])) {
+            $composer_json['scripts']['unit-test'] = "echo 'No unit test step defined.'";
+            $composer_json['scripts']['lint'] = "find web/modules/custom web/themes/custom -name '*.php' -exec php -l {} \\;";
+            $composer_json['scripts']['code-sniff'] = [
+                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+            ];
+            if ($cms_version === 'd8' || $cms_version === 'd9') {
+                $composer_json['extra']['build-env']['export-configuration'] = "drush config-export --yes";
+            }
+            file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT));
+        }
+        $fs->mkdir("$created_folder/web/modules/custom");
+        $fs->touch("$created_folder/web/modules/custom/.gitkeep");
+
+        $fs->mkdir("$created_folder/web/themes/custom");
+        $fs->touch("$created_folder/web/themes/custom/.gitkeep");
+    }
+
+    /**
      * Create a new project from the requested source GitHub project.
      * Does the following operations:
      *  - Creates a git repository forked from the source project.
@@ -196,8 +236,8 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option keep If given, clone a local copy of the project.
      * @option env Add extra environment variables to the CI environment. For example, --env='key=value' --env='another=v2'.
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
-     * @options clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
-
+     * @option ci-template Git repo that contains the CI scripts that will be copied if there is no ci in the source project.
+     * @option clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
      */
     public function createProject(
         $source,
@@ -222,6 +262,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'template-repository' => '',
+            'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-integrations.git',
             'clu-cron-pattern' => '',
         ])
     {
@@ -236,6 +277,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $visibility = $options['visibility'];
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
+        $ci_template = $options['ci-template'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -290,6 +332,27 @@ class ProjectCreateCommand extends BuildToolsBase
         }
 
         $builder = $this->collectionBuilder();
+
+        if (!file_exists($siteDir . '/.ci')) {
+            $version_info = new VersionTool();
+            $info = $version_info->info($siteDir);
+            $app = $info->application();
+            $cms_version = 'd';
+            if ($app !== 'Drupal') {
+                $cms_version = 'wp';
+            }
+            else {
+                $version = $info->version();
+                $cms_version .= substr($version, 0, 1);
+            }
+            $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version, $ci_template);
+
+            // If folder does not exists, assume we need to install composer deps.
+            exec("composer --working-dir=$siteDir require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension drupal/drupal-extension drupal/drupal-driver genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
+            exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
+        }
+        $prePushTime = 0;
 
         // $builder->setStateValue('ci-env', $ci_env)
 
@@ -364,6 +427,12 @@ class ProjectCreateCommand extends BuildToolsBase
             ->progressMessage('Make initial commit')
             ->addCode(
                 function ($state) use ($siteDir, $source) {
+                    if (file_exists("$siteDir/web/modules/custom/.gitkeep")) {
+                        $this->passthru("git -C $siteDir add -f web/modules/custom/.gitkeep");
+                    }
+                    if (file_exists("$siteDir/web/themes/custom/.gitkeep")) {
+                        $this->passthru("git -C $siteDir add -f web/themes/custom/.gitkeep");
+                    }
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
@@ -424,7 +493,8 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also effectively does a 'git reset --hard'
             ->progressMessage('Push code to Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $siteDir) {
+                function ($state) use ($site_name, $siteDir, &$prePushTime) {
+                    $prePushTime = time();
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
                     $this->resetToCommit($siteDir, $state['initial_commit']);
@@ -434,7 +504,13 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir) {
+                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime) {
+                    if (!$prePushTime) {
+                        $prePushTime = time() - 1800;
+                    }
+                    list($site, $env) = $this->getSiteEnv("{$site_name}.dev");
+                    // Wait for workflow to finish.
+                    $this->waitForWorkflow($prePushTime, $site, $env, 'Change database version for an environment', null, 3);
                     $siteAttributes = $ci_env->getState('site');
                     $composer_json = $this->getComposerJson($siteDir);
 
