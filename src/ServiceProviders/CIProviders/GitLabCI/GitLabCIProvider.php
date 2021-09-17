@@ -142,7 +142,7 @@ class GitLabCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         $data = [
             'ref' => 'master',
             'description' => 'Automated composer updates.',
-            'cron' => $ci_env->get('ci', 'clu-cron-pattern', static::CLU_CRON_PATTERN)
+            'cron' => $ci_env->get('clu', 'cron_pattern', static::CLU_CRON_PATTERN)
         ];
         $this->api()->request($uri, $data);
     }

@@ -114,7 +114,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // @TODO: verify that the custom "clu" task exists in yml first?
         $data = [
           'enabled' => true,
-          'cron_pattern' => $ci_env->get('ci', 'clu-cron-pattern', static::CLU_CRON_PATTERN),
+          'cron_pattern' => $ci_env->get('clu', 'cron_pattern', static::CLU_CRON_PATTERN),
           'target' => [
             'type' => 'pipeline_ref_target',
             'ref_type' => 'branch',

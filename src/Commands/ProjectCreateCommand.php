@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 
 /**
  * Project Create Command
@@ -250,8 +251,11 @@ class ProjectCreateCommand extends BuildToolsBase
         // Get the environment variables to be stored in the CI server.
         $ci_env = $this->getCIEnvironment($options['env']);
 
-        $ci_env->storeState('ci', $this->ci_provider->getEnvironment());
-        $ci_env->set('ci', 'clu-cron-pattern', $options['clu-cron-pattern']);
+        if (!empty($options['clu-cron-pattern'])) {
+            $clu_env = new ProviderEnvironment();
+            $clu_env['cron_pattern'] = $options['clu-cron-pattern'];
+            $ci_env->storeState('clu', $clu_env);
+        }
 
         // Add the environment variables from the git provider to the CI environment.
         $ci_env->storeState('repository', $this->git_provider->getEnvironment());
