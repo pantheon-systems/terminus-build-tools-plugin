@@ -16,7 +16,7 @@ use Pantheon\TerminusBuildTools\API\GitHub\GitHubAPITrait;
 use ParagonIE_Sodium_Compat;
 
 /**
- * Manages the configuration of a project to be tested on Circle CI.
+ * Manages the configuration of a project to be tested on Github Actions.
  */
 class GithubActionsProvider extends BaseCIProvider implements CIProvider, LoggerAwareInterface, PrivateKeyReciever, CredentialClientInterface
 {
@@ -62,7 +62,7 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
     }
 
     /**
-     * Write the CI environment variables to the Circle "envrionment variables" configuration section.
+     * Write the CI environment variables to the Github Secrets configuration section.
      *
      * @param CIState $ci_env
      * @param Session $session TEMPORARY to be removed
@@ -70,11 +70,11 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
     public function configureServer(CIState $ci_env)
     {
         $this->logger->notice('Configure Github Actions');
-        $this->setGithubActionsSecrets($ci_env);
-        $repo_path = $ci_env->get('env', 'CURRENT_WORKDIR', '');
+        $repo_path = $ci_env->get('temp_settings', 'CURRENT_WORKDIR', '');
         if ($repo_path) {
             $this->moveGithubWorkflows($repo_path);
         }
+        $this->setGithubActionsSecrets($ci_env);
     }
 
     /**
