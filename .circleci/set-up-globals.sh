@@ -19,6 +19,7 @@ set -ex
 
 # Update terminus temporarily.
 cd /opt/terminus
+git fetch
 git checkout 3.x
 composer install
 
