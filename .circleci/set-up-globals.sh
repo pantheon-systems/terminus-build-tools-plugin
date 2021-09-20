@@ -26,7 +26,7 @@ rm /usr/local/bin/terminus
 ln -s /opt/terminus/bin/t3 /usr/local/bin/terminus
 terminus self:info
 
-terminus self:plugin:install $CIRCLE_WORKING_DIRECTORY
+terminus self:plugin:install /root/terminus_build_tools_plugin
 
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
