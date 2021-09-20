@@ -17,11 +17,12 @@ source $BASH_ENV
 
 set -ex
 
-cd ~/terminus_build_tools_plugin
-mkdir -p $HOME/.terminus/plugins
-ln -s $(pwd) $HOME/.terminus/plugins
-terminus list -n build
-terminus --version
+# Update terminus temporarily.
+cd /opt/terminus
+git checkout 3.x
+composer install
+
+terminus self:plugin:install $CIRCLE_WORKING_DIRECTORY
 
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
