@@ -22,6 +22,9 @@ cd /opt/terminus
 git fetch
 git checkout 3.x
 composer install
+rm /usr/local/bin/terminus
+ln -s /opt/terminus/bin/t3 /usr/local/bin/terminus
+terminus self:info
 
 terminus self:plugin:install $CIRCLE_WORKING_DIRECTORY
 
