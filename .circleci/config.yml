@@ -60,6 +60,9 @@ jobs:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
+                name: Use composer 1
+                command: composer self-update --1
+            - run:
                 name: Test D7 with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
             - run:
