@@ -7,6 +7,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
+use GuzzleHttp\Exception\ClientException;
 
 /**
  * WebAPI is an abstract class for managing web APIs for different services.
@@ -35,12 +36,19 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
 
     public function request($uri, $data = [], $method = '')
     {
-        $res = $this->sendRequest($uri, $data, $method);
-
-        $resultData = json_decode($res->getBody(), true);
-        $httpCode = $res->getStatusCode();
-
-        return $this->processResponse($resultData, $httpCode);
+        try {
+            $res = $this->sendRequest($uri, $data, $method);
+            $resultData = json_decode($res->getBody(), true);
+            $httpCode = $res->getStatusCode();
+            return $this->processResponse($resultData, $httpCode);
+        } catch(ClientException $e) {
+            $res = $e->getResponse();
+            $resultData = json_decode($res->getBody(), true);
+            $httpCode = $res->getStatusCode();
+            $this->logger->error($e->getMessage());
+            // Raise right exception from this function.
+            $this->processResponse($resultData, $httpCode);
+        }
     }
 
     public function pagedRequest($uri, $callback = null, $queryParams = [])
