@@ -53,6 +53,8 @@ jobs:
 
     test_drupal_7_github:
         <<: *defaults
+        docker:
+            - image: quay.io/pantheon-public/php-ci:4.x
         resource_class: large
         steps:
             - checkout
