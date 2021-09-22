@@ -20,7 +20,7 @@ set -ex
 # Update terminus temporarily.
 cd /opt/terminus
 git fetch
-git checkout fix-org-list-command
+git checkout 3.x
 composer install
 rm /usr/local/bin/terminus
 ln -s /opt/terminus/bin/t3 /usr/local/bin/terminus
