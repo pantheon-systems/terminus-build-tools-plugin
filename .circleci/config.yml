@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:4.x
+    - image: pantheonpublic/php-ci:v7.4-hub
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -51,35 +51,13 @@ jobs:
                 name: Run unit tests
                 command: composer run unit-test
 
-    test_drupal_7_github:
-        <<: *defaults
-        resource_class: large
-        steps:
-            - checkout
-            - run:
-                name: Configure globals
-                command: ./.circleci/set-up-globals.sh
-            - run:
-                name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
-            - run:
-                name: Watch CircleCI tests
-                command: ./.circleci/watch-circle.sh
-            - run:
-                name: Clean up D7 GitHub fixtures after pass
-                command: ./.circleci/cleanup-fixtures.sh ok
-            - run:
-                name: Clean up D7 GitHub fixtures after failure
-                when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh fail
-
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
     # We test creating a PR and merging it to master here, but omit those tests
     # elsewhere in the interest of saving testing time.
     test_drupal_8_github:
         <<: *defaults
         docker:
-          - image: quay.io/pantheon-public/php-ci:4.x
+          - image: pantheonpublic/php-ci:v7.4-hub
         resource_class: large
         steps:
             - checkout
@@ -118,7 +96,7 @@ jobs:
     test_drupal_8_gitlab:
         <<: *defaults
         docker:
-          - image: quay.io/pantheon-public/php-ci:4.x
+          - image: pantheonpublic/php-ci:v7.4-hub
         resource_class: large
         steps:
             - checkout
@@ -261,9 +239,6 @@ workflows:
             - test_drupal_8_github:
                 requires:
                    - unit
-            - test_drupal_7_github:
-                requires:
-                   - unit
             - test_wordpress_github:
                 requires:
                    - unit
@@ -276,7 +251,6 @@ workflows:
             - test_drupal_8_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
                    - test_drupal_8_github
                    - test_drupal_8_gitlab
                    - test_wordpress_github
@@ -284,7 +258,6 @@ workflows:
             - test_wordpress_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
                    - test_drupal_8_github
                    - test_drupal_8_gitlab
                    - test_wordpress_github

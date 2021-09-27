@@ -87,11 +87,14 @@ Note: It is important to specify the name of your agency organization via the `-
 
 The `build:project:create` command supports services in the following combination: 
 
-| Git Host  | CI Service |
-| --------- | ---------- |
-| GitHub    | CircleCI   |
-| GitLab    | GitLabCI   |
-| BitBucket | CircleCI   |
+| Git Host  | CI Service       |
+| --------- | ----------       |
+| GitHub    | CircleCI         |
+| GitHub    | Github Actions   |
+| GitLab    | GitLabCI         |
+| BitBucket | CircleCI         |
+
+Note: if using Github Actions, token should have the "workflow" scope.
 
 ### Starting a new GitLab Project
 
@@ -103,6 +106,12 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 
 ```
 $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
+```
+
+### Starting a new Github/Github Actions Project
+
+```
+$ terminus build:project:create --ci=githubactions --team='My Agency Name' wp my-site
 ```
 
 #### Limitations

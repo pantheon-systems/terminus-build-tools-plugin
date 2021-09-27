@@ -24,6 +24,7 @@
         "unit-test": "./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests/*"
     },
     "require": {
-        "consolidation/version-tool": "^0.1.9"
+        "consolidation/version-tool": "^0.1.9",
+        "paragonie/sodium_compat": "^1.17"
     }
 }
