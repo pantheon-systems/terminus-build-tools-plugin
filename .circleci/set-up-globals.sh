@@ -18,7 +18,7 @@ source $BASH_ENV
 set -ex
 
 cd ~/terminus_build_tools_plugin
-composer install
+composer install --no-dev
 mkdir -p $HOME/.terminus/plugins
 ln -s $(pwd) $HOME/.terminus/plugins
 terminus list -n build
