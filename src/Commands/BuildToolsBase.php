@@ -17,7 +17,7 @@ use Pantheon\Terminus\Site\SiteAwareTrait;
 use Pantheon\TerminusBuildTools\Utility\UrlParsing;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
+use Robo\Common\ProcessUtils;
 use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
@@ -321,6 +321,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // pantheon-systems is assumed.
         //
         $aliases = [
+            'git@github.com:pantheon-upstreams/drupal-project.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
             'example-wordpress-composer' => ['wp', 'wordpress'],
@@ -423,6 +424,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
+
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-project.git' && empty($stability_flag)) {
+            // This is not published in packagist so it needs dev stability.
+            $stability_flag = '--stability dev';
+        }
 
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
@@ -1027,6 +1033,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        // Refresh environment data.
+        $env->fetch();
         if ($mode === $env->get('connection_mode')) {
             return;
         }
@@ -1052,10 +1060,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null, $maxNotFoundAttempts = null)
     {
         if (empty($expectedWorkflowDescription)) {
-            $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+            $expectedWorkflowDescription = "Sync code on $env_name";
         }
 
         if (null === $maxWaitInSeconds) {
@@ -1064,41 +1072,56 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         $startWaiting = time();
-        while(true) {
-            $workflow = $this->getLatestWorkflow($site);
-            $workflowCreationTime = $workflow->get('created_at');
-            $workflowDescription = $workflow->get('description');
+        $firstWorkflowDescription = null;
+        $notFoundAttempts = 0;
+        $workflows = $site->getWorkflows();
 
-            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
-                if ($workflow->isSuccessful()) {
-                    $this->log()->notice("Workflow succeeded");
-                    return;
+        while(true) {
+            $site = $this->getsite($site->id);
+            // Refresh env on each interation.
+            $index = 0;
+            $workflows->reset();
+            $workflow_items = $workflows->fetch(['paged' => false,])->all();
+            $found = false;
+            foreach ($workflow_items as $workflow) {
+                $workflowCreationTime = $workflow->get('created_at');
+
+                $workflowDescription = str_replace('"', '', $workflow->get('description'));
+                if ($index === 0) {
+                    $firstWorkflowDescription = $workflowDescription;
+                }
+                $index++;
+
+                if ($workflowCreationTime < $startTime) {
+                    // We already passed the start time.
+                    break;
+                }
+
+                if (($expectedWorkflowDescription === $workflowDescription)) {
+                    $workflow->fetch();
+                    $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    $found = true;
+                    if ($workflow->isSuccessful()) {
+                        $this->log()->notice("Workflow succeeded");
+                        return;
+                    }
                 }
             }
-            else {
-                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+            if (!$found) {
+                $notFoundAttempts++;
+                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+                if ($maxNotFoundAttempts && $notFoundAttempts === $maxNotFoundAttempts) {
+                    $this->log()->warning("Attempted '{max}' times, giving up waiting for workflow to be found", ['max' => $maxNotFoundAttempts]);
+                    break;
+                }
             }
             // Wait a bit, then spin some more
             sleep(5);
-
             if (time() - $startWaiting >= $maxWaitInSeconds) {
                 $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
                 break;
             }
         }
-    }
-
-    /**
-     * Fetch the info about the currently-executing (or most recently completed)
-     * workflow operation.
-     */
-    protected function getLatestWorkflow($site)
-    {
-        $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
-        $workflow = array_shift($workflows);
-        $workflow->fetchWithLogs();
-        return $workflow;
     }
 
     /**
