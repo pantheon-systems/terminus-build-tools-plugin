@@ -77,7 +77,7 @@ This command will create:
 - A GitHub repository
 - A CircleCI test configuration
 
-It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
+It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](#available-services) for details.
 
 Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace", then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
