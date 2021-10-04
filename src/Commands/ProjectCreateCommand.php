@@ -401,7 +401,13 @@ class ProjectCreateCommand extends BuildToolsBase
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
-                    $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team, 'region' => $region]);
+                    try {
+                        $site = $this->siteCreate($site_name, $label, $upstream, ['org' => $team, 'region' => $region]);
+                    } catch (\Exception $e) {
+                        // Catch exception only to print error and then throw it again.
+                        $this->log()->error($e->getMessage());
+                        throw $e;
+                    }
 
                     $siteInfo = $site->serialize();
                     $site_uuid = $siteInfo['id'];

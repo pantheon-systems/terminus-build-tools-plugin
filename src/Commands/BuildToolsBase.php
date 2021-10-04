@@ -17,7 +17,7 @@ use Pantheon\Terminus\Site\SiteAwareTrait;
 use Pantheon\TerminusBuildTools\Utility\UrlParsing;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
+use Robo\Common\ProcessUtils;
 use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
@@ -1038,6 +1038,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        // Refresh environment data.
+        $env->fetch();
         if ($mode === $env->get('connection_mode')) {
             return;
         }
@@ -1077,13 +1079,16 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $startWaiting = time();
         $firstWorkflowDescription = null;
         $notFoundAttempts = 0;
+        $workflows = $site->getWorkflows();
 
         while(true) {
+            $site = $this->getsite($site->id);
             // Refresh env on each interation.
             $index = 0;
-            $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
+            $workflows->reset();
+            $workflow_items = $workflows->fetch(['paged' => false,])->all();
             $found = false;
-            foreach ($workflows as $workflow) {
+            foreach ($workflow_items as $workflow) {
                 $workflowCreationTime = $workflow->get('created_at');
 
                 $workflowDescription = str_replace('"', '', $workflow->get('description'));
