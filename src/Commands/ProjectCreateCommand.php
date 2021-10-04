@@ -333,10 +333,11 @@ class ProjectCreateCommand extends BuildToolsBase
 
         $builder = $this->collectionBuilder();
 
+        $version_info = new VersionTool();
+        $info = $version_info->info($siteDir);
+        $app = $info->application();
+
         if (!file_exists($siteDir . '/.ci')) {
-            $version_info = new VersionTool();
-            $info = $version_info->info($siteDir);
-            $app = $info->application();
             $cms_version = 'd';
             if ($app !== 'Drupal') {
                 $cms_version = 'wp';
@@ -348,9 +349,18 @@ class ProjectCreateCommand extends BuildToolsBase
             $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version, $ci_template);
 
             // If folder does not exists, assume we need to install composer deps.
-            exec("composer --working-dir=$siteDir require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
-            exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension drupal/drupal-extension drupal/drupal-driver genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
-            exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
+            // Require basic testing general packages.
+            exec("composer --working-dir=$siteDir require --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            // Require behat related general packages.
+            exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
+
+            // Install packages depending on the application.
+            if ($app === 'Drupal') {
+                exec("composer --working-dir=$siteDir require --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
+                exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
+            } elseif ($app === 'WordPress') {
+                exec("composer --working-dir=$siteDir require --dev paulgibbs/behat-wordpress-extension");
+            }
         }
         $prePushTime = 0;
 
@@ -439,6 +449,10 @@ class ProjectCreateCommand extends BuildToolsBase
                     if (file_exists("$siteDir/web/themes/custom/.gitkeep")) {
                         $this->passthru("git -C $siteDir add -f web/themes/custom/.gitkeep");
                     }
+                    // This file may be in the repo but ignored (e.g. https://github.com/pantheon-upstreams/wordpress-project).
+                    if (file_exists("$siteDir/pantheon.upstream.yml")) {
+                        $this->passthru("git -C $siteDir add -f pantheon.upstream.yml");
+                    }
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
@@ -510,7 +524,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime) {
+                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime, $app) {
                     if (!$prePushTime) {
                         $prePushTime = time() - 1800;
                     }
@@ -529,7 +543,7 @@ class ProjectCreateCommand extends BuildToolsBase
                         'site-name' => $siteAttributes->testSiteName(),
                         'site-url' => "https://dev-{$site_name}.pantheonsite.io"
                     ];
-                    $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options);
+                    $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options, $app);
 
                     // Before any tests have been configured, export the
                     // configuration set up by the installer.
