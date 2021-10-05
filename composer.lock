@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "consolidation/version-tool",
-            "version": "0.1.9",
+            "version": "0.1.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/consolidation/version-tool.git",
-                "reference": "46939a0cfca5d1e63d1e48f3fbe808c73dde04fd"
+                "reference": "8a097b8fb5192c032b1d61dfadc9c44789af53d4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/consolidation/version-tool/zipball/46939a0cfca5d1e63d1e48f3fbe808c73dde04fd",
-                "reference": "46939a0cfca5d1e63d1e48f3fbe808c73dde04fd",
+                "url": "https://api.github.com/repos/consolidation/version-tool/zipball/8a097b8fb5192c032b1d61dfadc9c44789af53d4",
+                "reference": "8a097b8fb5192c032b1d61dfadc9c44789af53d4",
                 "shasum": ""
             },
             "require": {
@@ -35,7 +35,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.x-dev"
+                    "dev-main": "1.x-dev"
                 }
             },
             "autoload": {
@@ -55,9 +55,9 @@
             ],
             "description": "Template project for PHP libraries.",
             "support": {
-                "source": "https://github.com/consolidation/version-tool/tree/0.1.9"
+                "source": "https://github.com/consolidation/version-tool/tree/0.1.10"
             },
-            "time": "2020-05-23T01:04:16+00:00"
+            "time": "2021-10-01T19:12:14+00:00"
         },
         {
             "name": "paragonie/random_compat",
