@@ -468,8 +468,9 @@ class ProjectCreateCommand extends BuildToolsBase
                                 '# Put ignore patterns for css build artifacts and similar items below.',
                                 '# Files below this line are still ignored on Pantheon.',
                                 '# Files above this line are only ignored in the source repository.',
+                                '',
                             ];
-                            $gitignore_contents .= "\r\n" . implode("\r\n", $lines_to_add);
+                            $gitignore_contents = implode("\r\n", $lines_to_add) . $gitignore_contents;
                             file_put_contents("$siteDir/.gitignore", $gitignore_contents);
                             passthru("git -C {$siteDir} add .gitignore");
                             passthru("git -C {$siteDir} commit -m 'Update .gitignore to include cut line.'");
