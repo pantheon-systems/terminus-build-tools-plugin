@@ -465,8 +465,9 @@ class ProjectCreateCommand extends BuildToolsBase
                             $lines_to_add = [
                                 '# :::::::::::::::::::::: cut ::::::::::::::::::::::',
                                 '',
-                                '# Put ignore patterns for css build artifacts & c. below',
-                                '# Files below this line are ignored on the source repo and committed on Pantheon',
+                                '# Put ignore patterns for css build artifacts and similar items below.',
+                                '# Files below this line are still ignored on Pantheon.',
+                                '# Files above this line are only ignored in the source repository.',
                             ];
                             $gitignore_contents .= "\r\n" . implode("\r\n", $lines_to_add);
                             file_put_contents("$siteDir/.gitignore", $gitignore_contents);
