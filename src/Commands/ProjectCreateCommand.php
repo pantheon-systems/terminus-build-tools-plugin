@@ -262,7 +262,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'visibility' => 'public',
             'region' => '',
             'template-repository' => '',
-            'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-integrations.git',
+            'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-templates.git',
             'clu-cron-pattern' => '',
         ])
     {
