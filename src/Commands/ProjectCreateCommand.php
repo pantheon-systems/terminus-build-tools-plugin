@@ -456,6 +456,32 @@ class ProjectCreateCommand extends BuildToolsBase
                     $headCommit = $this->initialCommit($siteDir, $source);
                 })
 
+            ->progressMessage('Fix .gitignore file if needed')
+            ->addCode(
+                function () use ($siteDir) {
+                    if (file_exists("$siteDir/.gitignore")) {
+                        $gitignore_contents = file_get_contents("$siteDir/.gitignore");
+                        if (preg_match('/#\s?:+\s?cut\s?:+/', $gitignore_contents) === 0) {
+                            $lines_to_add = [
+                                '# :::::::::::::::::::::: cut ::::::::::::::::::::::',
+                                '',
+                                '# Put ignore patterns for build artifacts above the cut line',
+                                '# so they are ignored in the source repo and committed',
+                                '# to Pantheon.',
+                                '',
+                            ];
+                            $gitignore_contents = implode("\r\n", $lines_to_add) . $gitignore_contents;
+                            file_put_contents("$siteDir/.gitignore", $gitignore_contents);
+                            passthru("git -C {$siteDir} add .gitignore");
+                            passthru("git -C {$siteDir} commit -m 'Update .gitignore to include cut line.'");
+
+                        } else {
+                            $this->log()->notice('.gitignore already contains the cut line. Nothing to do.');
+                        }
+                    }
+                }
+            )
+
             ->progressMessage('Set up CI services')
 
             // Set up CI to test our project.

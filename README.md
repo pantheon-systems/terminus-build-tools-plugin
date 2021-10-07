@@ -360,6 +360,10 @@ The `build:workflow:wait` command waits for a workflow in Pantheon to complete b
  | --start          | The time to ignore workflow operations before |
  | --max            | The maximum amount of time to wait for a workflow to complete |
 
+### build:gitignore:cut
+
+The `build:gitignore:cut` command cuts your .gitignore file in the cut line. This is useful before pushing to Pantheon from a source repo.
+
 
 ## Customization
 
