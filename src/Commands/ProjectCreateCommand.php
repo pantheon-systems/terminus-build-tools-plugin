@@ -465,7 +465,7 @@ class ProjectCreateCommand extends BuildToolsBase
                             $lines_to_add = [
                                 '# :::::::::::::::::::::: cut ::::::::::::::::::::::',
                                 '',
-                                '# Put ignore patterns for artifacts above the cut line',
+                                '# Put ignore patterns for build artifacts above the cut line',
                                 '# so they are ignored in the source repo and committed',
                                 '# to Pantheon.',
                                 '',
