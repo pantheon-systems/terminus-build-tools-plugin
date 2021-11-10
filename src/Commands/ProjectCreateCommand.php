@@ -359,7 +359,7 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
                 exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
             } elseif ($app === 'WordPress') {
-                exec("composer --working-dir=$siteDir require --dev paulgibbs/behat-wordpress-extension");
+                exec("composer --working-dir=$siteDir require --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
         }
         $prePushTime = 0;
