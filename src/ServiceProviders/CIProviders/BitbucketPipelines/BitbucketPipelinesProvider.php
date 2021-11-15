@@ -10,6 +10,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\Task\Ssh\KeyPairReciever;
 use Psr\Log\LoggerAwareInterface;
 use antheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
+use Robo\Config\Config;
 
 /**
  * Manages the configuration of a project to be tested on BitbucketPipelines.
