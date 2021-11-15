@@ -425,7 +425,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
 
-        if ($source === 'git@github.com:pantheon-upstreams/drupal-project.git' && empty($stability_flag)) {
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-recommended.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
         }
