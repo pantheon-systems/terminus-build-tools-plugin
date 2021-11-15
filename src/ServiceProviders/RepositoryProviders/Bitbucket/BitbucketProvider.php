@@ -19,14 +19,40 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
     use BitbucketAPITrait;
 
     protected $serviceName = 'bitbucket';
-    protected $baseGitUrl = 'git@bitbucket.org';
-    const BITBUCKET_URL = 'https://bitbucket.org';
+    protected $baseGitUrl = '';
+    protected $BITBUCKET_URL = '';
 
     private $bitbucketClient;
 
-    public function infer($url)
+    public function __construct(Config $config) {
+        parent::__construct($config);
+        $this->setBitbucketUrl(GitLabAPI::determineGitLabUrl($config));
+        $this->baseGitUrl = 'git@' . $this->getBitbucketUrl();
+    }
+
+    public function infer($url) {
+        return strpos($url, $this->getBitbucketUrl()) !== FALSE;
+    }
+
+    /**
+     * @return string
+     */
+    public function getBitbucketUrl() {
+        return $this->BITBUCKET_URL;
+    }
+
+    /**
+     * @param string $BITBUCKET_URL
+     */
+    public function setBitbucketUrl($BITBUCKET_URL) {
+        $this->BITBUCKET_URL = $BITBUCKET_URL;
+    }
+
+    public function generateBuildProvidersData($git_service_name, $ci_service_name)
     {
-        return strpos($url, 'bitbucket.org') !== false;
+        $metadata = parent::generateBuildProvidersData($git_service_name, $ci_service_name);
+        $metadata['api-host'] = $this->getBitbucketUrl();
+        return $metadata;
     }
 
     /**
@@ -72,7 +98,8 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
             $this->execGit($dir, 'push --progress origin master');
         } else {
             $bitbucket_token = $this->token();
-            $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
+            $bitbucket_url = $this->getBitbucketUrl();
+            $remote_url = "https://$bitbucket_token@$bitbucket_url/${target_project}.git";
             $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
         }
     }
@@ -91,7 +118,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
      */
     public function projectURL($target_project)
     {
-        return self::BITBUCKET_URL . '/' . $target_project;
+        return 'https://' . $this->getBitbucketUrl() . '/' . $target_project;
     }
 
     /**
