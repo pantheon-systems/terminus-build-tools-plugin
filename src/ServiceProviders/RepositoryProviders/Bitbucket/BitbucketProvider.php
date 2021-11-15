@@ -101,6 +101,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
         } else {
             $bitbucket_token = $this->token();
             $bitbucket_url = $this->getBitbucketUrl();
+            // @todo: Is this url right for hosted bitbucket?
             $remote_url = "https://$bitbucket_token@$bitbucket_url/${target_project}.git";
             $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
         }
@@ -120,6 +121,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
      */
     public function projectURL($target_project)
     {
+        // @todo: Is this url right for hosted bitbucket?
         return 'https://' . $this->getBitbucketUrl() . '/' . $target_project;
     }
 

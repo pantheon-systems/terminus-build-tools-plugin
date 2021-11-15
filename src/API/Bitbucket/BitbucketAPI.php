@@ -62,7 +62,9 @@ class BitbucketAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
+                // @todo: Is this URL right for hosted bitbucket?
                 'base_uri' => 'https://api.' . $this->getBitbucketUrl() . '/2.0/',
+                // @todo: Is this auth mechanism right for hosted bitbucket?
                 'auth' => [ $this->serviceTokenStorage->token(self::BITBUCKET_USER), $this->serviceTokenStorage->token(self::BITBUCKET_PASS) ],
                 'headers' => $headers,
             ]

@@ -56,6 +56,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
     {
         $repositoryAttributes = $ci_env->getState('repository');
         // TODO: Fix this url. Point to the Bitbucket pipelines UI
+        // @todo: Is this url right for hosted bitbucket?
         return 'https://' . $this->getBitbucketUrl() . "/{$repositoryAttributes->projectId()}";
     }
 
