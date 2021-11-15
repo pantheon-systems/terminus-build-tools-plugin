@@ -37,7 +37,7 @@ trait BitbucketAPITrait
     {
         $api = new BitbucketAPI($environment);
         $api->setLogger($this->logger);
-        $api->setBitbucketUrl($this->GITLAB_URL);
+        $api->setBitbucketUrl($this->BITBUCKET_URL);
 
 
         return $api;
