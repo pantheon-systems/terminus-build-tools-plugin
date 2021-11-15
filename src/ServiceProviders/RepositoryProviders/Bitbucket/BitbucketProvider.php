@@ -11,7 +11,7 @@ use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider
 use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPITrait;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Robo\Config\Config;
-use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketApi;
+use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
 
 /**
  * Encapsulates access to Bitbucket through git and the Bitbucket API.
@@ -28,7 +28,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
 
     public function __construct(Config $config) {
         parent::__construct($config);
-        $this->setBitbucketUrl(BitbucketApi::determineBitbucketUrl($config));
+        $this->setBitbucketUrl(BitbucketAPI::determineBitbucketUrl($config));
         $this->baseGitUrl = 'git@' . $this->getBitbucketUrl();
     }
 
