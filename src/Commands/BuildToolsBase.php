@@ -368,6 +368,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'core/misc/drupal.js' => 'empty', // Drupal 8
           'misc/drupal.js' => 'empty-7', // Drupal 7
           'wp-config.php' => 'empty-wordpress', // WordPress
+          'wp-config-sample.php' => 'empty-wordpress', // Also WordPress
+          'wp-config-pantheon.php' => 'empty-wordpress', // Also also WordPress
         ];
 
         foreach ($upstream_map as $file => $upstream) {
