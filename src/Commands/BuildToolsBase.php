@@ -321,7 +321,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // pantheon-systems is assumed.
         //
         $aliases = [
-            'git@github.com:pantheon-upstreams/drupal-project.git' => ['d9', 'drops-9'],
+            'git@github.com:pantheon-upstreams/drupal-recommended.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
             'example-wordpress-composer' => ['wp', 'wordpress'],
@@ -427,7 +427,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
 
-        if ($source === 'git@github.com:pantheon-upstreams/drupal-project.git' && empty($stability_flag)) {
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-recommended.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
         }
