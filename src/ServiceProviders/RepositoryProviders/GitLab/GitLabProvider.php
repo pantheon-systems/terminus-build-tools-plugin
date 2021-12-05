@@ -157,14 +157,19 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     }
 
     public function getProjectID($target_project) {
-        $project = $this->api()
-            ->request("api/v4/projects/" . urlencode($target_project));
+        $projects = $this->api()->request("api/v4/projects");
 
-        if (empty($project)) {
-            throw new TerminusException('Error: No GitLab project found for {target_project}', ['target_project' => $target_project]);
+        if (empty($projects)) {
+            throw new TerminusException('Error: No GitLab projects found.');
         }
 
-        return $project['id'];
+        // Loop through all the projects and look for the project just created
+        // by matching the target_project value to path_with_namespace key.
+        foreach ($projects as $project) {
+            if ($target_project == $project['path_with_namespace']) {
+                return $project['id'];
+            }
+        }
     }
 
     /**

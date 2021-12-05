@@ -381,13 +381,14 @@ class ProjectCreateCommand extends BuildToolsBase
                 function ($state) use ($ci_env, $target, $target_org, $siteDir, $visibility) {
 
                     $target_project = $this->git_provider->createRepository($siteDir, $target, $target_org, $visibility);
-
+                    $projectId = $this->git_provider->getProjectID($target_project);
                     $repositoryAttributes = $ci_env->getState('repository');
                     // $github_token = $repositoryAttributes->token();
 
                     // $target_project = $this->createGitHub($target, $siteDir, $target_org, $github_token);
                     $this->log()->notice('The target is {target}', ['target' => $target_project]);
-                    $repositoryAttributes->setProjectId($target_project);
+                    $this->log()->notice('The id is {id}', ['id' => $projectId]);
+                    $repositoryAttributes->setProjectId($projectId);
                 })
 
             // TODO: rollback GitHub repository create
