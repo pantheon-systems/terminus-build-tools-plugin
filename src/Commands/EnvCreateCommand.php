@@ -26,7 +26,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option label What to name the environment in commit comments
      * @option clone-content Run terminus env:clone-content if the environment is re-used
      * @option db-only Only clone the database when runing env:clone-content
-     * @option notify Do not use this deprecated option. Previously used for a build notify command, currently ignored.
+     * @option notify To suppress comment on commit or PR, use "--notify=0". Defaults to true.
      * @option message Commit message to include when committing assets to Pantheon
      * @option pr-id Post notification comment to a specific PR instead of the commit hash.
      * @option no-git-force set this flag to omit the --force flag from 'git add' and 'git push'
@@ -37,7 +37,7 @@ class EnvCreateCommand extends BuildToolsBase
         $options = [
             'label' => '',
             'clone-content' => false,
-            'notify' => '',
+            'notify' => true,
             'db-only' => false,
             'message' => '',
             'pr-id' =>  '',
@@ -137,7 +137,7 @@ class EnvCreateCommand extends BuildToolsBase
         // TODO: Push to repo provider
 
         // Run notification command
-        if ($doNotify == true) {
+        if ($doNotify == true && $options['notify']) {
             $site_name = $site->getName();
             $project = $this->projectFromRemoteUrl($metadata['url']);
             $dashboard_url = "https://dashboard.pantheon.io/sites/{$site_id}#{$multidev}";
