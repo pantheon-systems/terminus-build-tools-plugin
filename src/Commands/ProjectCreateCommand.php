@@ -350,17 +350,18 @@ class ProjectCreateCommand extends BuildToolsBase
 
             // If folder does not exists, assume we need to install composer deps.
             // Require basic testing general packages.
-            exec("composer --working-dir=$siteDir require --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
             // Require behat related general packages.
-            exec("composer --working-dir=$siteDir require --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream symfony/css-selector");
+            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
 
             // Install packages depending on the application.
             if ($app === 'Drupal') {
-                exec("composer --working-dir=$siteDir require --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
-                exec("composer --working-dir=$siteDir require drush-ops/behat-drush-endpoint");
+                exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
+                exec("composer --working-dir=$siteDir require --no-update drush-ops/behat-drush-endpoint");
             } elseif ($app === 'WordPress') {
-                exec("composer --working-dir=$siteDir require --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
+                exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
+            exec("composer --working-dir=$siteDir update");
         }
         $prePushTime = 0;
 
