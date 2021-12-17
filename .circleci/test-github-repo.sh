@@ -26,7 +26,7 @@ git clone "$CLONE_URL" "$TARGET_REPO_WORKING_COPY"
 
 # Replace with right docker image.
 cd $TARGET_REPO_WORKING_COPY
-sed -i 's/quay.io\/pantheon\-public\/build\-tools\-ci:6.x/pantheonpublic\/build\-tools\-ci:7.x\-php7.4\-t3/g' ./.circleci/config.yml
+sed -i 's/quay.io\/pantheon\-public\/build\-tools\-ci:6.x/pantheonpublic\/build\-tools\-ci:8.x\-php7.4\-t3/g' ./.circleci/config.yml
 git add .circleci/config.yml
 git commit -m "Update Docker image. [ci skip]"
 git push origin master
