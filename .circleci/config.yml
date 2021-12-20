@@ -216,7 +216,7 @@ jobs:
                 name: Disable strict SSH host checking to prevent SSH connect issues
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
-                name: Test Wordpressd with BitBucket
+                name: Test WordPress with BitBucket
                 command: echo "BitBucket test skipped"
                 #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
@@ -224,10 +224,10 @@ jobs:
                 command: echo "Skipping the watch-cicle step too"
                 #command: ./.circleci/watch-circle.sh
             - run:
-                name: Clean up Wordpress Bitbucket fixtures after pass
+                name: Clean up WordPress Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up Wordpress Bitbucket fixtures after failure
+                name: Clean up WordPress Bitbucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
