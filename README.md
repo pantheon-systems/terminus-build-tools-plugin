@@ -32,7 +32,6 @@ See [Commands](#commands) and [Build Tools Command Examples](#build-tools-comman
 
 - If you are using Terminus 3, you must use the [Build Tools `3.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/3.x).
 - If you are using Terminus 2, you must use the [Build Tools `2.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x).
-- If you are using Terminus 1, you must use the [Build Tools `1.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x). Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline) and version 2 or higher is recommended.
 
 PHP `7.2` or greater is recommended.
 
@@ -49,13 +48,6 @@ terminus self:plugin:install terminus-build-tools-plugin
 ```
 mkdir -p ~/.terminus/plugins
 composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2
-```
-
-### Installing Build Tools 1.x:
-
-```
-mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^1
 ```
 
 ### Note about dev dependencies
