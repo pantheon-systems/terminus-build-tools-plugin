@@ -461,10 +461,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         $this->passthru("composer create-project --working-dir=$tmpsitedir $repository $source_project $target -n $no_install_flag $stability_flag");
-        if ($additional_commands) {
-            foreach ($additional_commands as $command) {
-                $this->passthru("$command");
-            }
+        foreach ($additional_commands as $command) {
+            $this->passthru("$command");
         }
         $local_site_path = "$tmpsitedir/$target";
         return $local_site_path;
