@@ -18,12 +18,11 @@ source $BASH_ENV
 set -ex
 
 # Update terminus temporarily.
-cd /opt/terminus
-git fetch
-git checkout 3.x
-composer install
 rm /usr/local/bin/terminus
-ln -s /opt/terminus/bin/t3 /usr/local/bin/terminus
+mkdir ~/terminus && cd ~/terminus
+curl -L https://github.com/pantheon-systems/terminus/releases/download/`curl --silent "https://api.github.com/repos/pantheon-systems/terminus/releases/latest" | perl -nle'print $& while m#"tag_name": "\K[^"]*#g'`/terminus.phar --output terminus
+chmod +x terminus
+ln -s ~/terminus/terminus /usr/local/bin/terminus
 terminus self:info
 
 terminus self:plugin:install /root/terminus_build_tools_plugin
