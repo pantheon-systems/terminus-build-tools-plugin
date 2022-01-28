@@ -20,7 +20,8 @@ set -ex
 # Update terminus temporarily.
 rm /usr/local/bin/terminus
 mkdir ~/terminus && cd ~/terminus
-curl -L https://github.com/pantheon-systems/terminus/releases/download/`curl --silent "https://api.github.com/repos/pantheon-systems/terminus/releases/latest" | perl -nle'print $& while m#"tag_name": "\K[^"]*#g'`/terminus.phar --output terminus
+TERMINUS_RELEASE=$(curl --silent "https://api.github.com/repos/pantheon-systems/terminus/releases/latest" | perl -nle'print $& while m#"tag_name": "\K[^"]*#g')
+curl -L https://github.com/pantheon-systems/terminus/releases/download/$TERMINUS_RELEASE/terminus.phar --output terminus
 chmod +x terminus
 ln -s ~/terminus/terminus /usr/local/bin/terminus
 terminus self:info
