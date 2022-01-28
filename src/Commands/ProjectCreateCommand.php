@@ -228,7 +228,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option admin-password The password to use for the CMS admin when installing the test site.
      * @option stability Minimum allowed stability for template project.
      * @option git Specify a git provider. Options are github (default), gitlab, and bitbucket.
-     * @option ci Specify a CI provider. Options are circleci, gitlab-pipelines, bitbucket-pipelines and githubactions. If not provided, CI will be assigned based on git provider choice.
+     * @option ci Specify a CI provider. Options are circleci, gitlab-pipelines, bitbucket-pipelines and githubactions. If not provided, CI will be assigned based on git provider choice (Note that the default CI for Github is CircleCI).
      * @option visibility The desired visibility of the provider repository. Options are public, internal, and private.
      * @option use-ssh Use SSH instead of HTTPS to create the provider repository.
      * @option region Specify a data residency region. See https://pantheon.io/docs/regions#available-regions for the current region options.
