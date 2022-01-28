@@ -69,6 +69,9 @@ TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE=10 terminus -n build:env:delete:pr "
 # Do -not- fail on errors any more
 set +e
 
+echo "Wait 30 seconds to be sure the environment gets deleted"
+sleep 30
+
 # Confirm that our test environment no longer exists.
 echo "Check to see if $TERMINUS_SITE.$TERMINUS_ENV still exists."
 terminus env:info "$TERMINUS_SITE.$TERMINUS_ENV"
