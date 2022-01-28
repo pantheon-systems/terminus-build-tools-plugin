@@ -417,7 +417,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     {
         $source_project = $source;
         $additional_commands = [];
-        $no_install_flag = '';
+        $create_project_options = [];
 
         $this->log()->notice('Creating project and resolving dependencies.');
 
@@ -438,8 +438,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
-            $no_install_flag = '--no-install';
+            $create_project_options[] = '--no-install';
         }
+        $create_project_options[] = $stability_flag;
 
         $repository = '';
 
@@ -460,9 +461,16 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             }
         }
 
-        $this->passthru("composer create-project --working-dir=$tmpsitedir $repository $source_project $target -n $no_install_flag $stability_flag");
+        $create_project_command = sprintf('composer create-project --working-dir=%s %s %s %s -n %s',
+            $tmpsitedir,
+            $repository,
+            $source_project,
+            $target,
+            implode(' ', $create_project_options)
+        );
+        $this->passthru($create_project_command);
         foreach ($additional_commands as $command) {
-            $this->passthru("$command");
+            $this->passthru($command);
         }
         $local_site_path = "$tmpsitedir/$target";
         return $local_site_path;
