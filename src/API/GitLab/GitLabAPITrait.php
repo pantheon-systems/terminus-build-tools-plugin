@@ -68,7 +68,7 @@ trait GitLabAPITrait
   {
     $instructions = "Please generate a GitLab personal access token by visiting the page:\n\n    https://" . $this->getGitLabUrl() . "/profile/personal_access_tokens\n\n For more information, see:\n\n    https://" . $this->getGitLabUrl() . "/help/user/profile/personal_access_tokens.md.\n\n Give it the 'api', 'read_repository', and 'write_repository' (required) scopes.";
 
-    $validation_message = 'GitLab authentication tokens should be 20-character strings containing only the letters a-z and digits (0-9). Please enter your token again.';
+    $validation_message = 'GitLab authentication tokens should be 20 or 26 characters strings containing only the letters a-z and digits (0-9). Please enter your token again.';
 
     $could_not_authorize = 'Your provided authentication token could not be used to authenticate with the GitLab service. Please re-enter your credential.';
 
@@ -77,7 +77,7 @@ trait GitLabAPITrait
     $gitlabTokenRequest = (new CredentialRequest($this->tokenKey()))
         ->setInstructions($instructions)
         ->setPrompt("Enter GitLab personal access token: ")
-        ->setValidateRegEx('#^[0-9a-zA-Z\-_]{20}$#')
+        ->setValidateRegEx('#^[0-9a-zA-Z\-_]{20,26}$#')
         ->setValidationErrorMessage($validation_message)
         ->setValidationCallbackErrorMessage($could_not_authorize)
         ->setValidateFn(
