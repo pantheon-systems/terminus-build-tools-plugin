@@ -416,6 +416,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function createFromSourceProject($source, $target, $stability = '', $template_repository = '')
     {
         $source_project = $source;
+        $additional_commands = [];
+        $create_project_options = [];
 
         $this->log()->notice('Creating project and resolving dependencies.');
 
@@ -427,13 +429,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Pass in --stability to `composer create-project` if user requested it.
         $stability_flag = empty($stability) ? '' : "--stability $stability";
 
+        // Create a working directory
+        $tmpsitedir = $this->tempdir('local-site');
+
         if ($source === 'git@github.com:pantheon-upstreams/drupal-recommended.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+            $create_project_options[] = '--no-install';
         }
-
-        // Create a working directory
-        $tmpsitedir = $this->tempdir('local-site');
+        $create_project_options[] = $stability_flag;
 
         $repository = '';
 
@@ -454,7 +461,17 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             }
         }
 
-        $this->passthru("composer create-project --working-dir=$tmpsitedir $repository $source_project $target -n $stability_flag");
+        $create_project_command = sprintf('composer create-project --working-dir=%s %s %s %s -n %s',
+            $tmpsitedir,
+            $repository,
+            $source_project,
+            $target,
+            implode(' ', $create_project_options)
+        );
+        $this->passthru($create_project_command);
+        foreach ($additional_commands as $command) {
+            $this->passthru($command);
+        }
         $local_site_path = "$tmpsitedir/$target";
         return $local_site_path;
     }
