@@ -238,6 +238,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
      * @option ci-template Git repo that contains the CI scripts that will be copied if there is no ci in the source project.
      * @option clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
+     * @option profile The profile to be used at the time of the installation.
      */
     public function createProject(
         $source,
@@ -264,6 +265,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'template-repository' => '',
             'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-templates.git',
             'clu-cron-pattern' => '',
+            'profile' => ''
         ])
     {
         $this->warnAboutOldPhp();
@@ -278,6 +280,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
         $ci_template = $options['ci-template'];
+        $profile = $options['profile'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -551,7 +554,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime, $app) {
+                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime, $app, $profile) {
                     if (!$prePushTime) {
                         $prePushTime = time() - 1800;
                     }
@@ -568,7 +571,8 @@ class ProjectCreateCommand extends BuildToolsBase
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
-                        'site-url' => "https://dev-{$site_name}.pantheonsite.io"
+                        'site-url' => "https://dev-{$site_name}.pantheonsite.io",
+                        'profile' => $profile
                     ];
                     $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options, $app);
 

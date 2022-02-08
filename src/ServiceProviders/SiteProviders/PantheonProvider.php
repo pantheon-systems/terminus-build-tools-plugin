@@ -108,12 +108,17 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             ->setValidationErrorMessage(self::PASSWORD_ERROR_MESSAGE)
             ->setRequired(true);
 
+        $siteProfile = (new CredentialRequest('SITE_PROFILE'))
+            ->setOptionKey('profile')
+            ->setRequired(false);
+
         return [
             $siteNameRequest,
             $testSiteNameRequest,
             $gitEmailRequest,
             $adminEmailRequest,
             $adminPasswordRequest,
+            $siteProfile
         ];
     }
 
