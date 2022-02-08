@@ -1,5 +1,5 @@
 {
-    "name": "pantheon-systems/terminus-build-tools-plugin",
+    "name": "coderkakarrot/terminus-build-tools-plugin",
     "description": "Build Tools - A Terminus plugin that contain commands to manage build assets on Pantheon.",
     "license": "MIT",
     "type": "terminus-plugin",
