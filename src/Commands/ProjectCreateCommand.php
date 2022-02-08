@@ -238,6 +238,7 @@ class ProjectCreateCommand extends BuildToolsBase
      * @option template-repository Composer repository if package is hosted on a private registry or url to git.
      * @option ci-template Git repo that contains the CI scripts that will be copied if there is no ci in the source project.
      * @option clu-cron-pattern Specify a cron pattern to override the given CI provider's clu task schedule, if applicable. For example, '0 0 * * 1' to run once a week at midnight on monday.
+     * @option profile The profile to be used at the time of the installation.
      */
     public function createProject(
         $source,
@@ -264,6 +265,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'template-repository' => '',
             'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-templates.git',
             'clu-cron-pattern' => '',
+            'profile' => 'standard'
         ])
     {
         $this->warnAboutOldPhp();
