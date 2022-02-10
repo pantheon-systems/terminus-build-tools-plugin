@@ -280,6 +280,7 @@ class ProjectCreateCommand extends BuildToolsBase
         $region = $options['region'];
         $use_ssh = $options['use-ssh'];
         $ci_template = $options['ci-template'];
+        $profile = $options['profile'];
 
         // Provide default values for other optional variables.
         if (empty($label)) {
@@ -553,7 +554,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Note that this also commits the configuration to the repository.
             ->progressMessage('Install CMS on Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime, $app) {
+                function ($state) use ($ci_env, $site_name, $siteDir, &$prePushTime, $app, $profile) {
                     if (!$prePushTime) {
                         $prePushTime = time() - 1800;
                     }
@@ -570,7 +571,8 @@ class ProjectCreateCommand extends BuildToolsBase
                         'account-pass' => $siteAttributes->adminPassword(),
                         'site-mail' => $siteAttributes->adminEmail(),
                         'site-name' => $siteAttributes->testSiteName(),
-                        'site-url' => "https://dev-{$site_name}.pantheonsite.io"
+                        'site-url' => "https://dev-{$site_name}.pantheonsite.io",
+                        'profile' => $profile
                     ];
                     $this->doInstallSite("{$site_name}.dev", $composer_json, $site_install_options, $app);
 
