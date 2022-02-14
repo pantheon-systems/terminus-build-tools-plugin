@@ -637,7 +637,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'account-pass' => '',
             'site-mail' => '',
             'site-name' => '',
-            'profile' => 'standard'
+            'profile' => ''
         ],
         $app = 'Drupal'
         )

@@ -29,7 +29,8 @@ class EnvInstallCommand extends BuildToolsBase
             'account-name' => '',
             'account-pass' => '',
             'site-mail' => '',
-            'site-name' => ''
+            'site-name' => '',
+            'profile' => ''
         ])
     {
         if (empty($siteDir)) {

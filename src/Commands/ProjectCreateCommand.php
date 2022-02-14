@@ -265,7 +265,7 @@ class ProjectCreateCommand extends BuildToolsBase
             'template-repository' => '',
             'ci-template' => 'git@github.com:pantheon-systems/tbt-ci-templates.git',
             'clu-cron-pattern' => '',
-            'profile' => 'standard'
+            'profile' => ''
         ])
     {
         $this->warnAboutOldPhp();
