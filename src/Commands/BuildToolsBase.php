@@ -657,8 +657,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Set the target environment to sftp mode prior to running the command
         $this->connectionSet($env, 'sftp');
 
+        foreach ($options as $key => $val) {
+          if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
+            $metadata[$key] = $this->escapeArgument($val);
+          }
+        }
         foreach ((array)$command_templates as $command_template) {
-            $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $options);
             $command_line = $this->interpolate($command_template, $metadata);
             $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
             $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
