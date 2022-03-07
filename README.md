@@ -3,6 +3,7 @@
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
 [![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x)
 [![Terminus v3.x Compatible](https://img.shields.io/badge/terminus-v3.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/3.x)
+[![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained)
 
 Build Tools is a Terminus Plugin that contains a collection of commands useful for projects making use of an external Git provider and Continuous Integration (CI) along with [Pantheon](https://www.pantheon.io).
 
