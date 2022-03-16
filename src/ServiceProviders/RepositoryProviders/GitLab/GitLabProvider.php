@@ -50,10 +50,7 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
         if ($isGitlab) {
             return TRUE;
         }
-        if (getenv('GITLAB_CI')) {
-            return strpos(getenv('CI_REPOSITORY_URL'), $this->getGitLabUrl()) !== FALSE;
-        }
-        return FALSE;
+        return (bool) getenv('GITLAB_CI') ?? FALSE;
     }
 
     /**
