@@ -21,6 +21,11 @@ class PushbackSetup
         $this->git_provider->commitCode($this->dir, "Initialize build-providers.json file.");
         $this->logger()->notice('Created build-providers.json');
 
+        if (!file_exists($this->dir . '/pantheon.yml')) {
+            $source = dirname(__FILE__) . '/../../../assets/pantheon.yml';
+            copy($source, $this->dir . '/pantheon.yml');
+        }
+
         return Result::success($this);
     }
 }
