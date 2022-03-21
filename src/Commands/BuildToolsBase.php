@@ -636,7 +636,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'account-name' => '',
             'account-pass' => '',
             'site-mail' => '',
-            'site-name' => ''
+            'site-name' => '',
+            'profile' => ''
         ],
         $app = 'Drupal'
         )
@@ -765,7 +766,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 'wp option update permalink_structure "/%postname%/"',
             ];
         }
-        return 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
+        return 'drush site-install {profile} --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
     }
 
     /**
