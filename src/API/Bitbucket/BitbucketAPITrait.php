@@ -99,14 +99,14 @@ trait BitbucketAPITrait
         // we cannot use it to log in, then we re-prompt for both.
         $bitbucketUserRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_USER))
             ->setInstructions('')
-            ->setPrompt("Enter your Bitbucket username: ")
+            ->setPrompt("Enter your Bitbucket username")
             ->setRequired(true);
 
         $bitbucketPassRequest = (new CredentialRequest(BitbucketAPI::BITBUCKET_PASS))
             ->setInstructions('')
-            ->setPrompt("Enter your Bitbucket account password or an app password: ")
+            ->setPrompt("Enter your Bitbucket app password")
             ->setRequired(true)
-            ->setValidationCallbackErrorMessage("Your provided username and password or app password could not be used to authenticate with the BitBucket service. Please re-enter your credentials.")
+            ->setValidationCallbackErrorMessage("Your provided username and app password could not be used to authenticate with the BitBucket service. Please re-enter your credentials.")
             ->setValidateFn(
                 function ($password, $otherCredentials) {
                     $username = $otherCredentials[BitbucketAPI::BITBUCKET_USER];
