@@ -105,7 +105,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             ->setInstructions(self::PASSWORD_INSTRUCTIONS)
             ->setPrompt(self::PASSWORD_PROMPT)
             ->setValidateFn([$this, 'validAdminPassword'])
-            ->setValidationErrorMessage(self::PASSWORD_ERROR_MESSAGE)
+            ->setValidationCallbackErrorMessage(self::PASSWORD_ERROR_MESSAGE)
             ->setRequired(true);
 
         $siteProfile = (new CredentialRequest('SITE_PROFILE'))
