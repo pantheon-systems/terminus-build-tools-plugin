@@ -321,7 +321,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // pantheon-systems is assumed.
         //
         $aliases = [
-            'git@github.com:pantheon-upstreams/drupal-recommended.git' => ['d9', 'drops-9'],
+            'git@github.com:pantheon-upstreams/drupal-composer-managed.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
             'example-wordpress-composer' => ['wp', 'wordpress'],
@@ -432,7 +432,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
-        if ($source === 'git@github.com:pantheon-upstreams/drupal-recommended.git' && empty($stability_flag)) {
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
