@@ -62,7 +62,7 @@ It is recommended that you use one of the provided example projects as a templat
 The default template repositories are each assigned an abbreviation, as shown below:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
-- [Drupal 9](https://github.com/pantheon-upstreams/drupal-recommended): `d9`
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-composer-managed): `d9`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
@@ -515,7 +515,7 @@ Run `terminus list build` for a complete list of available commands. Use `termin
 In addition to the Terminus Build Tools Plugin, Pantheon maintains template repositories for:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer)
-- [Drupal 9](https://github.com/pantheon-upstreams/drupal-project)
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-composer-managed)
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer)
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer)
 
