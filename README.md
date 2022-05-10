@@ -51,13 +51,13 @@ mkdir -p ~/.terminus/plugins
 composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2
 ```
 
-### Note about dev dependencies
+#### Note about dev dependencies
 
 The Terminus Build Tools plugin should be installed **without** dev dependencies. If you install the plugin with a different method, such as cloning this source repository, use `composer install --no-dev` to download the project dependencies.
 
 ## Setup
 
-It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `2` and Build Tools `2.x`.
+It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `3` and Build Tools `3.x`.
 
 The default template repositories are each assigned an abbreviation, as shown below:
 
@@ -153,9 +153,8 @@ Additional options are available to further customize the `build:project:create`
  | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
  | --ci-template | Git repo that contains the CI scripts that will be copied if there is no ci in the source project. |
 
-See `terminus help build:project:create` for more information.
 
-Note that if you want to use a private composer repository, you should provide the credentials like this:
+If you want to use a private composer repository, you should provide the credentials like this:
 
 ```
 export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
@@ -163,9 +162,31 @@ export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
 
 or in ~/.terminus/config.yml file under build-tools.composer-auth.
 
+Then, in the build:project:create command, pass a composer-repository option like this:
+
+```
+terminus build:project:create --template-repository="https://repo.packagist.com/myorg" myorg/myrepo my-project
+```
+
+If you want to use git repository that has not been published to packagist as your template, you should do it like this:
+
+```
+terminus build:project:create --template-repository="git@github.com:myorg/myrepo.git" myorg/myrepo-template my-project
+```
+
+The package name in the composer.json file into the template repo should be "myorg/myrepo-template". If myorg/myrepo is a private repo, you should have access to it in your current terminal.
+
+You can also use the following shorthand:
+
+```
+terminus build:project:create git@github.com:myorg/myrepo.git my-project
+```
+
+and build tools will figure out the right package name for you.
+
 You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md), [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md), [cli authentication](https://getcomposer.org/doc/03-cli.md#composer-auth) and [authentication methods](https://getcomposer.org/doc/articles/authentication-for-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
 
-If you want to use a git repository as template, it should include a composer.json file and you should have access to it from your terminal. For the template name, you could use the git repo url and this command will get the right project name.
+See `terminus help build:project:create` for more information.
 
 ### build:project:repair
 
