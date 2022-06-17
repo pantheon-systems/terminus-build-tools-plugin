@@ -89,7 +89,10 @@ class EnvCreateCommand extends BuildToolsBase
             // will not be applied unless we push our change.
             // To allow pantheon.yml to be processed, we will
             // create the multidev environment, and then push the code.
-            $this->create($site_env_id, $multidev);
+            $this->create($site_env_id, $multidev, [
+              'no-db' => !$options['db-only'],
+              'no-files' => $options['db-only'],
+            ]);
             $doNotify = true;
         }
 
@@ -100,7 +103,10 @@ class EnvCreateCommand extends BuildToolsBase
             // If the environment is created after the branch is pushed,
             // then there is never a race condition -- the new env is
             // created with the correct files from the specified branch.
-            $this->create($site_env_id, $multidev);
+            $this->create($site_env_id, $multidev, [
+              'no-db' => !$options['db-only'],
+              'no-files' => $options['db-only'],
+            ]);
             $doNotify = true;
         }
 

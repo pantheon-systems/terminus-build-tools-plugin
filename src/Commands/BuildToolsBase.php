@@ -1019,12 +1019,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      *
      * @param string $site_env Source site and environment.
      * @param string $multidev Name of environment to create.
+     * @param array $options Create options.
      */
-    public function create($site_env, $multidev)
+    public function create($site_env, $multidev, array $options = [])
     {
         list($site, $env) = $this->getSiteEnv($site_env, 'dev');
         $this->log()->notice("Creating multidev {env} for site {site}", ['site' => $site->getName(), 'env' => $multidev]);
-        $workflow = $site->getEnvironments()->create($multidev, $env);
+        $workflow = $site->getEnvironments()->create($multidev, $env, $options);
         while (!$workflow->checkProgress()) {
             // TODO: Add workflow progress output
         }
