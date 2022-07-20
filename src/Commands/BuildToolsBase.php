@@ -760,7 +760,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (isset($composer_json['extra']['build-env']['install-cms'])) {
             return $composer_json['extra']['build-env']['install-cms'];
         }
-        if ($app === 'Wordpress') {
+        if (strtolower($app) === 'wordpress') {
             return [
                 'wp core install --title={site-name} --url={site-url} --admin_user={account-name} --admin_email={account-mail} --admin_password={account-pass}',
                 'wp option update permalink_structure "/%postname%/"',
