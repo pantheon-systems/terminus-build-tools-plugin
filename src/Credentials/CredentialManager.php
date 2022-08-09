@@ -125,7 +125,7 @@ class CredentialManager implements CredentialProviderInterface
             return;
         }
         $credential = $this->cache->get($key);
-        $credential = trim($credential);
+        $credential = trim($credential ?? '');
         $this->storeTransient($id, $credential);
 
         return $credential;
@@ -136,7 +136,7 @@ class CredentialManager implements CredentialProviderInterface
      */
     public function store($id, $credential)
     {
-        $credential = trim($credential);
+        $credential = trim($credential ?? '');
         $this->storeTransient($id, $credential);
         $key = $this->credentialKey($id);
         if (!empty($key)) {
@@ -207,7 +207,7 @@ class CredentialManager implements CredentialProviderInterface
         while (true) {
             $io->write("\n\n");
             $credential = $io->askHidden($prompt);
-            $credential = trim($credential);
+            $credential = trim($credential ?? '');
 
             // If the credential validates, set it and return. Otherwise
             // we'll ask again.
