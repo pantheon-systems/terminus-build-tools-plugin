@@ -184,11 +184,14 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
         ];
 
         $client = new \GuzzleHttp\Client();
-        $res = $client->request($method, $url, [
+        $request = [
             'headers' => $headers,
             'auth' => [$this->circle_token, ''],
-            'json' => $data,
-        ]);
+        ];
+        if ($method !== 'GET') {
+            $request['json'] = $data;
+        }
+        $res = $client->request($method, $url, $request);
         return $res->getStatusCode();
     }
 
