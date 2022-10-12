@@ -458,6 +458,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $source_project = $items['source'];
             if (!empty($items['template-repository'])) {
                 $repository = ' --repository="' . $items['template-repository'] . '"';
+
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+                $create_project_options[] = '--no-install';
             }
         }
 
