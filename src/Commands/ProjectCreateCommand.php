@@ -159,6 +159,9 @@ class ProjectCreateCommand extends BuildToolsBase
         }
 
         $composer_json = $this->getComposerJson($created_folder);
+        if (!isset($composer_json['scripts']['build-assets'])) {
+            $composer_json['scripts']['build-assets'] = "echo 'Nothing to do.'";
+        }
         if (!isset($composer_json['scripts']['unit-test'])) {
             $composer_json['scripts']['unit-test'] = "echo 'No unit test step defined.'";
 
@@ -370,6 +373,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // If folder does not exists, assume we need to install composer deps.
             // Require basic testing general packages.
             exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            exec("composer --working-dir=$siteDir config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true");
             // Require behat related general packages.
             exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
 
