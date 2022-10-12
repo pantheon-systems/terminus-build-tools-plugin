@@ -375,7 +375,7 @@ class ProjectCreateCommand extends BuildToolsBase
             exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
             exec("composer --working-dir=$siteDir config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true");
             // Require behat related general packages.
-            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
+            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
 
             // Install packages depending on the application.
             if ($app === 'Drupal') {
@@ -386,7 +386,8 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
-            exec("composer --working-dir=$siteDir update");
+            // @todo ignore-platform-reqs should be removed when we decide what to do with behat-wordpress-extension.
+            exec("composer --working-dir=$siteDir update --ignore-platform-reqs");
         }
         $prePushTime = 0;
 
