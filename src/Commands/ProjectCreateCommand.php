@@ -384,10 +384,9 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
-                exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
+                //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
-            // @todo ignore-platform-reqs should be removed when we decide what to do with behat-wordpress-extension.
-            exec("composer --working-dir=$siteDir update --ignore-platform-reqs");
+            exec("composer --working-dir=$siteDir update");
         }
         $prePushTime = 0;
 
