@@ -324,7 +324,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'git@github.com:pantheon-upstreams/drupal-composer-managed.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
-            'example-wordpress-composer' => ['wp', 'wordpress'],
+            'git@github.com:pantheon-upstreams/wordpress-composer-managed.git' => ['wp', 'wordpress'],
         ];
 
         // Convert the defaults into a more straightforward mapping:
@@ -439,7 +439,14 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
             $create_project_options[] = '--no-install';
+        } elseif ($source === 'git@github.com:pantheon-upstreams/wordpress-composer-managed.git' && empty($stability_flag)) {
+            // This is not published in packagist so it needs dev stability.
+            $stability_flag = '--stability dev';
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+            $create_project_options[] = '--no-install';
         }
+
         $create_project_options[] = $stability_flag;
 
         $repository = '';
