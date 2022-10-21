@@ -24,6 +24,7 @@ class PushbackSetup
         if (!file_exists($this->dir . '/pantheon.yml')) {
             $source = dirname(__FILE__) . '/../../../assets/pantheon.yml';
             copy($source, $this->dir . '/pantheon.yml');
+            $this->git_provider->commitCode($this->dir, "Add pantheon.yml with quicksilver-pushback configuration.");
         }
 
         return Result::success($this);
