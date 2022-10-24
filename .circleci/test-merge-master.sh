@@ -87,6 +87,5 @@ STATUS="$?"
 if [ $STATUS -eq 0 ] ; then
     echo "Environment $TERMINUS_SITE.$TERMINUS_ENV should have been deleted, but was not."
     exit 1
-else
-    echo "Environment $TERMINUS_SITE.$TERMINUS_ENV deleted as expected."
 fi
+echo "Environment $TERMINUS_SITE.$TERMINUS_ENV deleted as expected."
