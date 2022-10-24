@@ -39,6 +39,9 @@ while [ $STATUS -ne 0 ] ; do
     fi
 done
 
+# Env is now returned but not ready yet.
+terminus build:workflow:wait "$TERMINUS_SITE.$TERMINUS_ENV" "Create a Multidev environment" --max=300
+
 # Fail on errors
 set -e
 
