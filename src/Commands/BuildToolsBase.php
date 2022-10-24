@@ -1241,8 +1241,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if ($status == 0) {
             $metadataContents = file_get_contents($dest);
             $metadata = json_decode($metadataContents, true);
-        } else {
-            print("Error status: $status");
         }
 
         $metadata['site'] = $site_env_id;
