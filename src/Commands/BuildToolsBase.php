@@ -436,7 +436,6 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
-            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
             $create_project_options[] = '--no-install';
         }
