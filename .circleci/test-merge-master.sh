@@ -57,13 +57,16 @@ git merge -m 'Merge to master' test-after-repair
 ORIGIN="https://$GITHUB_TOKEN:x-oauth-basic@github.com/$GITHUB_USER/$TERMINUS_SITE.git"
 git push $ORIGIN master | sed -e "s/$GITHUB_TOKEN/[REDACTED]/g"
 
+echo "About to run build:env:merge..."
+
 # Run `build:env:merge` to see if it works.
 terminus -n build:env:merge "$TERMINUS_SITE.$TERMINUS_ENV" --yes
 
-# Since we mereged our PR branch above, this should cause our pull
+# Since we merged our PR branch above, this should cause our pull
 # request to be marked as merged, which will make our environment
 # $TERMINUS_ENV eligible for deletion. We therefore expect build:env:delete:pr
 # to delete it.
+echo "About to run build:env:delete:pr..."
 TERMINUS_BUILD_TOOLS_REPO_PROVIDER_PER_PAGE=10 terminus -n build:env:delete:pr "$TERMINUS_SITE" --yes
 
 # Do -not- fail on errors any more
