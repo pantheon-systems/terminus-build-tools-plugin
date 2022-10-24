@@ -83,8 +83,6 @@ class EnvDeleteCommand extends BuildToolsBase
     {
         // Look up the oldest environments matching the delete pattern
         $oldestEnvironments = $this->oldestEnvironments($site_id, '^' . $multidev_delete_pattern);
-        print("Oldest environments...");
-        var_dump($oldestEnvironments);
         // Bail out if nothing matched
         if (empty($oldestEnvironments)) {
             $this->log()->notice('No environments matched the provided pattern "{pattern}".', ['pattern' => $multidev_delete_pattern]);
