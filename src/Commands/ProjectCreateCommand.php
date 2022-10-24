@@ -159,17 +159,36 @@ class ProjectCreateCommand extends BuildToolsBase
         }
 
         $composer_json = $this->getComposerJson($created_folder);
+        if (!isset($composer_json['scripts']['build-assets'])) {
+            $composer_json['scripts']['build-assets'] = "echo 'Nothing to do.'";
+        }
         if (!isset($composer_json['scripts']['unit-test'])) {
             $composer_json['scripts']['unit-test'] = "echo 'No unit test step defined.'";
-            $composer_json['scripts']['lint'] = "find web/modules/custom web/themes/custom -name '*.php' -exec php -l {} \\;";
-            $composer_json['scripts']['code-sniff'] = [
-                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
-                "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
-                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
-                "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
-            ];
+
+
             if ($cms_version === 'd8' || $cms_version === 'd9') {
+                // Linting and coding standards.
+                $composer_json['scripts']['lint'] = "find web/modules/custom web/themes/custom -name '*.php' -exec php -l {} \\;";
+                $composer_json['scripts']['code-sniff'] = [
+                    "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                    "./vendor/bin/phpcs --standard=Drupal --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+                    "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/modules/custom",
+                    "./vendor/bin/phpcs --standard=DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md --ignore=node_modules,bower_components,vendor ./web/themes/custom",
+                ];
+
+                // Config export.
                 $composer_json['extra']['build-env']['export-configuration'] = "drush config-export --yes";
+            }
+            elseif ($cms_version === 'wp') {
+                // Linting and coding standards.
+                $composer_json['scripts']['lint'] = [
+                    "mkdir -p ./web/wp-content",
+                    "find web/wp-content -name '*.php' -exec php -l {} \\;",
+                ];
+                $composer_json['scripts']['code-sniff'] = [
+                    "mkdir -p ./web/wp-content",
+                    "./vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=node_modules,bower_components,vendor ./web/wp-content",
+                ];
             }
             file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT));
         }
@@ -354,8 +373,9 @@ class ProjectCreateCommand extends BuildToolsBase
             // If folder does not exists, assume we need to install composer deps.
             // Require basic testing general packages.
             exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
+            exec("composer --working-dir=$siteDir config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true");
             // Require behat related general packages.
-            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink behat/mink-extension dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
+            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
 
             // Install packages depending on the application.
             if ($app === 'Drupal') {
@@ -363,7 +383,8 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
             } elseif (strtolower($app) === 'wordpress') {
-                exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
+                exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
+                //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
             exec("composer --working-dir=$siteDir update");
         }
