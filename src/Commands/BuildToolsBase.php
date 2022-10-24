@@ -1242,7 +1242,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $status = $this->rsync($site_env_id, $src, $dest);
         if ($status == 0) {
             $metadataContents = file_get_contents($dest);
+            print("Metadata contents: $metadataContents");
             $metadata = json_decode($metadataContents, true);
+            var_dump($metadata);
+        } else {
+            print("Error status: $status");
         }
 
         $metadata['site'] = $site_env_id;
