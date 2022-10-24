@@ -86,7 +86,7 @@ STATUS="$?"
 # Assert that status is non-zero
 if [ $STATUS -eq 0 ] ; then
     echo "Environment $TERMINUS_SITE.$TERMINUS_ENV should have been deleted, but was not."
-    echo "This should fail the test but right now it is not working so marking as complete."
+    exit 1
 else
     echo "Environment $TERMINUS_SITE.$TERMINUS_ENV deleted as expected."
 fi
