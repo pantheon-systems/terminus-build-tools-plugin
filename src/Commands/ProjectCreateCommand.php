@@ -374,7 +374,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Require basic testing general packages.
             exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer phpunit/phpunit");
             exec("composer --working-dir=$siteDir config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true");
-            exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
+            exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback:dev-hackaton");
 
             // Install packages depending on the application.
             if ($app === 'Drupal') {
