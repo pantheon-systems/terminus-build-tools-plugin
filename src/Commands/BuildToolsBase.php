@@ -432,12 +432,16 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
+        $stability = $stability ?? 'stable';
+
         if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+            // Restore stability or set to default value.
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability $stability";
             $create_project_options[] = '--no-install';
         } elseif ($source === 'git@github.com:pantheon-upstreams/wordpress-composer-managed.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
@@ -465,9 +469,10 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $source_project = $items['source'];
             if (!empty($items['template-repository'])) {
                 $repository = ' --repository="' . $items['template-repository'] . '"';
-
                 $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
                 $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+                // Restore stability or set to default value.
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability $stability";
                 $create_project_options[] = '--no-install';
                 $create_project_options[] = '--stability dev';
             }
