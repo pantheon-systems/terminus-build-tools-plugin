@@ -419,9 +419,9 @@ class ProjectCreateCommand extends BuildToolsBase
             // Create a Pantheon site
             ->progressMessage('Create Pantheon site {site}', ['site' => $site_name])
             ->addCode(
-                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region) {
+                function ($state) use ($site_name, $label, $team, $target, $siteDir, $region, $source) {
                     // Look up our upstream.
-                    $upstream = $this->autodetectUpstream($siteDir);
+                    $upstream = $this->autodetectUpstream($siteDir, $source);
 
                     $this->log()->notice('About to create Pantheon site {site} in {team} with upstream {upstream}', ['site' => $site_name, 'team' => $team, 'upstream' => $upstream]);
 
@@ -566,6 +566,8 @@ class ProjectCreateCommand extends BuildToolsBase
                 function ($state) use ($site_name, $siteDir, &$prePushTime) {
                     $prePushTime = time();
                     $this->pushCodeToPantheon("{$site_name}.dev", 'dev', $siteDir);
+                    // Push pantheon.initialize tag.
+                    $this->passthru("git -C $siteDir push -f -q pantheon pantheon.initialize");
                     // Remove the commit added by pushCodeToPantheon; we don't need the build assets locally any longer.
                     $this->resetToCommit($siteDir, $state['initial_commit']);
                 })
@@ -657,6 +659,7 @@ class ProjectCreateCommand extends BuildToolsBase
         // respecting .gitignore.
         $this->passthru("git -C $repositoryDir add .");
         $this->passthru("git -C $repositoryDir commit -m 'Create new Pantheon site from $source'");
+        $this->passthru("git -C $repositoryDir tag -f 'pantheon.initialize'");
         return $this->getHeadCommit($repositoryDir);
     }
 

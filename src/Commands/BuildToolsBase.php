@@ -348,8 +348,15 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      * Upstream is irrelevant, save for the fact that this is the only way to
      * set the framework on Pantheon at the moment.
      */
-    protected function autodetectUpstream($siteDir)
+    protected function autodetectUpstream($siteDir, $source)
     {
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git') {
+            return 'drupal-composer-managed';
+        } elseif ($source === 'git@github.com:pantheon-upstreams/wordpress-composer-managed.git') {
+            return 'wordpress-composer-managed';
+        }
+
+        // If not yet found, comntinue with the regular detection.
         $upstream = $this->autodetectUpstreamAtDir("$siteDir/web");
         if ($upstream) {
             return $upstream;
@@ -418,6 +425,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $source_project = $source;
         $additional_commands = [];
         $create_project_options = [];
+        $run_create_project_command = true;
 
         $this->log()->notice('Creating project and resolving dependencies.');
 
@@ -435,20 +443,26 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $stability = $stability ?? 'stable';
 
         if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git' && empty($stability_flag)) {
-            // This is not published in packagist so it needs dev stability.
-            $stability_flag = '--stability dev';
+            // We will take a different route if drupal or wordpress composer managed is requested.
+            $run_create_project_command = false;
+            $additional_commands[] = "git -C $tmpsitedir clone -b main $source $target";
+            // Create master because platform needs it.
+            $additional_commands[] = "git -C $tmpsitedir/$target checkout -b master";
+            $additional_commands[] = "git -C $tmpsitedir/$target remote remove origin";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
             // Restore stability or set to default value.
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability $stability";
-            $create_project_options[] = '--no-install';
         } elseif ($source === 'git@github.com:pantheon-upstreams/wordpress-composer-managed.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
-            $stability_flag = '--stability dev';
+            $run_create_project_command = false;
+            $additional_commands[] = "git -C $tmpsitedir clone -b main $source $target";
+            // Create master because platform needs it.
+            $additional_commands[] = "git -C $tmpsitedir/$target checkout -b master";
+            $additional_commands[] = "git -C $tmpsitedir/$target remote remove origin";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
-            $create_project_options[] = '--no-install';
         }
 
         $create_project_options[] = $stability_flag;
@@ -478,14 +492,16 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             }
         }
 
-        $create_project_command = sprintf('composer create-project --working-dir=%s %s %s %s -n %s',
-            $tmpsitedir,
-            $repository,
-            $source_project,
-            $target,
-            implode(' ', $create_project_options)
-        );
-        $this->passthru($create_project_command);
+        if ($run_create_project_command) {
+            $create_project_command = sprintf('composer create-project --working-dir=%s %s %s %s -n %s',
+                $tmpsitedir,
+                $repository,
+                $source_project,
+                $target,
+                implode(' ', $create_project_options)
+            );
+            $this->passthru($create_project_command);
+        }
         foreach ($additional_commands as $command) {
             $this->passthru($command);
         }
