@@ -37,8 +37,15 @@ trait BitbucketAPITrait
     {
         $api = new BitbucketAPI($environment);
         $api->setLogger($this->logger);
+        $api->setBitbucketUrl($this->BITBUCKET_URL);
+
 
         return $api;
+    }
+
+    public function getBitbucketUrl()
+    {
+        return BitbucketAPI::BITBUCKET_URL_DEFAULT;
     }
 
     public function tokenKey()

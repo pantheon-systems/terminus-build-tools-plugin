@@ -5,6 +5,7 @@ namespace Pantheon\TerminusBuildTools\API\Bitbucket;
 use Pantheon\TerminusBuildTools\API\WebAPI;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
 use Psr\Http\Message\ResponseInterface;
+use Robo\Config\Config;
 
 /**
  * BitbucketAPI manages calls to the Bitbucket API.
@@ -15,6 +16,33 @@ class BitbucketAPI extends WebAPI
     const BITBUCKET_USER = 'BITBUCKET_USER';
     const BITBUCKET_PASS = 'BITBUCKET_PASS';
     const BITBUCKET_AUTH = 'BITBUCKET_AUTH';
+    const BITBUCKET_CONFIG_PATH = 'build-tools.provider.git.bitbucket.url';
+    const BITBUCKET_URL_DEFAULT = 'bitbucket.org';
+
+    private $BITBUCKET_URL;
+
+    public static function determineBitbucketUrl(Config $config)
+    {
+        // Robo's Config object in combination with Terminus does not properly expand
+        // environment variable configurations for nested items. This temporary env
+        // detection can be removed once resolved. This can be ovserved by using
+        // `terminus self:config:dump` from a local environment with the configuration
+        // set via config.yml and from a CI environment with the below env variable set.
+        if ($preservedBitbucketUrl = getenv('TERMINUS_BUILD_TOOLS_PROVIDER_GIT_BITBUCKET_URL')) {
+            return $preservedBitbucketUrl;
+        }
+        return $config->get(self::BITBUCKET_CONFIG_PATH, self::BITBUCKET_URL_DEFAULT);
+    }
+
+    public function getBitbucketUrl()
+    {
+        return $this->BITBUCKET_URL;
+    }
+
+    public function setBitbucketUrl($BITBUCKET_URL)
+    {
+        $this->BITBUCKET_URL = $BITBUCKET_URL;
+    }
 
     public function serviceHumanReadableName()
     {
@@ -34,7 +62,9 @@ class BitbucketAPI extends WebAPI
 
         return new \GuzzleHttp\Client(
             [
-                'base_uri' => 'https://api.bitbucket.org/2.0/',
+                // @todo: Is this URL right for hosted bitbucket?
+                'base_uri' => 'https://api.' . $this->getBitbucketUrl() . '/2.0/',
+                // @todo: Is this auth mechanism right for hosted bitbucket?
                 'auth' => [ $this->serviceTokenStorage->token(self::BITBUCKET_USER), $this->serviceTokenStorage->token(self::BITBUCKET_PASS) ],
                 'headers' => $headers,
             ]

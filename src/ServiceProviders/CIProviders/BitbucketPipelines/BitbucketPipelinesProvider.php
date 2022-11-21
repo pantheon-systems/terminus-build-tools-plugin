@@ -9,6 +9,8 @@ use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIProvider;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\Task\Ssh\KeyPairReciever;
 use Psr\Log\LoggerAwareInterface;
+use Pantheon\TerminusBuildTools\API\Bitbucket\BitbucketAPI;
+use Robo\Config\Config;
 
 /**
  * Manages the configuration of a project to be tested on BitbucketPipelines.
@@ -20,18 +22,42 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
     // Default cron pattern is to run CLU / testing jobs once per day.
     const CLU_CRON_PATTERN = '0 0 4 * * ? *';
 
+    // We make this modifiable as individuals can self-host Bitbucket.
+    protected $BITBUCKET_URL;
+
     protected $serviceName = 'bitbucket-pipelines';
+
+    public function __construct(Config $config)
+    {
+        parent::__construct($config);
+        $this->setBitbucketUrl(BitbucketAPI::determineBitbucketUrl($config));
+    }
+
+    /**
+     * @return string
+     */
+    public function getBitbucketUrl() {
+        return $this->BITBUCKET_URL;
+    }
+
+    /**
+     * @param string $BITBUCKET_URL
+     */
+    public function setBitbucketUrl($BITBUCKET_URL) {
+        $this->BITBUCKET_URL = $BITBUCKET_URL;
+    }
 
     public function infer($url)
     {
-        return strpos($url, 'bitbucket.org') !== false;
+        return strpos($url, $this->getBitbucketUrl()) !== false;
     }
 
     public function projectUrl(CIState $ci_env)
     {
         $repositoryAttributes = $ci_env->getState('repository');
         // TODO: Fix this url. Point to the Bitbucket pipelines UI
-        return "https://bitbucket.org/{$repositoryAttributes->projectId()}";
+        // @todo: Is this url right for hosted bitbucket?
+        return 'https://' . $this->getBitbucketUrl() . "/{$repositoryAttributes->projectId()}";
     }
 
     /**
@@ -70,6 +96,8 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         $repoApiUrl = $this->targetRepositoryBaseUrl($ci_env);
 
         $env = $ci_env->getAggregateState();
+        $env['TERMINUS_BUILD_TOOLS_PROVIDER_GIT_BITBUCKET_URL'] = $this->getBitbucketUrl();
+
         foreach ($env as $key => $value) {
             $secured = $ci_env->isVariableValueSecret($key);
             $data = ['key' => $key, 'value' => $value, 'secured' => $secured];
