@@ -19,6 +19,7 @@ composer clear-cache
 
 # Build a test project on github
 terminus build:project:create -n "$SOURCE_COMPOSER_PROJECT" "$TERMINUS_SITE" --team="$TERMINUS_ORG" --email="$GIT_EMAIL" --env="BUILD_TOOLS_VERSION=$BUILD_TOOLS_VERSION" $EXTRA_ARGS
+echo "Project created"
 # Confirm that the Pantheon site was created
 terminus site:info "$TERMINUS_SITE"
 # Confirm that the Github project was created
