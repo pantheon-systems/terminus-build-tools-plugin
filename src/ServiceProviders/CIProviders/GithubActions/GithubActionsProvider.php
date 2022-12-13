@@ -93,7 +93,7 @@ class GithubActionsProvider extends BaseCIProvider implements CIProvider, Logger
     {
         $repositoryAttributes = $ci_env->getState('repository');
         $target_project = $repositoryAttributes->projectId();
-        $public_key = $this->api()->request("repos/${target_project}/actions/secrets/public-key");
+        $public_key = $this->api()->request("repos/{$target_project}/actions/secrets/public-key");
         return $public_key;
     }
 
