@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: pantheonpublic/php-ci:v7.4-hub
+    - image: quay.io/pantheon-public/php-ci:v8.2
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -57,7 +57,7 @@ jobs:
     test_drupal_9_github:
         <<: *defaults
         docker:
-          - image: pantheonpublic/php-ci:v7.4-hub
+          - image: quay.io/pantheon-public/php-ci:v8.2
         resource_class: large
         steps:
             - checkout
@@ -67,6 +67,9 @@ jobs:
             - run:
                 name: Check Terminus version
                 command: terminus --version
+            - run:
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test D9 with GitHub
                 command: ./.circleci/test-github-repo.sh "d9"
@@ -96,13 +99,16 @@ jobs:
     test_drupal_9_gitlab:
         <<: *defaults
         docker:
-          - image: pantheonpublic/php-ci:v7.4-hub
+          - image: quay.io/pantheon-public/php-ci:v8.2
         resource_class: large
         steps:
             - checkout
             - run:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
+            - run:
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
                 name: Test Drupal with GitLab
                 command: ./.circleci/test-gitlab-repo.sh "d9" gitlabci

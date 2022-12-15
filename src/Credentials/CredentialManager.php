@@ -15,6 +15,7 @@ class CredentialManager implements CredentialProviderInterface
     protected $credentialRequests = [];
     protected $transientCache = [];
     protected $userId;
+    protected $cache;
 
     public function __construct(DataStoreInterface $storage)
     {
