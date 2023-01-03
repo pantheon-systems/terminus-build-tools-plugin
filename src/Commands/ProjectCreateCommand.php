@@ -190,7 +190,7 @@ class ProjectCreateCommand extends BuildToolsBase
                     "./vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=node_modules,bower_components,vendor ./web/wp-content",
                 ];
             }
-            file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT));
+            file_put_contents("$created_folder/composer.json", json_encode($composer_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         }
         $fs->mkdir("$created_folder/web/modules/custom");
         $fs->touch("$created_folder/web/modules/custom/.gitkeep");
