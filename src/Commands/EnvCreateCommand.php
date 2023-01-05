@@ -31,7 +31,7 @@ class EnvCreateCommand extends BuildToolsBase
      * @option pr-id Post notification comment to a specific PR instead of the commit hash.
      * @option no-git-force set this flag to omit the --force flag from 'git add' and 'git push'
      * @option create-before-push Force the environment to be created first before pushing code.
-     * @option git-commit-compare The Git commit identifier to use when checking for changes to pantheon configuraiton YAML files.
+     * @option git-ref-compare The Git commit identifier to use when checking for changes to pantheon configuraiton YAML files.
      */
     public function createBuildEnv(
         $site_env_id,
@@ -45,7 +45,7 @@ class EnvCreateCommand extends BuildToolsBase
             'pr-id' =>  '',
             'no-git-force' =>  false,
             'create-before-push' => false,
-            'git-commit-compare' => 'HEAD',
+            'git-ref-compare' => 'HEAD',
         ])
     {
         list($site, $env) = $this->getSiteEnv($site_env_id);
@@ -82,7 +82,7 @@ class EnvCreateCommand extends BuildToolsBase
         $environmentExists = $site->getEnvironments()->has($multidev);
 
         // Check to see if we should create before pushing or after
-        $createBeforePush = $options['create-before-push'] || $this->commitChangesFile($options['git-commit-compare'], 'pantheon.yml') || $this->commitChangesFile($options['git-commit-compare'], 'pantheon.upstream.yml');
+        $createBeforePush = $options['create-before-push'] || $this->commitChangesFile($options['git-ref-compare'], 'pantheon.yml') || $this->commitChangesFile($options['git-commit-compare'], 'pantheon.upstream.yml');
 
         if (!$environmentExists && $createBeforePush) {
             // If pantheon.yml exists, then we need to create the environment
