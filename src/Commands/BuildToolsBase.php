@@ -811,6 +811,9 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function escapeArgument($arg)
     {
+        if (empty($arg)) {
+            return $arg;
+        }
         // Omit escaping for simple args.
         if (preg_match('/^[a-zA-Z0-9_-]*$/', $arg)) {
             return $arg;
@@ -1299,7 +1302,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         foreach ($context as $key => $val) {
             if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
                 $replace[sprintf('{%s}', $key)] = $val;
-                $replace[sprintf('[[%s]]', $key)] = ProcessUtils::escapeArgument($val);
+                $replace[sprintf('[[%s]]', $key)] = !empty($val) ? ProcessUtils::escapeArgument($val) : $val;
             }
         }
 
