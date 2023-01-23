@@ -380,12 +380,14 @@ class ProjectCreateCommand extends BuildToolsBase
             // Install packages depending on the application.
             if ($app === 'Drupal') {
                 exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
-                exec("composer --working-dir=$siteDir require --no-update drush-ops/behat-drush-endpoint");
+                exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
+            exec("composer --working-dir=$siteDir update");
+            // There is a weird composer bug that downgrades Drupal to 9.4.4 the first time this command runs.
             exec("composer --working-dir=$siteDir update");
         }
         $prePushTime = 0;
