@@ -392,7 +392,6 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
-            // Delete composer.lock if it exists to avoid issues with platform.php.
             exec("composer --working-dir=$siteDir update");
         }
         $prePushTime = 0;
