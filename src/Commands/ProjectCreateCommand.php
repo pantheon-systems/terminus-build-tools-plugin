@@ -19,6 +19,7 @@ use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use VersionTool\VersionTool;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
+use Composer\Semver\Comparator;
 
 /**
  * Project Create Command
@@ -382,12 +383,16 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
                 exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
+
+                if (Comparator::greaterThanOrEqualTo($version, '9.5.0')) {
+                    exec("composer --working-dir=$siteDir config platform.php \"8.1.13\"");
+                }
+
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
             }
-            exec("composer --working-dir=$siteDir update");
-            // There is a weird composer bug that downgrades Drupal to 9.4.4 the first time this command runs.
+            // Delete composer.lock if it exists to avoid issues with platform.php.
             exec("composer --working-dir=$siteDir update");
         }
         $prePushTime = 0;
