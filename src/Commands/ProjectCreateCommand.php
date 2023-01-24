@@ -19,7 +19,6 @@ use Pantheon\TerminusBuildTools\Utility\Config as Config_Utility;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use VersionTool\VersionTool;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
-use Composer\Semver\Comparator;
 
 /**
  * Project Create Command
@@ -383,7 +382,6 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
                 exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
-
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
