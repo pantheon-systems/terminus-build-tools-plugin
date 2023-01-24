@@ -437,6 +437,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git' && empty($stability_flag)) {
             // This is not published in packagist so it needs dev stability.
             $stability_flag = '--stability dev';
+            $additional_commands[] = "mkdir $tmpsitedir/$target/vendor";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
             $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";

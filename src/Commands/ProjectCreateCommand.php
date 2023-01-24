@@ -384,10 +384,6 @@ class ProjectCreateCommand extends BuildToolsBase
                 exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
 
-                if (Comparator::greaterThanOrEqualTo($version, '9.5.0')) {
-                    exec("composer --working-dir=$siteDir config platform.php \"8.1.13\"");
-                }
-
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
                 //exec("composer --working-dir=$siteDir require --no-update --dev paulgibbs/behat-wordpress-extension --ignore-platform-reqs");
