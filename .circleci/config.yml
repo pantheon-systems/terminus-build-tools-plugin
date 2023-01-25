@@ -70,6 +70,9 @@ jobs:
             - run:
                 name: Disable strict SSH host checking to prevent SSH connect issues
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - add_ssh_keys:
+                fingerprints:
+                - "74:82:8b:ea:78:ad:23:23:68:70:b6:07:5c:2b:4b:e0"
             - run:
                 name: Test D9 with GitHub
                 command: ./.circleci/test-github-repo.sh "d9"
@@ -160,6 +163,9 @@ jobs:
             - run:
                 name: Disable strict SSH host checking to prevent SSH connect issues
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - add_ssh_keys:
+                fingerprints:
+                - "74:82:8b:ea:78:ad:23:23:68:70:b6:07:5c:2b:4b:e0"
             - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh

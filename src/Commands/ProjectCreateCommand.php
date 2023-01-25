@@ -380,7 +380,7 @@ class ProjectCreateCommand extends BuildToolsBase
             // Install packages depending on the application.
             if ($app === 'Drupal') {
                 exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
-                exec("composer --working-dir=$siteDir require --no-update drush-ops/behat-drush-endpoint");
+                exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");
