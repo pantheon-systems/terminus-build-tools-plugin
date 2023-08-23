@@ -63,7 +63,7 @@ class CircleCIProvider extends BaseCIProvider implements CIProvider, LoggerAware
             self::CIRCLE_TOKEN,
             "Please generate a Circle CI personal API token by visiting the page:\n\n    https://circleci.com/account/api\n\n For more information, see:\n\n    https://circleci.com/docs/api/v1-reference/#getting-started.",
             "Enter Circle CI personal API token: ",
-            '#^[0-9a-fA-F]{40}$#',
+            '#^[0-9a-zA-Z_]{70}$#',
             'Circle CI authentication tokens should be 40-character strings containing only the letters a-f and digits (0-9). Please enter your token again.'
         );
 
