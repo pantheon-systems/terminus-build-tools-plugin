@@ -254,6 +254,8 @@ The `build:env:create` command creates the specified multidev environment on the
  | --message        | The commit message to use when committing the built assets to Pantheon |
  | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
 
+By default, this command uses the `--force` flag for both `git add` and `git push`. Passing `--no-git-force` will prevent adding this flag but unless your remotes are in sync, it will most likely make the push fail.
+
 ### build:env:delete:ci
 
 The `build:env:delete:ci` command is used to delete multidev environments on Pantheon that match the CI pattern of builds (`ci-*`).
@@ -329,6 +331,8 @@ The `build:env:push` command pushes code in the current directory to an existing
  | --label          | The name of the site when referred to in commit comments. |
  | --message        | The commit message to use when committing built code to Pantheon |
  | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
+
+ By default, this command uses the `--force` flag for both `git add` and `git push`. Passing `--no-git-force` will prevent adding this flag but unless your remotes are in sync, it will most likely make the push fail.
 
 ### build:project:info
 
