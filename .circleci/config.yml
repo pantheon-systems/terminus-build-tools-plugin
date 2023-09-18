@@ -72,7 +72,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - add_ssh_keys:
                 fingerprints:
-                - "74:82:8b:ea:78:ad:23:23:68:70:b6:07:5c:2b:4b:e0"
+                - "cb:92:c4:59:07:7f:6c:3d:1b:92:e7:6c:8a:da:3f:b2"
             - run:
                 name: Test D9 with GitHub
                 command: ./.circleci/test-github-repo.sh "d9"
@@ -165,7 +165,7 @@ jobs:
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - add_ssh_keys:
                 fingerprints:
-                - "74:82:8b:ea:78:ad:23:23:68:70:b6:07:5c:2b:4b:e0"
+                - "cb:92:c4:59:07:7f:6c:3d:1b:92:e7:6c:8a:da:3f:b2"
             - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
