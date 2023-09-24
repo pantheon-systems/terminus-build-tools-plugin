@@ -322,7 +322,7 @@ There are no additional command options for this command.
 
 ### build:env:push
 
-The `build:env:push` command pushes code in the current directory to an existing Pantheon site/environment.
+The `build:env:push` command pushes code in the current directory to an existing dev or multidev Pantheon site/environment.
 
 #### Command Options
 
