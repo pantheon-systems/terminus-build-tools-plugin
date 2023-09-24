@@ -525,6 +525,13 @@ In addition to the Terminus Build Tools Plugin, Pantheon maintains template repo
 
 Each repository includes an opinionated set of workflows and deployment scripts. These templates are meant to be a one-time starting point for new projects and customized as needed. Improvements made over time must be manually applied to existing projects. These are examples, **not** frameworks.
 
+### Advanced Build tools
+
+Tooling and templates for Terminus Build Tools enable developers to quickly generate a new project implementing common best practices and automation to build, test, deploy, and update a Drupal or Wordpress project on Pantheon Hosting
+
+https://github.com/pantheon-systems/advanced-ci-templates/
+
+
 ### Build Tools CI Dockerfile
 
 Pantheon maintains a [Build Tools CI Dockerfile](https://github.com/pantheon-systems/docker-build-tools-ci/), which is deployed to [`quay.io`](https://quay.io/repository/pantheon-public/build-tools-ci?tab=tags), for use in Continuous Integration environments. It contains common Pantheon tools, such as Terminus and the Terminus Build Tools plugin. The deployed image tags follow semantic versioning.
