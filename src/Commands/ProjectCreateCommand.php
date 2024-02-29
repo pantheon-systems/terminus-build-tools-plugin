@@ -375,12 +375,12 @@ class ProjectCreateCommand extends BuildToolsBase
             exec("composer --working-dir=$siteDir require --no-update --dev dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer");
             exec("composer --working-dir=$siteDir config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true");
             // Require behat related general packages.
-            exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
+            // exec("composer --working-dir=$siteDir require --no-update --dev behat/behat behat/mink dmore/behat-chrome-extension genesis/behat-fail-aid jcalderonzumba/mink-phantomjs-driver mikey179/vfsstream");
 
             // Install packages depending on the application.
             if ($app === 'Drupal') {
-                exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
-                exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
+                // exec("composer --working-dir=$siteDir require --no-update --dev drupal/coder drupal/drupal-extension drupal/drupal-driver");
+                // exec("composer --working-dir=$siteDir require --no-update --dev drush-ops/behat-drush-endpoint");
                 exec("composer --working-dir=$siteDir require --no-update pantheon-systems/quicksilver-pushback");
             } elseif (strtolower($app) === 'wordpress') {
                 exec("composer --working-dir=$siteDir require --no-update --dev wp-coding-standards/wpcs");

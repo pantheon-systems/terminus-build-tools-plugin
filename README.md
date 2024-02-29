@@ -507,7 +507,7 @@ This command will commit the generated artifacts to an existing multidev environ
 
 ### Commenting on a pull request or merge request
 
-`terminus build:comment:add:pr --pr_number=123 --message="Behat tests passed!"`
+`terminus build:comment:add:pr --pr_number=123 --message="Tests passed!"`
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
