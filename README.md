@@ -2,6 +2,8 @@
 
 [![CircleCI](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin.svg?style=shield)](https://circleci.com/gh/pantheon-systems/terminus-build-tools-plugin)
 [![Terminus v2.x Compatible](https://img.shields.io/badge/terminus-v2.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x)
+[![Terminus v3.x Compatible](https://img.shields.io/badge/terminus-v3.x-green.svg)](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/3.x)
+[![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support)
 
 Build Tools is a Terminus Plugin that contains a collection of commands useful for projects making use of an external Git provider and Continuous Integration (CI) along with [Pantheon](https://www.pantheon.io).
 
@@ -29,42 +31,42 @@ See [Commands](#commands) and [Build Tools Command Examples](#build-tools-comman
 
 ## Requirements
 
-- If you are using Terminus 2, you must use the Build Tools `2.x` release
-- If you are using Terminus 1, you must use [the Build Tools `1.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/1.x). Note that Terminus 1 is nearing [End of Life](https://pantheon.io/docs/terminus/updates#eol-timeline) and version 2 is recommended.
+- If you are using Terminus 3, you must use the [Build Tools `3.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/3.x).
+- If you are using Terminus 2, you must use the [Build Tools `2.x` release](https://github.com/pantheon-systems/terminus-build-tools-plugin/tree/2.x).
 
 PHP `7.2` or greater is recommended.
 
 ## Installation
 
+### Installing Build Tools 3.x:
+
+```
+terminus self:plugin:install terminus-build-tools-plugin
+```
+
 ### Installing Build Tools 2.x:
 
 ```
 mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2.0.0
+composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^2
 ```
 
-### Installing Build Tools 1.x:
-
-```
-mkdir -p ~/.terminus/plugins
-composer create-project --no-dev -d ~/.terminus/plugins pantheon-systems/terminus-build-tools-plugin:^1
-```
-
-### Note about dev dependencies
+#### Note about dev dependencies
 
 The Terminus Build Tools plugin should be installed **without** dev dependencies. If you install the plugin with a different method, such as cloning this source repository, use `composer install --no-dev` to download the project dependencies.
 
 ## Setup
 
-It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `2` and Build Tools `2.x`.
+It is recommended that you use one of the provided example projects as a template when creating a new project. All of the example projects use Terminus `3` and Build Tools `3.x`.
 
 The default template repositories are each assigned an abbreviation, as shown below:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-composer-managed): `d9`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
 
-More more details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
+More details about these template repositories see [Template Repositories](#template-repositories) in this document or visit the links above.
 
 You can get started with one of these examples by using the `build:project:create` command:
 ```
@@ -76,21 +78,24 @@ This command will create:
 - A GitHub repository
 - A CircleCI test configuration
 
-It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](available-services) for details.
+It will prompt you for the credentials it needs to create these assets. While GitHub and CircleCI are the defaults, other providers are supported as well. See [available services](#available-services) for details.
 
-Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace," then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
+Note: After running this command, if you get an error "There are no commands defined in the "build:project" namespace", then you may need to install this Terminus plugin first as described in [Requirements](#requirements), above.
 
 Note: It is important to specify the name of your agency organization via the `--team` option. If you do not do this, then your new site will be associated with your user and will not have the capability to create multidev environments.
 
 ## Available Services
 
-The `build:project:create` command supports services in the following combination: 
+The `build:project:create` command supports services in the following combination:
 
-| Git Host  | CI Service |
-| --------- | ---------- |
-| GitHub    | CircleCI   |
-| GitLab    | GitLabCI   |
-| BitBucket | CircleCI   |
+| Git Host  | CI Service       |
+| --------- | ----------       |
+| GitHub    | CircleCI         |
+| GitHub    | Github Actions   |
+| GitLab    | GitLabCI         |
+| BitBucket | CircleCI         |
+
+Note: if using Github Actions, token should have the "workflow" scope.
 
 ### Starting a new GitLab Project
 
@@ -102,6 +107,12 @@ $ terminus build:project:create --git=gitlab --team='My Agency Name' wp my-site
 
 ```
 $ terminus build:project:create --git=bitbucket --team='My Agency Name' wp my-site
+```
+
+### Starting a new Github/Github Actions Project
+
+```
+$ terminus build:project:create --ci=githubactions --team='My Agency Name' wp my-site
 ```
 
 #### Limitations
@@ -120,40 +131,75 @@ The `build:project:create` command is used to initialize projects within the Git
 #### Command Options
 
 Additional options are available to further customize the `build:project:create` command:
- 
- | Option             | Description    |
- | ------------------ | -------------- |
- | --pantheon-site    | The name to use for the Pantheon site (defaults to the name of the Git site) | 
- | --team             | The Pantheon team to associate the site with |
- | --org              | The Git organization to place the repository in (defaults to authenticated user) |
- | --label            | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
- | --email            | The git user email address to use when committing build results |
- | --test-site-name   | The name to use when installing the test site |
- | --admin-password   | The password to use for the admin when installing the test site |
- | --admin-email      | The email address to use for the admin |
- | --admin-username   | The username to use for the admin |
- | --stability        | The stability to use with composer when creating the project (defaults to dev) |
- | --keep             | The ability to keep a project repository cloned after your project is created |
- | --use-ssh          | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
- | --ci               | The CI provider to use. Defaults to "circleci" |
- | --git              | The git repository provider to use. Defaults to "github" |
- | --visibility       | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
- | --region           | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
- 
+
+ | Option                | Description    |
+ | --------------------- | -------------- |
+ | --pantheon-site       | The name to use for the Pantheon site (defaults to the name of the Git site) |
+ | --team                | The Pantheon team to associate the site with |
+ | --org                 | The Git organization to place the repository in (defaults to authenticated user) |
+ | --label               | The friendly name to use for the Pantheon site (defaults to the name of the Git site) |
+ | --email               | The git user email address to use when committing build results |
+ | --test-site-name      | The name to use when installing the test site |
+ | --admin-password      | The password to use for the admin when installing the test site |
+ | --admin-email         | The email address to use for the admin |
+ | --admin-username      | The username to use for the admin |
+ | --stability           | The stability to use with composer when creating the project (defaults to dev) |
+ | --keep                | The ability to keep a project repository cloned after your project is created |
+ | --use-ssh             | The ability to perform the initial git push to the repository provider over SSH instead of HTTPS |
+ | --ci                  | The CI provider to use. Defaults to "circleci" |
+ | --git                 | The git repository provider to use. Defaults to "github" |
+ | --visibility          | The visibility of the project. Defaults to "public". Use "public" or "private" for GitHub and "public", "private", or "internal" for GitLab |
+ | --region              | The region to create the site in. See [the Pantheon regions documentation](https://pantheon.io/docs/regions#create-a-new-site-in-a-specific-region-using-terminus) for details. |
+ | --template-repository | Private composer repository to download template or git url if using the expanded version when no composer repository. |
+ | --ci-template | Git repo that contains the CI scripts that will be copied if there is no ci in the source project. |
+
+
+If you want to use a private composer repository, you should provide the credentials like this:
+
+```
+export TERMINUS_BUILD_TOOLS_COMPOSER_AUTH=json_encoded_string
+```
+
+or in ~/.terminus/config.yml file under build-tools.composer-auth.
+
+Then, in the build:project:create command, pass a composer-repository option like this:
+
+```
+terminus build:project:create --template-repository="https://repo.packagist.com/myorg" myorg/myrepo my-project
+```
+
+If you want to use git repository that has not been published to packagist as your template, you should do it like this:
+
+```
+terminus build:project:create --template-repository="git@github.com:myorg/myrepo.git" myorg/myrepo-template my-project
+```
+
+The package name in the composer.json file into the template repo should be "myorg/myrepo-template". If myorg/myrepo is a private repo, you should have access to it in your current terminal.
+
+You can also use the following shorthand:
+
+```
+terminus build:project:create git@github.com:myorg/myrepo.git my-project
+```
+
+and build tools will figure out the right package name for you.
+
+You can find more info about [composer repositories](https://getcomposer.org/doc/05-repositories.md), [private packages](https://getcomposer.org/doc/articles/handling-private-packages.md), [cli authentication](https://getcomposer.org/doc/03-cli.md#composer-auth) and [authentication methods](https://getcomposer.org/doc/articles/authentication-for-private-packages.md) in the official [composer documentation](https://getcomposer.org/doc/).
+
 See `terminus help build:project:create` for more information.
- 
+
 ### build:project:repair
- 
+
 The `build:project:repair` command is used to repair projects that were created with the Build Tools plugin. This is useful for rotating credentials, such as provider authentication tokens.
- 
+
 #### Command Options
- 
+
 Additional options are available to further customize the `build:project:repair` command:
 
  | Option           | Description      |
  | ---------------- | ---------------- |
  | --env            | The environment variables you would like to set on the CI system |
- 
+
 ### build:comment:add:commit
 
 The `build:comment:add:commit` command is used to add a comment to a commit on the Git Provider. This is useful in CI scripts for commenting as multidev environments are created or other code feedback is determined.
@@ -187,7 +233,7 @@ Additional options are available to customize the `build:comment:add:pr` command
  | --site_url       | If provided, will include a "Visit Site" link at the start of the pull request, linking to the provided site URL |
 
 ### build:credentials:clear
- 
+
 The `build:credentials:clear` command is available to clear cached credentials from Build Tools. This is useful when developing Build Tools or trying to remove credentials from a machine.
 
 #### Command Options
@@ -207,7 +253,9 @@ The `build:env:create` command creates the specified multidev environment on the
  | --db-only        | When cloning content, whether to only clone the database (by default, both the database and files are cloned |
  | --message        | The commit message to use when committing the built assets to Pantheon |
  | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
- 
+
+By default, this command uses the `--force` flag for both `git add` and `git push`. Passing `--no-git-force` will prevent adding this flag but unless your remotes are in sync, it will most likely make the push fail.
+
 ### build:env:delete:ci
 
 The `build:env:delete:ci` command is used to delete multidev environments on Pantheon that match the CI pattern of builds (`ci-*`).
@@ -218,7 +266,7 @@ The `build:env:delete:ci` command is used to delete multidev environments on Pan
  | ---------------- | ---------------- |
  | --keep           | The number of environments matching the pattern to keep |
  | --dry-run        | If set, this command only determines which environments should be deleted but doesn't actually delete them |
- 
+
 ### build:env:delete:pr
 
 The `build:env:delete:pr` command is used to delete multidev environments on Pantheon that match the PR pattern of builds (`pr-*`) for pull requests (GitHub and BitBucket) or merge requests (GitLab) that have been closed.
@@ -228,7 +276,7 @@ The `build:env:delete:pr` command is used to delete multidev environments on Pan
  | Option           | Description      |
  | ---------------- | ---------------- |
  | --dry-run        | If set, this command only determines which environments should be deleted but doesn't actually delete them |
- 
+
 ### build:env:install
 
 The `build:env:install` command is used to install the CMS on a Pantheon site the specified site.
@@ -242,7 +290,7 @@ The `build:env:install` command is used to install the CMS on a Pantheon site th
  | --account-pass   | The password for the first user account created during install |
  | --site-mail      | The email address used for the CMS |
  | --site-name      | The name of the site to be set within the CMS |
- 
+
 ### build:env:list
 
 The `build:env:list` command is used to list the multidev environments in the specified site.
@@ -283,9 +331,11 @@ The `build:env:push` command pushes code in the current directory to an existing
  | --label          | The name of the site when referred to in commit comments. |
  | --message        | The commit message to use when committing built code to Pantheon |
  | --no-git-force   | Set this flag to omit the --force flag from `git add` and `git push` |
- 
+
+ By default, this command uses the `--force` flag for both `git add` and `git push`. Passing `--no-git-force` will prevent adding this flag but unless your remotes are in sync, it will most likely make the push fail.
+
 ### build:project:info
- 
+
 The `build:project:info` command displays information about a site created by the `build:project:create` command.
 
 #### Command Options
@@ -294,7 +344,7 @@ There are no additional command options for this command.
 
 ### build:secrets:delete
 
-The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:delete` command deletes a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -304,17 +354,17 @@ The `build:secrets:delete` command deletes a secret from Pantheon. These secrets
 
 ### build:secrets:list
 
-The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:list` command lists all secret from Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
  | Option           | Description      |
  | ---------------- | ---------------- |
  | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
-  
+
 ### build:secrets:set
 
-The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing informatiion needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:set` command sets a secret in a Pantheon. These secrets are commonly used for storing information needed by future CI integration such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -323,10 +373,10 @@ The `build:secrets:set` command sets a secret in a Pantheon. These secrets are c
  | --file           | The name of the file to use for storing the secret. Defaults to tokens.json |
  | --clear          | If set, will overwrite a secret with the existing name |
  | --skip-if-empty  | If set, will not write anything if the value passed to the command is empty |
- 
+
 ### build:secrets:show
 
-The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing informatiion needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
+The `build:secrets:show` command shows a secret from Pantheon. These secrets are commonly used for storing information needed by CI integrations, such as [Quicksilver Pushback](https://www.github.com/pantheon-systems/quicksilver-pushback).
 
 #### Command Options
 
@@ -345,6 +395,10 @@ The `build:workflow:wait` command waits for a workflow in Pantheon to complete b
  | --start          | The time to ignore workflow operations before |
  | --max            | The maximum amount of time to wait for a workflow to complete |
 
+### build:gitignore:cut
+
+The `build:gitignore:cut` command cuts your .gitignore file in the cut line. This is useful before pushing to Pantheon from a source repo.
+
 
 ## Customization
 
@@ -357,11 +411,11 @@ See [Starter Site Shortcuts](#starter-site-shortcuts) below for instructions on 
 
 ### Configuration
 
-Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would liike every site created within their Pantheon team.
+Configuration values for the Terminus Build Tools Plugin may be stored in your Terminus Configuration file, located at `~/.terminus/config.yml`. This is especially useful for agencies who would like every site created within their Pantheon team.
 
 #### Default Values for Options
 
-Terminus configuration is based on the [Robo PHP configuration system](http://robo.li/getting-started/#configuration). Default option values for Terminus commands can be defined in the same way as other Robo applications. For example, the options for the command `build:project:create` are stored in the section `command:` > `build:` > `project:` > `create:` > `options:`. The example below provides default values for the `--admin-password` and `--team` options. 
+Terminus configuration is based on the [Robo PHP configuration system](http://robo.li/getting-started/#configuration). Default option values for Terminus commands can be defined in the same way as other Robo applications. For example, the options for the command `build:project:create` are stored in the section `command:` > `build:` > `project:` > `create:` > `options:`. The example below provides default values for the `--admin-password` and `--team` options.
 ```
 command:
   build:
@@ -394,7 +448,7 @@ command:
       create:
         shortcuts:
           contenta: pantheon-systems/example-drops-8-composer:dev-contenta
-``` 
+```
 Note that the project name follows the standard defined by Composer: `org-name` / `project-name` : dev- `branch-name`.
 
 ### Build Customizations
@@ -453,7 +507,7 @@ This command will commit the generated artifacts to an existing multidev environ
 
 ### Commenting on a pull request or merge request
 
-`terminus build:comment:add:pr --pr_number=123 --message="Behat tests passed!"`
+`terminus build:comment:add:pr --pr_number=123 --message="Tests passed!"`
 
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
@@ -465,6 +519,7 @@ Run `terminus list build` for a complete list of available commands. Use `termin
 In addition to the Terminus Build Tools Plugin, Pantheon maintains template repositories for:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer)
+- [Drupal 9](https://github.com/pantheon-upstreams/drupal-composer-managed)
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer)
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer)
 

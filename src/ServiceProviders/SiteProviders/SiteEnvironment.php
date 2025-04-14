@@ -93,4 +93,16 @@ class SiteEnvironment extends ProviderEnvironment
     public function getComposerAuth() {
       return $this['COMPOSER_AUTH'];
     }
+
+    public function siteProfile()
+    {
+        return $this['SITE_PROFILE'];
+    }
+
+    public function setSiteProfile($site_profile)
+    {
+        $this['SITE_PROFILE'] = $site_profile;
+        return $this;
+    }
+
 }

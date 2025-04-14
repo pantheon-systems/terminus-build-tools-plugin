@@ -105,8 +105,12 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             ->setInstructions(self::PASSWORD_INSTRUCTIONS)
             ->setPrompt(self::PASSWORD_PROMPT)
             ->setValidateFn([$this, 'validAdminPassword'])
-            ->setValidationErrorMessage(self::PASSWORD_ERROR_MESSAGE)
+            ->setValidationCallbackErrorMessage(self::PASSWORD_ERROR_MESSAGE)
             ->setRequired(true);
+
+        $siteProfile = (new CredentialRequest('SITE_PROFILE'))
+            ->setOptionKey('profile')
+            ->setRequired(false);
 
         return [
             $siteNameRequest,
@@ -114,6 +118,7 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
             $gitEmailRequest,
             $adminEmailRequest,
             $adminPasswordRequest,
+            $siteProfile
         ];
     }
 
@@ -220,5 +225,14 @@ class PantheonProvider implements SiteProvider, CredentialClientInterface, Publi
     {
         // Add the public key to Pantheon.
         $this->session()->getUser()->getSSHKeys()->addKey($publicKey);
+    }
+
+    /**
+     * Retrieves this providers tokens.
+     */
+    public function getSecretValues() {
+        return [
+          'token' => $this->machineToken
+        ];
     }
 }

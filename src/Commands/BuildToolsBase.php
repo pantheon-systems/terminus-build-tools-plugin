@@ -17,7 +17,7 @@ use Pantheon\Terminus\Site\SiteAwareTrait;
 use Pantheon\TerminusBuildTools\Utility\UrlParsing;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\ProcessUtils;
+use Robo\Common\ProcessUtils;
 use Composer\Semver\Comparator;
 use Pantheon\TerminusBuildTools\ServiceProviders\CIProviders\CIState;
 use Pantheon\TerminusBuildTools\ServiceProviders\ProviderEnvironment;
@@ -43,6 +43,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
     const DEFAULT_DELETE_PATTERN = self::TRANSIENT_CI_DELETE_PATTERN;
+    const DEFAULT_WORKFLOW_TIMEOUT = 180;
     const SECRETS_DIRECTORY = '.build-secrets';
     const SECRETS_REMOTE_DIRECTORY = 'private/' . self::SECRETS_DIRECTORY;
 
@@ -320,6 +321,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // pantheon-systems is assumed.
         //
         $aliases = [
+            'git@github.com:pantheon-upstreams/drupal-composer-managed.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],
             'example-wordpress-composer' => ['wp', 'wordpress'],
@@ -366,6 +368,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'core/misc/drupal.js' => 'empty', // Drupal 8
           'misc/drupal.js' => 'empty-7', // Drupal 7
           'wp-config.php' => 'empty-wordpress', // WordPress
+          'wp-config-sample.php' => 'empty-wordpress', // Also WordPress
+          'wp-config-pantheon.php' => 'empty-wordpress', // Also also WordPress
         ];
 
         foreach ($upstream_map as $file => $upstream) {
@@ -387,7 +391,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             return $this->useExistingSourceDirectory($source, $options['preserve-local-repository']);
         }
         else {
-            return $this->createFromSourceProject($source, $target, $stability);
+            return $this->createFromSourceProject($source, $target, $stability, $options['template-repository']);
         }
     }
 
@@ -409,9 +413,11 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Use composer create-project to create a new local copy of the source project.
      */
-    protected function createFromSourceProject($source, $target, $stability = '')
+    protected function createFromSourceProject($source, $target, $stability = '', $template_repository = '')
     {
-        $source_project = $this->sourceProjectFromSource($source);
+        $source_project = $source;
+        $additional_commands = [];
+        $create_project_options = [];
 
         $this->log()->notice('Creating project and resolving dependencies.');
 
@@ -426,7 +432,57 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create a working directory
         $tmpsitedir = $this->tempdir('local-site');
 
-        $this->passthru("composer create-project --working-dir=$tmpsitedir $source $target -n $stability_flag");
+        $stability = $stability ?? 'stable';
+
+        if ($source === 'git@github.com:pantheon-upstreams/drupal-composer-managed.git' && empty($stability_flag)) {
+            // This is not published in packagist so it needs dev stability.
+            $stability_flag = '--stability dev';
+            $additional_commands[] = "mkdir $tmpsitedir/$target/vendor";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target require pantheon-upstreams/upstream-configuration:'*' --no-update";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+            // Restore stability or set to default value.
+            $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability $stability";
+            $create_project_options[] = '--no-install';
+        }
+        $create_project_options[] = $stability_flag;
+
+        $repository = '';
+
+        if ($template_repository) {
+            if (substr($template_repository, -4) === '.git') {
+                // It's a git repository.
+                $repository = ' --repository="{\"url\": \"' . $template_repository . '\", \"type\": \"vcs\"}"';
+            }
+            else {
+                $repository = ' --repository=' . $template_repository;
+            }
+        }
+        else {
+            $items = $this->getSourceAndTemplateFromSource($source);
+            $source_project = $items['source'];
+            if (!empty($items['template-repository'])) {
+                $repository = ' --repository="' . $items['template-repository'] . '"';
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability dev";
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target install -n";
+                // Restore stability or set to default value.
+                $additional_commands[] = "composer --working-dir=$tmpsitedir/$target config minimum-stability $stability";
+                $create_project_options[] = '--no-install';
+                $create_project_options[] = '--stability dev';
+            }
+        }
+
+        $create_project_command = sprintf('composer create-project --working-dir=%s %s %s %s -n %s',
+            $tmpsitedir,
+            $repository,
+            $source_project,
+            $target,
+            implode(' ', $create_project_options)
+        );
+        $this->passthru($create_project_command);
+        foreach ($additional_commands as $command) {
+            $this->passthru($command);
+        }
         $local_site_path = "$tmpsitedir/$target";
         return $local_site_path;
     }
@@ -440,6 +496,39 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function sourceProjectFromSource($source)
     {
         return preg_replace('/:.*/', '', $source);
+    }
+
+    /**
+     * Given a source:
+     *   If it's a composer repository such as:
+     *     pantheon-systems/example-drops-8-composer:dev-1.x
+     *   Return the full source in $items array: pantheon-systems/example-drops-8-composer:dev-1.x
+     *
+     *   If it's a git repo such as:
+     *     git@github.com:pantheon-systems/example-drops-8.git
+     *   Return the template-repository in json format as expected by composer create-project
+     *     and the source from the package name in the composer.json file.
+     */
+    protected function getSourceAndTemplateFromSource($source) {
+        $items = [
+            'source' => '',
+            'template-repository' => '',
+        ];
+        if (preg_match('/^[A-Za-z0-9\-]*\/[A-Za-z0-9\-]*:?[A-Za-z0-9\-]*$/', $source)) {
+            $items['source'] = $source;
+        }
+        else {
+            $items['template-repository'] = '{\"url\": \"' . $source . '\", \"type\": \"vcs\"}';
+            $templateDir = $this->tempdir('template-dir');
+            $this->passthru("git -C $templateDir clone $source --depth 1 .");
+            $composer_json_contents = file_get_contents($templateDir . '/composer.json');
+            if ($contents = json_decode($composer_json_contents)) {
+                if (!empty($contents->name)) {
+                    $items['source'] = $contents->name;
+                }
+            }
+        }
+        return $items;
     }
 
     /**
@@ -558,10 +647,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             'account-name' => '',
             'account-pass' => '',
             'site-mail' => '',
-            'site-name' => ''
-        ])
+            'site-name' => '',
+            'profile' => ''
+        ],
+        $app = 'Drupal'
+        )
     {
-        $command_template = $this->getInstallCommandTemplate($composer_json);
+        $command_template = $this->getInstallCommandTemplate($composer_json, $app);
         return $this->runCommandTemplateOnRemoteEnv($site_env_id, $command_template, "Install site", $site_install_options);
     }
 
@@ -577,8 +669,12 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Set the target environment to sftp mode prior to running the command
         $this->connectionSet($env, 'sftp');
 
+        foreach ($options as $key => $val) {
+          if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
+            $metadata[$key] = $this->escapeArgument($val);
+          }
+        }
         foreach ((array)$command_templates as $command_template) {
-            $metadata = array_map(function ($item) { return $this->escapeArgument($item); }, $options);
             $command_line = $this->interpolate($command_template, $metadata);
             $redacted_metadata = $this->redactMetadata($metadata, ['account-pass']);
             $redacted_command_line = $this->interpolate($command_template, $redacted_metadata);
@@ -670,15 +766,18 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     /**
      * Determine the command to use to install the site.
      */
-    protected function getInstallCommandTemplate($composer_json)
+    protected function getInstallCommandTemplate($composer_json, $app)
     {
         if (isset($composer_json['extra']['build-env']['install-cms'])) {
             return $composer_json['extra']['build-env']['install-cms'];
         }
-        // TODO: Select a different default template based on the cms type (Drupal or WordPress).
-        $defaultTemplate = 'drush site-install --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
-
-        return $defaultTemplate;
+        if (strtolower($app) === 'wordpress') {
+            return [
+                'wp core install --title={site-name} --url={site-url} --admin_user={account-name} --admin_email={account-mail} --admin_password={account-pass}',
+                'wp option update permalink_structure "/%postname%/"',
+            ];
+        }
+        return 'drush site-install {profile} --yes --account-mail={account-mail} --account-name={account-name} --account-pass={account-pass} --site-mail={site-mail} --site-name={site-name}';
     }
 
     /**
@@ -974,6 +1073,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     public function connectionSet($env, $mode)
     {
+        // Refresh environment data.
+        $env->fetch();
         if ($mode === $env->get('connection_mode')) {
             return;
         }
@@ -999,48 +1100,68 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $this->waitForWorkflow($startTime, $site, $env_name);
     }
 
-    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = 180)
+    protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null, $maxNotFoundAttempts = null)
     {
         if (empty($expectedWorkflowDescription)) {
-            $expectedWorkflowDescription = "Sync code on \"$env_name\"";
+            $expectedWorkflowDescription = "Sync code on $env_name";
+        }
+
+        if (null === $maxWaitInSeconds) {
+            $maxWaitInSecondsEnv = getenv('TERMINUS_BUILD_TOOLS_WORKFLOW_TIMEOUT'); 
+            $maxWaitInSeconds = $maxWaitInSecondsEnv ? $maxWaitInSecondsEnv : self::DEFAULT_WORKFLOW_TIMEOUT; 
         }
 
         $startWaiting = time();
-        while(true) {
-            $workflow = $this->getLatestWorkflow($site);
-            $workflowCreationTime = $workflow->get('created_at');
-            $workflowDescription = $workflow->get('description');
+        $firstWorkflowDescription = null;
+        $notFoundAttempts = 0;
+        $workflows = $site->getWorkflows();
 
-            if (($workflowCreationTime > $startTime) && ($expectedWorkflowDescription == $workflowDescription)) {
-                $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
-                if ($workflow->isSuccessful()) {
-                    $this->log()->notice("Workflow succeeded");
-                    return;
+        while(true) {
+            $site = $this->getsite($site->id);
+            // Refresh env on each interation.
+            $index = 0;
+            $workflows->reset();
+            $workflow_items = $workflows->fetch(['paged' => false,])->all();
+            $found = false;
+            foreach ($workflow_items as $workflow) {
+                $workflowCreationTime = $workflow->get('created_at');
+
+                $workflowDescription = str_replace('"', '', $workflow->get('description'));
+                if ($index === 0) {
+                    $firstWorkflowDescription = $workflowDescription;
+                }
+                $index++;
+
+                if ($workflowCreationTime < $startTime) {
+                    // We already passed the start time.
+                    break;
+                }
+
+                if (($expectedWorkflowDescription === $workflowDescription)) {
+                    $workflow->fetch();
+                    $this->log()->notice("Workflow '{current}' {status}.", ['current' => $workflowDescription, 'status' => $workflow->getStatus(), ]);
+                    $found = true;
+                    if ($workflow->isSuccessful()) {
+                        $this->log()->notice("Workflow succeeded");
+                        return;
+                    }
                 }
             }
-            else {
-                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $workflowDescription, 'expected' => $expectedWorkflowDescription]);
+            if (!$found) {
+                $notFoundAttempts++;
+                $this->log()->notice("Current workflow is '{current}'; waiting for '{expected}'", ['current' => $firstWorkflowDescription, 'expected' => $expectedWorkflowDescription]);
+                if ($maxNotFoundAttempts && $notFoundAttempts === $maxNotFoundAttempts) {
+                    $this->log()->warning("Attempted '{max}' times, giving up waiting for workflow to be found", ['max' => $maxNotFoundAttempts]);
+                    break;
+                }
             }
             // Wait a bit, then spin some more
             sleep(5);
-
             if (time() - $startWaiting >= $maxWaitInSeconds) {
                 $this->log()->warning("Waited '{max}' seconds, giving up waiting for workflow to finish", ['max' => $maxWaitInSeconds]);
                 break;
             }
         }
-    }
-
-    /**
-     * Fetch the info about the currently-executing (or most recently completed)
-     * workflow operation.
-     */
-    protected function getLatestWorkflow($site)
-    {
-        $workflows = $site->getWorkflows()->fetch(['paged' => false,])->all();
-        $workflow = array_shift($workflows);
-        $workflow->fetchWithLogs();
-        return $workflow;
     }
 
     /**
@@ -1051,7 +1172,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     public function getBuildMetadata($repositoryDir)
     {
         $buildMetadata = [
-          'url'         => exec("git -C $repositoryDir config --get remote.origin.url"),
+          'url'         => $this->sanitizeUrl(exec("git -C $repositoryDir config --get remote.origin.url")),
           'ref'         => exec("git -C $repositoryDir rev-parse --abbrev-ref HEAD"),
           'sha'         => $this->getHeadCommit($repositoryDir),
           'comment'     => exec("git -C $repositoryDir log --pretty=format:%s -1"),
@@ -1059,11 +1180,24 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
           'build-date'  => date("Y-m-d H:i:s O"),
         ];
 
-        if (isset($this->git_provider)) {
-            $this->git_provider->alterBuildMetadata($repositoryDir);
+        if (!isset($this->git_provider)) {
+            $this->git_provider = $this->inferGitProviderFromUrl($buildMetadata['url']);
         }
+        
+        $this->git_provider->alterBuildMetadata($buildMetadata);
 
         return $buildMetadata;
+    }
+
+    /**
+     * Sanitize a build url: if http[s] is used, strip any token that exists.
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function sanitizeUrl($url)
+    {
+        return preg_replace('#://[^@/]*@#', '://', $url);
     }
 
     /**

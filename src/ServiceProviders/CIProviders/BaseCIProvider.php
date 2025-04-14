@@ -51,4 +51,10 @@ abstract class BaseCIProvider
         }
         return $intersecting;
     }
+
+    public function getSecretValues() {
+        return [
+          'token' => $this->token()
+        ];
+    }
 }

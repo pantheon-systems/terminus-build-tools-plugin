@@ -1,0 +1,15 @@
+name: PHP Compatibility
+on:
+  push
+
+jobs:
+  phpcompatibility:
+    runs-on: ubuntu-latest
+    name: PHP Compatibility
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: PHPCompatibility
+        uses: pantheon-systems/phpcompatibility-action@v1
+        with:
+          test-versions: 7.4-

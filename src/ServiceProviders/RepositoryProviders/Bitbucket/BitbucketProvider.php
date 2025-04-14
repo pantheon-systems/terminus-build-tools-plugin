@@ -72,7 +72,7 @@ class BitbucketProvider extends BaseGitProvider implements GitProvider, LoggerAw
             $this->execGit($dir, 'push --progress origin master');
         } else {
             $bitbucket_token = $this->token();
-            $remote_url = "https://$bitbucket_token@bitbucket.org/${target_project}.git";
+            $remote_url = "https://$bitbucket_token@bitbucket.org/{$target_project}.git";
             $this->execGit($dir, 'push --progress {remote} master', ['remote' => $remote_url], ['remote' => $target_project]);
         }
     }

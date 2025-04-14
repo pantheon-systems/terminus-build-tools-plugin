@@ -17,6 +17,9 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
 {
     use BitbucketAPITrait;
 
+    // Default cron pattern is to run CLU / testing jobs once per day.
+    const CLU_CRON_PATTERN = '0 0 4 * * ? *';
+
     protected $serviceName = 'bitbucket-pipelines';
 
     public function infer($url)
@@ -111,7 +114,7 @@ class BitbucketPipelinesProvider extends BaseCIProvider implements CIProvider, L
         // @TODO: verify that the custom "clu" task exists in yml first?
         $data = [
           'enabled' => true,
-          'cron_pattern' => '0 0 4 * * ? *',
+          'cron_pattern' => $ci_env->get('clu', 'cron_pattern', static::CLU_CRON_PATTERN),
           'target' => [
             'type' => 'pipeline_ref_target',
             'ref_type' => 'branch',

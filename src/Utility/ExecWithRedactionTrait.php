@@ -1,7 +1,7 @@
 <?php
 namespace Pantheon\TerminusBuildTools\Utility;
 
-use Symfony\Component\Process\ProcessUtils;
+use Robo\Common\ProcessUtils;
 
 trait ExecWithRedactionTrait
 {

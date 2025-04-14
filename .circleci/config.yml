@@ -1,7 +1,7 @@
 # https://circleci.com/docs/2.0/workflows/#using-workspaces-to-share-data-among-jobs
 defaults: &defaults
   docker:
-    - image: quay.io/pantheon-public/php-ci:4.x
+    - image: quay.io/pantheon-public/php-ci:v8.2
   working_directory: ~/terminus_build_tools_plugin
   environment:
 
@@ -51,35 +51,13 @@ jobs:
                 name: Run unit tests
                 command: composer run unit-test
 
-    test_drupal_7_github:
-        <<: *defaults
-        resource_class: large
-        steps:
-            - checkout
-            - run:
-                name: Configure globals
-                command: ./.circleci/set-up-globals.sh
-            - run:
-                name: Test D7 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-7-composer:dev-master"
-            - run:
-                name: Watch CircleCI tests
-                command: ./.circleci/watch-circle.sh
-            - run:
-                name: Clean up D7 GitHub fixtures after pass
-                command: ./.circleci/cleanup-fixtures.sh ok
-            - run:
-                name: Clean up D7 GitHub fixtures after failure
-                when: on_fail
-                command: ./.circleci/cleanup-fixtures.sh fail
-
     # Note that we do more work on the Drupal 8 + GitHub test than in other permutations.
     # We test creating a PR and merging it to master here, but omit those tests
     # elsewhere in the interest of saving testing time.
-    test_drupal_8_github:
+    test_drupal_9_github:
         <<: *defaults
         docker:
-          - image: quay.io/pantheon-public/php-ci:4.x
+          - image: quay.io/pantheon-public/php-ci:v8.2
         resource_class: large
         steps:
             - checkout
@@ -90,8 +68,14 @@ jobs:
                 name: Check Terminus version
                 command: terminus --version
             - run:
-                name: Test D8 with GitHub
-                command: ./.circleci/test-github-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - add_ssh_keys:
+                fingerprints:
+                - "cb:92:c4:59:07:7f:6c:3d:1b:92:e7:6c:8a:da:3f:b2"
+            - run:
+                name: Test D9 with GitHub
+                command: ./.circleci/test-github-repo.sh "d9"
             - run:
                 name: Watch CircleCI tests after build:project:create
                 command: ./.circleci/watch-circle.sh
@@ -108,17 +92,17 @@ jobs:
                 name: Test merge to master
                 command: ./.circleci/test-merge-master.sh
             - run:
-                name: Clean up D8 GitHub fixtures after pass
+                name: Clean up D9 GitHub fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 GitHub fixtures after failure
+                name: Clean up D9 GitHub fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_drupal_8_gitlab:
+    test_drupal_9_gitlab:
         <<: *defaults
         docker:
-          - image: quay.io/pantheon-public/php-ci:4.x
+          - image: quay.io/pantheon-public/php-ci:v8.2
         resource_class: large
         steps:
             - checkout
@@ -126,20 +110,23 @@ jobs:
                 name: dependencies
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test WordPress with GitLab
-                command: ./.circleci/test-gitlab-repo.sh "pantheon-systems/example-drops-8-composer:dev-master" gitlabci
+                name: Disable strict SSH host checking to prevent SSH connect issues
+                command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - run:
+                name: Test Drupal with GitLab
+                command: ./.circleci/test-gitlab-repo.sh "d9" gitlabci
             - run:
                 name: Watch GitLab CI tests
                 command: ./.circleci/watch-gitlabci.sh
             - run:
-                name: Clean up WordPress GitLab fixtures after pass
+                name: Clean up Drupal GitLab fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up WordPress GitLab fixtures after failure
+                name: Clean up Drupal GitLab fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
-    test_drupal_8_bitbucket:
+    test_drupal_9_bitbucket:
         <<: *defaults
         steps:
             - checkout
@@ -147,18 +134,18 @@ jobs:
                 name: Configure globals
                 command: ./.circleci/set-up-globals.sh
             - run:
-                name: Test D8 with BitBucket
+                name: Test D9 with BitBucket
                 command: echo "BitBucket test skipped"
-                #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-drops-8-composer:dev-master"
+                #command: ./.circleci/test-bitbucket-repo.sh "d9"
             - run:
                 name: Watch CircleCI tests
                 command: echo "Skipping the watch-cicle step too"
                 #command: ./.circleci/watch-circle.sh
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Clean up D9 Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up D9 Bitbucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -176,6 +163,9 @@ jobs:
             - run:
                 name: Disable strict SSH host checking to prevent SSH connect issues
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+            - add_ssh_keys:
+                fingerprints:
+                - "cb:92:c4:59:07:7f:6c:3d:1b:92:e7:6c:8a:da:3f:b2"
             - run:
                 name: Test WordPress with GitHub
                 command: ./.circleci/test-github-repo.sh "pantheon-systems/example-wordpress-composer:dev-master" --use-ssh
@@ -238,7 +228,7 @@ jobs:
                 name: Disable strict SSH host checking to prevent SSH connect issues
                 command: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
             - run:
-                name: Test D8 with BitBucket
+                name: Test WordPress with BitBucket
                 command: echo "BitBucket test skipped"
                 #command: ./.circleci/test-bitbucket-repo.sh "pantheon-systems/example-wordpress-composer:dev-master"
             - run:
@@ -246,10 +236,10 @@ jobs:
                 command: echo "Skipping the watch-cicle step too"
                 #command: ./.circleci/watch-circle.sh
             - run:
-                name: Clean up D8 Bitbucket fixtures after pass
+                name: Clean up WordPress Bitbucket fixtures after pass
                 command: ./.circleci/cleanup-fixtures.sh ok
             - run:
-                name: Clean up D8 Bitbucket fixtures after failure
+                name: Clean up WordPress Bitbucket fixtures after failure
                 when: on_fail
                 command: ./.circleci/cleanup-fixtures.sh fail
 
@@ -258,10 +248,7 @@ workflows:
     build_test:
         jobs:
             - unit
-            - test_drupal_8_github:
-                requires:
-                   - unit
-            - test_drupal_7_github:
+            - test_drupal_9_github:
                 requires:
                    - unit
             - test_wordpress_github:
@@ -270,22 +257,20 @@ workflows:
             - test_wordpress_gitlab:
                 requires:
                    - unit
-            - test_drupal_8_gitlab:
+            - test_drupal_9_gitlab:
                 requires:
                    - unit
-            - test_drupal_8_bitbucket:
+            - test_drupal_9_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
+                   - test_drupal_9_github
+                   - test_drupal_9_gitlab
                    - test_wordpress_github
                    - test_wordpress_gitlab
             - test_wordpress_bitbucket:
                 requires:
                    - unit
-                   - test_drupal_7_github
-                   - test_drupal_8_github
-                   - test_drupal_8_gitlab
+                   - test_drupal_9_github
+                   - test_drupal_9_gitlab
                    - test_wordpress_github
                    - test_wordpress_gitlab

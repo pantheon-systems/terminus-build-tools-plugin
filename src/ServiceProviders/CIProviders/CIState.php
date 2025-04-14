@@ -71,8 +71,12 @@ class CIState
      */
     public function getAggregateState()
     {
+        $cloned_array = $this->state;
+        if (isset($cloned_array['temp_settings'])) {
+            unset($cloned_array['temp_settings']);
+        }
         return array_reduce(
-            $this->state,
+            $cloned_array,
             function ($carry, $item) {
                 return array_merge($carry, $item->ciState());
             },

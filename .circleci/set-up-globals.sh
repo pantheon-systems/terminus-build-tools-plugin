@@ -17,11 +17,16 @@ source $BASH_ENV
 
 set -ex
 
-cd ~/terminus_build_tools_plugin
-mkdir -p $HOME/.terminus/plugins
-ln -s $(pwd) $HOME/.terminus/plugins
-terminus list -n build
-terminus --version
+# Update terminus temporarily.
+rm /usr/local/bin/terminus
+mkdir ~/terminus && cd ~/terminus
+TERMINUS_RELEASE=$(curl --silent "https://api.github.com/repos/pantheon-systems/terminus/releases/latest" | perl -nle'print $& while m#"tag_name": "\K[^"]*#g')
+curl -L https://github.com/pantheon-systems/terminus/releases/download/$TERMINUS_RELEASE/terminus.phar --output terminus
+chmod +x terminus
+ln -s ~/terminus/terminus /usr/local/bin/terminus
+terminus self:info
+
+terminus self:plugin:install /root/terminus_build_tools_plugin
 
 set +ex
 terminus auth:login -n --machine-token="$TERMINUS_TOKEN"
