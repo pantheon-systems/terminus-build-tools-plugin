@@ -584,7 +584,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         }
 
         // Deploy the upstream
-        if ($site = $this->getSite($workflow->get('waiting_for_task')->site_id)) {
+        if ($site = $this->getSiteById($workflow->get('waiting_for_task')->site_id)) {
             $this->log()->notice('Deploying {upstream} to Pantheon site', ['upstream' => $upstream_id]);
             $workflow = $site->deployProduct($upstream->id);
             while (!$workflow->checkProgress()) {
@@ -593,7 +593,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
             $this->log()->notice('Deployed CMS');
         }
 
-        return $this->getSite($site_name);
+        return $this->getSiteById($site_name);
     }
 
     /**
@@ -1023,7 +1023,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
     protected function oldestEnvironments($site_id, $multidev_delete_pattern)
     {
         // Get a list of all of the sites
-        $env_list = $this->getSite($site_id)->getEnvironments()->serialize();
+        $env_list = $this->getSiteById($site_id)->getEnvironments()->serialize();
 
         // Filter out the environments that do not match the multidev delete pattern
         $env_list = array_filter(

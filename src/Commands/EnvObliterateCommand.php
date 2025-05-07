@@ -22,7 +22,7 @@ class EnvObliterateCommand extends BuildToolsBase
      */
     public function obliterate($site_name)
     {
-        $site = $this->getSite($site_name);
+        $site = $this->getSiteById($site_name);
 
         // Fetch the build metadata from the specified site name and
         // look up the URL to the repository stored therein.

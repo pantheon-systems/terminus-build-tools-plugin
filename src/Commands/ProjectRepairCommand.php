@@ -133,7 +133,7 @@ class ProjectRepairCommand extends BuildToolsBase
         $ci_env->storeState('site', $this->site_provider->getEnvironment());
 
         // Determine if the site has multidev capability
-        $site = $this->getSite($site_name);
+        $site = $this->getSiteById($site_name);
         $hasMultidevCapability = $this->siteHasMultidevCapability($site);
 
         // Do the work
