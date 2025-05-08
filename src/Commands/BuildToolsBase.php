@@ -1117,7 +1117,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $workflows = $site->getWorkflows();
 
         while(true) {
-            $site = $this->getsite($site->id);
+            $site = $this->getSiteById($site->id);
             // Refresh env on each interation.
             $index = 0;
             $workflows->reset();
