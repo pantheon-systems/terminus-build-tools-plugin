@@ -567,7 +567,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Locate organization
         if (!empty($org_id = $options['org'])) {
-            $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
+            $org = $user->getOrganizationMemberships()->get($org_id)->getOrganization();
             $workflow_options['organization_id'] = $org->id;
         }
 
