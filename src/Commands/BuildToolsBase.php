@@ -567,7 +567,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
 
         // Locate organization
         if (!empty($org_id = $options['org'])) {
-            $org = $user->getOrgMemberships()->get($org_id)->getOrganization();
+            $org = $user->getOrganizationMemberships()->get($org_id)->getOrganization();
             $workflow_options['organization_id'] = $org->id;
         }
 
@@ -579,17 +579,13 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // Create the site
         $this->log()->notice('Creating a new Pantheon site {name}', ['name' => $site_name]);
         $workflow = $this->sites()->create($workflow_options);
-        while (!$workflow->checkProgress()) {
-            // @TODO: Add Symfony progress bar to indicate that something is happening.
-        }
+        $this->processWorkflow($workflow);
 
         // Deploy the upstream
         if ($site = $this->getSiteById($workflow->get('waiting_for_task')->site_id)) {
             $this->log()->notice('Deploying {upstream} to Pantheon site', ['upstream' => $upstream_id]);
             $workflow = $site->deployProduct($upstream->id);
-            while (!$workflow->checkProgress()) {
-                // @TODO: Add Symfony progress bar to indicate that something is happening.
-            }
+            $this->processWorkflow($workflow);
             $this->log()->notice('Deployed CMS');
         }
 
@@ -619,9 +615,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 "Cloning files from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
             );
-            while (!$workflow->checkProgress()) {
-                // @TODO: Add Symfony progress bar to indicate that something is happening.
-            }
+            $this->processWorkflow($workflow);
             $this->log()->notice($workflow->getMessage());
         }
 
@@ -632,9 +626,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
                 "Cloning database from {from_name} environment to {target_env} environment",
                 ['from_name' => $from_name, 'target_env' => $target->getName()]
             );
-            while (!$workflow->checkProgress()) {
-                // @TODO: Add Symfony progress bar to indicate that something is happening.
-            }
+            $this->processWorkflow($workflow);
             $this->log()->notice($workflow->getMessage());
         }
     }
@@ -1058,9 +1050,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         list($site, $env) = $this->getSiteEnv($site_env, 'dev');
         $this->log()->notice("Creating multidev {env} for site {site}", ['site' => $site->getName(), 'env' => $multidev]);
         $workflow = $site->getEnvironments()->create($multidev, $env);
-        while (!$workflow->checkProgress()) {
-            // TODO: Add workflow progress output
-        }
+        $this->processWorkflow($workflow);
         $this->log()->notice($workflow->getMessage());
     }
 
@@ -1082,9 +1072,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         if (is_string($workflow)) {
             $this->log()->notice($workflow);
         } else {
-            while (!$workflow->checkProgress()) {
-                // TODO: Add workflow progress output
-            }
+            $this->processWorkflow($workflow);
             $this->log()->notice($workflow->getMessage());
         }
     }
@@ -1117,7 +1105,7 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         $workflows = $site->getWorkflows();
 
         while(true) {
-            $site = $this->getsite($site->id);
+            $site = $this->getSiteById($site->id);
             // Refresh env on each interation.
             $index = 0;
             $workflows->reset();
