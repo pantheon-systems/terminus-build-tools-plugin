@@ -21,6 +21,6 @@
     },
     "require": {
         "consolidation/version-tool": "^0.1.9",
-        "paragonie/sodium_compat": "^1.17"
+        "paragonie/sodium_compat": "^1|^2"
     }
 }
