@@ -4,6 +4,7 @@ namespace Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitHu
 
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\BaseGitProvider;
 use Psr\Log\LoggerAwareInterface;
+use Robo\Config\Config;
 use Pantheon\Terminus\Exceptions\TerminusException;
 use Pantheon\TerminusBuildTools\Credentials\CredentialClientInterface;
 use Pantheon\TerminusBuildTools\ServiceProviders\RepositoryProviders\GitProvider;
@@ -25,9 +26,19 @@ class GitHubProvider extends BaseGitProvider implements GitProvider, LoggerAware
     protected $api;
 
 
+    public function __construct(Config $config)
+    {
+        parent::__construct($config);
+        $privateGithub = $this->config->get('build-tools.provider.git.github.url');
+        if (!empty($privateGithub)) {
+          $this->baseGitUrl = 'git@' . $privateGithub;
+        }
+    }
+
     public function infer($url)
     {
-        return strpos($url, 'github.com') !== false;
+        $githubDomain = explode('@', $this->baseGitUrl)[1];
+        return strpos($url, $githubDomain) !== false;
     }
 
     /**
