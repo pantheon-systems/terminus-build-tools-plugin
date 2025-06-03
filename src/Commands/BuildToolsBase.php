@@ -321,6 +321,8 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
         // pantheon-systems is assumed.
         //
         $aliases = [
+            'git@github.com:pantheon-upstreams/drupal-11-composer-managed.git' => ['d11'],
+            'git@github.com:pantheon-upstreams/drupal-10-composer-managed.git' => ['d10'],
             'git@github.com:pantheon-upstreams/drupal-composer-managed.git' => ['d9', 'drops-9'],
             'example-drops-8-composer' => ['d8', 'drops-8'],
             'example-drops-7-composer' => ['d7', 'drops-7'],

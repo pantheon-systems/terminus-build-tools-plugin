@@ -368,6 +368,11 @@ class ProjectCreateCommand extends BuildToolsBase
                 $version = $info->version();
                 $cms_version .= substr($version, 0, 1);
             }
+            // Assumes that all versions of Drupal 10-19 will work with the
+            // d9 template from https://github.com/pantheon-systems/tbt-ci-templates.
+            if ($cms_version == 'd1') {
+                $cms_version = 'd9';
+            }
             $this->copyCiFiles($this->ci_provider, $siteDir, $cms_version, $ci_template);
 
             // If folder does not exists, assume we need to install composer deps.
