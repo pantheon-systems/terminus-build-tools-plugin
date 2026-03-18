@@ -29,7 +29,7 @@ use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
 use Pantheon\Terminus\Models\Environment;
 use Pantheon\Terminus\Request\RequestAwareInterface;
 use Pantheon\Terminus\Request\RequestAwareTrait;
-use Pantheon\TerminusBuildTools\Utility\WaitForCommit;
+use Pantheon\Terminus\Helpers\Utility\WaitForCommit;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
