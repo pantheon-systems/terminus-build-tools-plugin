@@ -1,12 +1,13 @@
+# Managed by github-terraform — do not edit manually
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: terminus-build-tools-plugin
-  description: Auto-generated catalog info for pantheon-systems/terminus-build-tools-plugin
+  name: "terminus-build-tools-plugin"
+  description: "Manage multidev environments for a Pantheon site using a GitHub PR workflow."
   annotations:
-    backstage.io/techdocs-ref: dir:docs/
+    "backstage.io/techdocs-ref": "dir:docs/"
 spec:
-  type: tool
-  lifecycle: mature
-  owner: devx
+  type: "tool"
+  lifecycle: "mature"
+  owner: "developer-experience"
