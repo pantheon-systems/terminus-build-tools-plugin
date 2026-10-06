@@ -27,6 +27,9 @@ use Pantheon\TerminusBuildTools\ServiceProviders\ProviderManager;
 use Pantheon\Terminus\Helpers\LocalMachineHelper;
 use Pantheon\Terminus\Commands\WorkflowProcessingTrait;
 use Pantheon\Terminus\Models\Environment;
+use Pantheon\Terminus\Request\RequestAwareInterface;
+use Pantheon\Terminus\Request\RequestAwareTrait;
+use Pantheon\Terminus\Helpers\Utility\WaitForCommit;
 
 use Robo\Contract\BuilderAwareInterface;
 use Robo\LoadAllTasks;
@@ -34,11 +37,12 @@ use Robo\LoadAllTasks;
 /**
  * Build Tool Base Command
  */
-class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, BuilderAwareInterface
+class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, BuilderAwareInterface, RequestAwareInterface
 {
     use LoadAllTasks; // uses TaskAccessor, which uses BuilderAwareTrait
     use SiteAwareTrait;
     use WorkflowProcessingTrait;
+    use RequestAwareTrait;
 
     const TRANSIENT_CI_DELETE_PATTERN = 'ci-';
     const PR_BRANCH_DELETE_PATTERN = 'pr-';
@@ -1085,7 +1089,20 @@ class BuildToolsBase extends TerminusCommand implements SiteAwareInterface, Buil
      */
     protected function waitForCodeSync($startTime, $site, $env_name)
     {
-        $this->waitForWorkflow($startTime, $site, $env_name);
+        $target_commit = trim(exec('git rev-parse HEAD'));
+
+        $maxWaitInSecondsEnv = getenv('TERMINUS_BUILD_TOOLS_WORKFLOW_TIMEOUT');
+        $maxWaitInSeconds = $maxWaitInSecondsEnv ? $maxWaitInSecondsEnv : self::DEFAULT_WORKFLOW_TIMEOUT;
+
+        WaitForCommit::waitForCommit(
+            $startTime,
+            $site,
+            $env_name,
+            $target_commit,
+            $this->request(),
+            $this->log(),
+            $maxWaitInSeconds
+        );
     }
 
     protected function waitForWorkflow($startTime, $site, $env_name, $expectedWorkflowDescription = '', $maxWaitInSeconds = null, $maxNotFoundAttempts = null)
