@@ -62,6 +62,8 @@ It is recommended that you use one of the provided example projects as a templat
 The default template repositories are each assigned an abbreviation, as shown below:
 
 - [WordPress](https://github.com/pantheon-systems/example-wordpress-composer): `wp`
+- [Drupal 11](https://github.com/pantheon-upstreams/drupal-11-composer-managed): `d11`
+- [Drupal 10](https://github.com/pantheon-upstreams/drupal-10-composer-managed): `d10`
 - [Drupal 9](https://github.com/pantheon-upstreams/drupal-composer-managed): `d9`
 - [Drupal 8](https://github.com/pantheon-systems/example-drops-8-composer): `d8`
 - [Drupal 7](https://github.com/pantheon-systems/example-drops-7-composer): `d7`
