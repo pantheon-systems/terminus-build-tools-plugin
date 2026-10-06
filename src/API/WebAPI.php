@@ -79,6 +79,7 @@ abstract class WebAPI implements WebAPIInterface, LoggerAwareInterface
                 if (!$isDone) {
                     // $uri already has $queryParams, as altered in the $pager_info
                     $res = $this->sendRequest($uri, [], 'GET');
+                    $pager_info = $this->getPagerInfo($res);
                     $httpCode = $res->getStatusCode();
                     $resultData = $this->getResultData($res);
                     // Check with the calling method to see if we need to *continue*
