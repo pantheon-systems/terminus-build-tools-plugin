@@ -45,7 +45,12 @@ class GitLabProvider extends BaseGitProvider implements GitProvider, LoggerAware
     }
 
     public function infer($url) {
-        return strpos($url, $this->getGitLabUrl()) !== FALSE;
+        // Url could be gitlabci internal URL as per https://gitlab.com/gitlab-com/gl-infra/production/-/issues/6582.
+        $isGitlab = strpos($url, $this->getGitLabUrl()) !== FALSE;
+        if ($isGitlab) {
+            return TRUE;
+        }
+        return (bool) getenv('GITLAB_CI') ?? FALSE;
     }
 
     /**
