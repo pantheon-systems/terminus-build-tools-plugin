@@ -509,6 +509,18 @@ This command will commit the generated artifacts to an existing multidev environ
 
 `terminus build:comment:add:pr --pr_number=123 --message="Tests passed!"`
 
+## Rollback
+
+**When:** a release of this plugin breaks users and a fix will take more than a few hours. Otherwise fix forward with the next patch tag.
+
+**Recover:** revert the bad change on `3.x` and tag the next patch version. Never delete or move a published tag. Users who already installed the bad version can pin the last good one with `terminus self:plugin:install pantheon-systems/terminus-build-tools-plugin:<previous>`.
+
+**Verify:** a clean scratch install (commands in [DEPLOYMENT.md](DEPLOYMENT.md#how-to-confirm-it-deployed)) shows the intended version, and Packagist lists the fixed tag first.
+
+**Who to page:** the `developer-experience` team via `#ask-hosting`.
+
+Full procedure: [DEPLOYMENT.md](DEPLOYMENT.md#rollback).
+
 ## Help
 Run `terminus list build` for a complete list of available commands. Use `terminus help <command>` to get help on one command.
 
