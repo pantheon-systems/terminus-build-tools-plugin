@@ -15,7 +15,7 @@ namespace Pantheon\TerminusBuildTools\Commands;
 class EnvPushCommand extends BuildToolsBase
 {
     /**
-     * Push code to a specific Pantheon site and environment that already exists.
+     * Push code to a specific Pantheon site and dev or multidev environment that already exists.
      *
      * @command build:env:push
      * @aliases build-env:push-code
