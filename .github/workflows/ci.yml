@@ -2,6 +2,9 @@ name: PHP Compatibility
 on:
   push
 
+permissions:
+  contents: read
+
 jobs:
   phpcompatibility:
     runs-on: ubuntu-latest
